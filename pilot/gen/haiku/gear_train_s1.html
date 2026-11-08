@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two-stage compound gear train</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:system-ui,sans-serif;color:#e8ecf2}
+canvas{display:block;position:fixed;left:0;top:0}
+#panel{position:fixed;left:12px;top:12px;background:rgba(15,18,24,.8);padding:12px 14px;border-radius:8px;font-size:14px;line-height:1.7;min-width:250px}
+#panel h1{font-size:15px;margin:0 0 6px;font-weight:600}
+#panel b{font-variant-numeric:tabular-nums;font-weight:600;color:#9fd3ff}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Two-stage compound gear train</h1>
+  <div>Input gear1: <b data-q="input_deg">0.0 deg</b></div>
+  <div>Output gear4: <b data-q="output_deg">0.0 deg</b></div>
+  <div>Ratio |w_in / w_out|: <b data-q="ratio">6.00</b></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- parameters (mm, seconds) ----
+const M = 2;                 // module
+const Z1 = 20, Z2 = 40, Z3 = 15, Z4 = 45;
+const PERIOD = 4;            // s per input revolution
+const THICK = 10;            // gear face width
+const LAYER = 14;            // z offset of the front (gear3/gear4) layer, visual only
+
+// ---- kinematics: pure function of t ----
+function kin(t) {
+  const th1 = 2 * Math.PI * t / PERIOD;      // gear1, ccw
+  const th2 = -th1 * Z1 / Z2;                // external mesh: reverses, slows by z1/z2
+  const th3 = th2;                           // same shaft as gear2
+  const th4 = -th3 * Z3 / Z4;                // external mesh with gear3
+  return { th1, th2, th3, th4 };
+}
+const RATIO = (Z2 / Z1) * (Z4 / Z3);         // = 6
+
+// ---- renderer / scene ----
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 3000);
+const TARGET = new THREE.Vector3(42, 32, 0);
+function fitCamera() {
+  const a = window.innerWidth / window.innerHeight;
+  camera.aspect = a;
+  const d = a >= 1 ? 300 : 300 / a;
+  camera.position.set(TARGET.x, TARGET.y - 0.18 * d, d);   // slight angle, face-on
+  camera.lookAt(TARGET);
+  camera.updateProjectionMatrix();
+}
+fitCamera();
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x303540, 1.1));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(80, -120, 220);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9db8ff, 0.5);
+fill.position.set(-150, 80, 120);
+scene.add(fill);
+
+// ---- materials ----
+const matFrame = new THREE.MeshStandardMaterial({ color: 0x59606e, metalness: 0.6, roughness: 0.5 });
+const matShaft = new THREE.MeshStandardMaterial({ color: 0xaab2bd, metalness: 0.8, roughness: 0.3 });
+const matRef   = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x333333, roughness: 0.4 });
+const matG1 = new THREE.MeshStandardMaterial({ color: 0xd98b2b, metalness: 0.3, roughness: 0.45 });
+const matG2 = new THREE.MeshStandardMaterial({ color: 0x3b82c4, metalness: 0.3, roughness: 0.45 });
+const matG3 = new THREE.MeshStandardMaterial({ color: 0x4caf6a, metalness: 0.3, roughness: 0.45 });
+const matG4 = new THREE.MeshStandardMaterial({ color: 0x9b59b6, metalness: 0.3, roughness: 0.45 });
+
+// ---- gear tooth profile (extruded, bore hole) ----
+function gearGeom(z, rp, bore) {
+  const ra = rp + M;               // addendum
+  const rf = rp - 1.25 * M;        // root radius
+  const p = 2 * Math.PI / z;       // angular pitch
+  const s = new THREE.Shape();
+  let first = true;
+  const add = (r, a) => {
+    const x = r * Math.cos(a), y = r * Math.sin(a);
+    if (first) { s.moveTo(x, y); first = false; } else { s.lineTo(x, y); }
+  };
+  for (let k = 0; k < z; k++) {
+    const c = k * p;
+    add(rf, c - 0.32 * p);
+    add(ra, c - 0.20 * p);
+    add(ra, c + 0.20 * p);
+    add(rf, c + 0.32 * p);
+  }
+  s.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, bore, 0, Math.PI * 2, true);
+  s.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(s, { depth: THICK, bevelEnabled: false, curveSegments: 2 });
+  g.translate(0, 0, -THICK / 2);   // centred on z = layer
+  return g;
+}
+
+// Named moving body: Group at its centre; local +X = reference direction.
+// Tooth phase offset and face layer live on the visual child mesh only.
+function makeGear(name, z, rp, mat, bodyPos, layerZ, toothOffset) {
+  const body = new THREE.Group();
+  body.name = name;
+  body.position.set(bodyPos[0], bodyPos[1], bodyPos[2]);
+
+  const teeth = new THREE.Mesh(gearGeom(z, rp, 3.5), mat);
+  teeth.rotation.z = toothOffset;
+  teeth.position.z = layerZ;
+  body.add(teeth);
+
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(rp * 0.3, rp * 0.3, 3, 24), mat);
+  hub.rotation.x = Math.PI / 2;
+  hub.position.z = layerZ + THICK / 2 + 1;
+  body.add(hub);
+
+  // reference mark on local +X
+  const marker = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 2), matRef);
+  marker.position.set(rp * 0.7, 0, layerZ + THICK / 2 + 1.5);
+  body.add(marker);
+
+  scene.add(body);
+  return body;
+}
+
+// Tooth offsets make each mesh clean at t = 0 (tooth vs gap on the contact line).
+const gear1 = makeGear('gear1', Z1, 20, matG1, [0, 0, 0],   0,     0);
+const gear2 = makeGear('gear2', Z2, 40, matG2, [60, 0, 0],  0,     Math.PI / 40);
+const gear3 = makeGear('gear3', Z3, 15, matG3, [60, 0, 0],  LAYER, Math.PI / 2);
+const gear4 = makeGear('gear4', Z4, 45, matG4, [60, 60, 0], LAYER, Math.PI / 18);
+
+// ---- fixed frame and pivots (not moving) ----
+function shaft(x, y) {
+  const g = new THREE.CylinderGeometry(3, 3, 52, 16);
+  g.rotateX(Math.PI / 2);          // axis along Z
+  const m = new THREE.Mesh(g, matShaft);
+  m.position.set(x, y, 4);
+  scene.add(m);
+}
+shaft(0, 0);
+shaft(60, 0);
+shaft(60, 60);
+
+const plate = new THREE.Mesh(new THREE.BoxGeometry(160, 170, 4), matFrame);
+plate.position.set(42, 30, -24);
+scene.add(plate);
+
+// ---- panel update ----
+const elIn = document.querySelector('[data-q="input_deg"]');
+const elOut = document.querySelector('[data-q="output_deg"]');
+const elRatio = document.querySelector('[data-q="ratio"]');
+const toDeg = r => r * 180 / Math.PI;
+const wrap = d => ((d % 360) + 360) % 360;
+
+// ---- pure pose function ----
+function render(t) {
+  const k = kin(t);
+  gear1.rotation.z = k.th1;
+  gear2.rotation.z = k.th2;
+  gear3.rotation.z = k.th3;
+  gear4.rotation.z = k.th4;
+
+  elIn.textContent = wrap(toDeg(k.th1)).toFixed(1) + ' deg';
+  elOut.textContent = wrap(toDeg(k.th4)).toFixed(1) + ' deg';
+  elRatio.textContent = RATIO.toFixed(2);
+
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: PERIOD, render };
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  fitCamera();
+});
+
+// ---- live loop (skipped for capture) ----
+if (!window.location.href.includes('capture')) {
+  const t0 = performance.now();
+  const loop = now => {
+    SIM.render((now - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

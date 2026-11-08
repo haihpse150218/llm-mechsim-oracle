@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geneva drive, 4 slots</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:system-ui,sans-serif}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#panel{position:absolute;top:12px;left:12px;color:#e5e7eb;background:rgba(0,0,0,.45);padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.6;font-variant-numeric:tabular-nums}
+#panel h1{font-size:15px;margin:0 0 4px;font-weight:600}
+#panel .k{color:#9ca3af;display:inline-block;width:110px}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <h1>External Geneva drive, 4 slots</h1>
+  <div><span class="k">Driver angle</span><span data-q="driver_deg">0.0 deg</span></div>
+  <div><span class="k">Wheel angle</span><span data-q="wheel_deg">0.0 deg</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- Geometry (mm) ----
+const C = 100;                              // centre distance, driver pivot (0,0) to wheel centre W (C,0)
+const A = C * Math.sin(Math.PI / 4);        // pin radius on driver, 70.711
+const SLOT_W = 6;                           // half width of slot
+const R_WHEEL = 60;                         // wheel outer radius
+const R_ROOT = 18;                          // slot inner end (radius from wheel centre)
+
+// ---- Renderer / scene ----
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(55, -70, 270);
+camera.lookAt(55, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.1);
+key.position.set(120, -150, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.4);
+fill.position.set(-100, 80, 200);
+scene.add(fill);
+
+function mat(color, metalness = 0.2, roughness = 0.45) {
+  return new THREE.MeshStandardMaterial({ color, metalness, roughness });
+}
+const driverMat = mat(0xd98a2b);
+const wheelMat = mat(0x3f7fd6);
+const pinMat = mat(0xe5e7eb, 0.4, 0.3);
+const frameMat = mat(0x4b5563, 0.1, 0.7);
+const postMat = mat(0xaab2bd, 0.6, 0.3);
+
+// ---- Fixed frame and pivot posts ----
+const frame = new THREE.Mesh(new THREE.BoxGeometry(230, 130, 4), frameMat);
+frame.position.set(55, 0, -10);            // z -12..-8
+scene.add(frame);
+
+function post(x) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 40, 24).rotateX(Math.PI / 2), postMat);
+  m.position.set(x, 0, 8);                 // z -12..28
+  return m;
+}
+scene.add(post(0));
+scene.add(post(C));
+
+// ---- Driver (named "driver", origin = driver pivot, local +X toward drive pin) ----
+const driver = new THREE.Group();
+driver.name = 'driver';
+scene.add(driver);
+
+const DRIVER_Z = 17;                        // driver plate z 14..20
+const hub = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 14, 32).rotateX(Math.PI / 2), driverMat);
+hub.position.set(0, 0, DRIVER_Z);
+driver.add(hub);
+
+const arm = new THREE.Mesh(new THREE.BoxGeometry(A, 14, 6), driverMat);
+arm.position.set(A / 2, 0, DRIVER_Z);
+driver.add(arm);
+
+const lockDisc = new THREE.Mesh(new THREE.CylinderGeometry(36, 36, 6, 72).rotateX(Math.PI / 2), driverMat);
+lockDisc.position.set(0, 0, DRIVER_Z);
+driver.add(lockDisc);
+
+const pin = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 26, 24).rotateX(Math.PI / 2), pinMat);
+pin.position.set(A, 0, 11);                // local (A,0), spans z -2..24, reaches the wheel plane z 0..10
+driver.add(pin);
+
+// ---- Wheel outline: 4 radial slots, 90 deg apart, slot axes at local 0, 90, 180, 270 deg ----
+function wheelShape() {
+  const shape = new THREE.Shape();
+  const sR = Math.sqrt(R_WHEEL * R_WHEEL - SLOT_W * SLOT_W);
+  const delta = Math.asin(SLOT_W / R_WHEEL);
+  const pts = [];
+  for (let k = 0; k < 4; k++) {
+    const aK = k * Math.PI / 2;
+    const aN = (k + 1) * Math.PI / 2;
+    const steps = 24;
+    for (let s = 0; s <= steps; s++) {       // rim arc between slots
+      const a = aK + delta + (aN - aK - 2 * delta) * s / steps;
+      pts.push([R_WHEEL * Math.cos(a), R_WHEEL * Math.sin(a)]);
+    }
+    const u = [Math.cos(aN), Math.sin(aN)];
+    const n = [-Math.sin(aN), Math.cos(aN)];
+    const P = (s, off) => [s * u[0] + off * n[0], s * u[1] + off * n[1]];
+    pts.push(P(sR, -SLOT_W));                // slot side facing previous sector
+    pts.push(P(R_ROOT, -SLOT_W));            // slot bottom
+    pts.push(P(R_ROOT, +SLOT_W));
+    pts.push(P(sR, +SLOT_W));                // slot side facing next sector
+  }
+  shape.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i][0], pts[i][1]);
+  const bore = new THREE.Path();
+  bore.absarc(0, 0, 6, 0, Math.PI * 2, true);
+  shape.holes.push(bore);
+  return shape;
+}
+
+// ---- Wheel (named "wheel", origin = wheel centre W, local +X along a slot axis) ----
+const wheel = new THREE.Group();
+wheel.name = 'wheel';
+wheel.position.set(C, 0, 0);
+scene.add(wheel);
+const wheelMesh = new THREE.Mesh(
+  new THREE.ExtrudeGeometry(wheelShape(), { depth: 10, bevelEnabled: false, curveSegments: 6 }),
+  wheelMat
+);                                           // z 0..10
+wheel.add(wheelMesh);
+
+// ---- Kinematics ----
+// driver angle phi = 2*pi*t/4. Engagement when |phi wrapped| <= 45 deg, centred on phi = 0 of revolution k = round(t/4).
+// Inside engagement the slot axis passes through the pin:  psi = atan2(-A sin phi, C - A cos phi) - (pi/2) k.
+// Dwell: wheel held at the engagement end value (-45 deg, or +45 deg before entry), minus (pi/2) k.
+function poseAt(t) {
+  const phiU = Math.PI * t / 2;              // unwrapped driver angle (rad)
+  const k = Math.round(t / 4);
+  const phi = phiU - 2 * Math.PI * k;        // wrapped to [-pi, pi]
+  let g;
+  if (Math.abs(phi) <= Math.PI / 4) {
+    g = Math.atan2(-A * Math.sin(phi), C - A * Math.cos(phi));
+  } else {
+    g = phi > 0 ? -Math.PI / 4 : Math.PI / 4;
+  }
+  const psi = g - (Math.PI / 2) * k;         // cumulative wheel angle (rad), CCW positive
+  return { phiU, psi };
+}
+
+function wrap360(deg) {
+  const v = ((deg % 360) + 360) % 360;
+  const s = v.toFixed(1);
+  return parseFloat(s) >= 360 ? '0.0' : s;
+}
+
+const qDriver = document.querySelector('[data-q="driver_deg"]');
+const qWheel = document.querySelector('[data-q="wheel_deg"]');
+
+// ---- Exposed API ----
+function render(t) {
+  const { phiU, psi } = poseAt(t);
+  driver.rotation.z = phiU;
+  wheel.rotation.z = psi;
+  qDriver.textContent = wrap360(phiU * 180 / Math.PI) + ' deg';
+  qWheel.textContent = wrap360(psi * 180 / Math.PI) + ' deg';
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: 4, render };
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ---- Live loop (skipped when URL contains ?capture) ----
+if (window.location.search.indexOf('capture') === -1) {
+  const t0 = performance.now();
+  const loop = () => {
+    SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

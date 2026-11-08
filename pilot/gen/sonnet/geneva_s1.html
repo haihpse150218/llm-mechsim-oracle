@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Geneva Drive (4 slots)</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:10px;color:#e8ecf2;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.5}
+#panel h1{margin:0 0 4px;font-size:16px}
+</style></head><body>
+<div id="panel"><h1>External Geneva drive, 4 slots</h1>
+Driver: <span data-q="driver_deg">0.0</span> deg<br>
+Wheel: <span data-q="wheel_deg">0.0</span> deg
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const C = 100, A = C * Math.sin(Math.PI / 4), PERIOD = 4;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(50, -120, 420);
+camera.lookAt(50, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.1);
+dl.position.set(150, 200, 400); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x8899ff, 0.35);
+dl2.position.set(-200, -100, 200); scene.add(dl2);
+
+const mat = (c) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.4, roughness: 0.5 });
+
+// ground / frame
+const base = new THREE.Mesh(new THREE.BoxGeometry(280, 160, 6), mat(0x3a4150));
+base.position.set(50, 0, -12); scene.add(base);
+function post(x) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 14, 32), mat(0x777f8c));
+  m.rotation.x = Math.PI / 2; m.position.set(x, 0, -6); scene.add(m);
+}
+post(0); post(C);
+
+// driver
+const driver = new THREE.Group(); driver.name = 'driver'; scene.add(driver);
+const disc = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 6, 48), mat(0xd9822b));
+disc.rotation.x = Math.PI / 2; disc.position.z = 9; driver.add(disc);
+const arm = new THREE.Mesh(new THREE.BoxGeometry(A, 10, 6), mat(0xd9822b));
+arm.position.set(A / 2, 0, 9); driver.add(arm);
+const pin = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 24, 32), mat(0xe8e8e8));
+pin.rotation.x = Math.PI / 2; pin.position.set(A, 0, 2); driver.add(pin);
+
+// wheel
+const wheel = new THREE.Group(); wheel.name = 'wheel'; wheel.position.set(C, 0, 0); scene.add(wheel);
+{
+  const R = 75, w = 5.5, r0 = 20, d = Math.asin(w / R), pts = [];
+  for (let k = 0; k < 4; k++) {
+    const th = k * Math.PI / 2, th2 = th + Math.PI / 2;
+    const u = [Math.cos(th2), Math.sin(th2)], n = [-u[1], u[0]];
+    const e = Math.sqrt(R * R - w * w);
+    // arc from slot k to slot k+1
+    const a0 = th + d, a1 = th2 - d, N = 24;
+    for (let i = 0; i <= N; i++) { const a = a0 + (a1 - a0) * i / N; pts.push([R * Math.cos(a), R * Math.sin(a)]); }
+    pts.push([u[0] * e - n[0] * w, u[1] * e - n[1] * w]);
+    pts.push([u[0] * r0 - n[0] * w, u[1] * r0 - n[1] * w]);
+    pts.push([u[0] * r0 + n[0] * w, u[1] * r0 + n[1] * w]);
+    pts.push([u[0] * e + n[0] * w, u[1] * e + n[1] * w]);
+  }
+  const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) sh.lineTo(pts[i][0], pts[i][1]);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 8, bevelEnabled: false });
+  g.translate(0, 0, -4);
+  wheel.add(new THREE.Mesh(g, mat(0x3f8fd6)));
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 12, 32), mat(0xbfc6d1));
+  hub.rotation.x = Math.PI / 2; wheel.add(hub);
+  // mark slot 0 axis (local +X)
+  const mk = new THREE.Mesh(new THREE.BoxGeometry(14, 3, 1), mat(0xff4d4d));
+  mk.position.set(R - 10, 0, 4.6); wheel.add(mk);
+}
+
+const wrap360 = (x) => ((x % 360) + 360) % 360;
+const qD = document.querySelector('[data-q="driver_deg"]');
+const qW = document.querySelector('[data-q="wheel_deg"]');
+
+function wheelAngle(phi) {
+  const k = Math.round(phi / (2 * Math.PI));
+  const pw = phi - 2 * Math.PI * k;
+  const lim = Math.PI / 4;
+  let f;
+  if (Math.abs(pw) <= lim) f = -Math.atan2(A * Math.sin(pw), C - A * Math.cos(pw));
+  else f = pw > 0 ? -lim : lim;
+  return -k * Math.PI / 2 + f;
+}
+
+function render(t) {
+  const phi = 2 * Math.PI * t / PERIOD;
+  const psi = wheelAngle(phi);
+  driver.rotation.z = phi;
+  wheel.rotation.z = psi;
+  qD.textContent = wrap360(phi * 180 / Math.PI).toFixed(1);
+  qW.textContent = wrap360(psi * 180 / Math.PI).toFixed(1);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: PERIOD, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>
