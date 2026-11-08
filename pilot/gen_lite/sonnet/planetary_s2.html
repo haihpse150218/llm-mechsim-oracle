@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Planetary gear set</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#161a22;font-family:monospace}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;color:#dfe6f0;background:rgba(20,24,32,.8);padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.6}
+</style></head>
+<body>
+<div id="panel">
+<div>Planetary gear set (ring fixed)</div>
+<div>Sun angle: <span data-q="sun_deg">0</span> deg</div>
+<div>Carrier angle: <span data-q="carrier_deg">0</span> deg</div>
+<div>Ratio sun/carrier: <span data-q="ratio">0</span></div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const params = { module: 2, Zs: 24, Zp: 12, Zr: 48, omega: 2*Math.PI/6, theta0: 0 };
+const m = params.module, Zs = params.Zs, Zp = params.Zp, Zr = params.Zr;
+const rs = m*Zs/2, rp = m*Zp/2, rr = m*Zr/2, rc = rs + rp;
+const TH = 10;
+const TAU = Math.PI*2;
+const mod = (x, n) => ((x % n) + n) % n;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161a22);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth/window.innerHeight, 1, 2000);
+camera.position.set(0, -50, 230);
+camera.lookAt(0, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.1);
+dl.position.set(80, 120, 250);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-150, -80, 100);
+scene.add(dl2);
+
+function extrude(shape, depth, color) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 });
+  g.translate(0, 0, -depth/2);
+  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, metalness: 0.4, roughness: 0.5 }));
+}
+
+// external gear outline; tooth centres at j*2pi/Z
+function externalOutline(Z, r) {
+  const a = TAU/Z, rt = r + m, rb = r - 1.25*m;
+  const pts = [];
+  for (let j = 0; j < Z; j++) {
+    const c = j*a;
+    [[rb,-0.3],[rt,-0.15],[rt,0.15],[rb,0.3]].forEach(([R,f]) => {
+      pts.push(new THREE.Vector2(R*Math.cos(c+f*a), R*Math.sin(c+f*a)));
+    });
+  }
+  return pts;
+}
+function circlePath(path, r, n) {
+  for (let i = 0; i <= n; i++) {
+    const t = TAU*i/n;
+    const x = r*Math.cos(t), y = r*Math.sin(t);
+    if (i === 0) path.moveTo(x, y); else path.lineTo(x, y);
+  }
+}
+function externalGearMesh(Z, r, holeR, color) {
+  const sh = new THREE.Shape(externalOutline(Z, r));
+  const hole = new THREE.Path();
+  for (let i = 0; i <= 24; i++) {
+    const t = -TAU*i/24;
+    const x = holeR*Math.cos(t), y = holeR*Math.sin(t);
+    if (i === 0) hole.moveTo(x, y); else hole.lineTo(x, y);
+  }
+  sh.holes.push(hole);
+  return extrude(sh, TH, color);
+}
+
+// Parts
+function part(name) { const o = new THREE.Object3D(); o.name = name; scene.add(o); return o; }
+function marker(parent, point, x, y) {
+  const o = new THREE.Object3D();
+  o.name = parent.name + '@' + point;
+  o.position.set(x, y, 0);
+  parent.add(o);
+  return o;
+}
+
+// frame
+const frame = part('frame');
+{
+  const base = new THREE.Mesh(new THREE.BoxGeometry(170, 170, 6),
+    new THREE.MeshStandardMaterial({ color: 0x2c3442, metalness: 0.2, roughness: 0.8 }));
+  base.position.z = -22;
+  frame.add(base);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 30, 24),
+    new THREE.MeshStandardMaterial({ color: 0x8a94a6, metalness: 0.6, roughness: 0.4 }));
+  post.rotation.x = Math.PI/2;
+  post.position.z = -8;
+  frame.add(post);
+  marker(frame, 'C', 0, 0);
+}
+
+// sun
+const sun = part('sun');
+sun.add(externalGearMesh(Zs, rs, 5, 0xe0a030));
+{
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, TH + 18, 24),
+    new THREE.MeshStandardMaterial({ color: 0xb0b8c8, metalness: 0.7, roughness: 0.3 }));
+  shaft.rotation.x = Math.PI/2;
+  shaft.position.z = 4;
+  sun.add(shaft);
+  // visible mark on sun
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 12), new THREE.MeshStandardMaterial({ color: 0xff3030 }));
+  dot.position.set(rs - 3, 0, TH/2 + 0.5);
+  sun.add(dot);
+  marker(sun, 'C', 0, 0);
+  marker(sun, 'sunRef', rs, 0);
+}
+
+// ring (internal teeth; tooth centres at j*2pi/Zr)
+const ring = part('ring');
+{
+  const a = TAU/Zr, rtip = rr - m, rroot = rr + 1.25*m, ro = rr + 9;
+  const outer = new THREE.Shape();
+  circlePath(outer, ro, 96);
+  const hole = new THREE.Path();
+  const pts = [];
+  for (let j = 0; j < Zr; j++) {
+    const c = j*a;
+    [[rroot,-0.5*0 - 0.5],[rroot,-0.3],[rtip,-0.15],[rtip,0.15],[rroot,0.3]].slice(1).forEach(([R,f]) => {
+      pts.push([R*Math.cos(c+f*a), R*Math.sin(c+f*a)]);
+    });
+  }
+  // hole must wind opposite: reverse
+  pts.reverse();
+  pts.forEach((p, i) => { if (i === 0) hole.moveTo(p[0], p[1]); else hole.lineTo(p[0], p[1]); });
+  outer.holes.push(hole);
+  ring.add(extrude(outer, TH, 0x4a90c8));
+  marker(ring, 'C', 0, 0);
+  marker(ring, 'ringRef', rr, 0);
+}
+
+// carrier
+const carrier = part('carrier');
+{
+  const mat = new THREE.MeshStandardMaterial({ color: 0x9aa4b5, metalness: 0.5, roughness: 0.45 });
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 5, 32), mat);
+  hub.rotation.x = Math.PI/2; hub.position.z = -TH/2 - 3;
+  carrier.add(hub);
+  marker(carrier, 'C', 0, 0);
+  for (let k = 0; k < 3; k++) {
+    const ang = k*TAU/3;
+    const px = rc*Math.cos(ang), py = rc*Math.sin(ang);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(rc, 8, 5), mat);
+    arm.position.set(px/2, py/2, -TH/2 - 3);
+    arm.rotation.z = ang;
+    carrier.add(arm);
+    const disk = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 5, 24), mat);
+    disk.rotation.x = Math.PI/2; disk.position.set(px, py, -TH/2 - 3);
+    carrier.add(disk);
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, TH + 8, 16),
+      new THREE.MeshStandardMaterial({ color: 0xd0d6e0, metalness: 0.7, roughness: 0.3 }));
+    pin.rotation.x = Math.PI/2; pin.position.set(px, py, 0);
+    carrier.add(pin);
+    marker(carrier, 'P' + k, px, py);
+  }
+}
+
+// planets
+const planets = [];
+const psi0 = [];
+for (let k = 0; k < 3; k++) {
+  const p = part('planet' + k);
+  p.add(externalGearMesh(Zp, rp, 3, k === 0 ? 0x58b868 : 0x7cc08a));
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 12), new THREE.MeshStandardMaterial({ color: 0xff3030 }));
+  dot.position.set(rp - 3, 0, TH/2 + 0.5);
+  p.add(dot);
+  marker(p, 'P' + k, 0, 0);
+  marker(p, 'planet' + k + 'Ref', rp, 0);
+  planets.push(p);
+  // meshing phase: sun tooth at phi_k, planet gap at phi_k + pi
+  psi0.push(k*TAU/3 + Math.PI - Math.PI/Zp);
+}
+
+// kinematics
+const wS = params.omega;
+const wC = wS * Zs/(Zs + Zr);            // ring fixed
+const wP = wC - (Zs/Zp)*(wS - wC);       // planet absolute angular velocity
+const phi0 = 0;                          // carrier angle at t = 0 (theta0 = 0 keeps teeth in mesh)
+
+const qSun = document.querySelector('[data-q="sun_deg"]');
+const qCar = document.querySelector('[data-q="carrier_deg"]');
+const qRat = document.querySelector('[data-q="ratio"]');
+
+function render(t) {
+  const th = params.theta0 + wS*t;
+  const phi = phi0 + wC*t;
+  sun.rotation.set(0, 0, th);
+  carrier.rotation.set(0, 0, phi);
+  ring.rotation.set(0, 0, 0);
+  for (let k = 0; k < 3; k++) {
+    const a = phi + k*TAU/3;
+    planets[k].position.set(rc*Math.cos(a), rc*Math.sin(a), 0);
+    planets[k].rotation.set(0, 0, psi0[k] + wP*t);
+  }
+  qSun.textContent = (mod(th, TAU)*180/Math.PI).toFixed(1) + '';
+  qCar.textContent = (mod(phi, TAU)*180/Math.PI).toFixed(1) + '';
+  qRat.textContent = Math.abs(wS/wC).toFixed(3);
+  scene.updateMatrixWorld(true);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: TAU/params.omega, params, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    window.SIM.render((performance.now() - start)/1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

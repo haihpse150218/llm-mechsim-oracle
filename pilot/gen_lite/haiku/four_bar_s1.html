@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Four-bar crank-rocker</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #15181f; color: #e8ecf2; font-family: system-ui, sans-serif; }
+  canvas { display: block; position: fixed; inset: 0; }
+  #panel { position: fixed; left: 12px; top: 12px; background: rgba(10,12,16,0.72); padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.7; }
+  #panel span { font-variant-numeric: tabular-nums; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>Crank angle (O2 to A): <span data-q="crank_deg">0.0</span> deg</div>
+  <div>Rocker angle (O4 to B): <span data-q="rocker_deg">0.0</span> deg</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// Parameters (mm, rad/s). Ground O2=(0,0), O4=(d,0).
+// Grashof check: shortest a=40 + longest d=130 = 170 <= 120 + 100 = 220, so crank-rocker.
+const P = { a: 40, b: 120, c: 100, d: 130, omega: 1.0, theta0: 0.0 };
+const TAU = Math.PI * 2;
+
+function norm360(rad) {
+  let deg = ((rad * 180 / Math.PI) % 360 + 360) % 360;
+  if (deg >= 360) deg -= 360;
+  return deg;
+}
+
+// Closed-form pose. Coupler/rocker circle intersection, always the branch lying
+// to the left of the directed line A->O4 (never tangent for these lengths, so the
+// branch is continuous over the full crank revolution).
+function solve(t) {
+  const th = P.theta0 + P.omega * t;
+  const Ax = P.a * Math.cos(th), Ay = P.a * Math.sin(th);
+  const dx = P.d - Ax, dy = -Ay;
+  const L = Math.hypot(dx, dy);
+  const ux = dx / L, uy = dy / L;
+  const x = (P.b * P.b - P.c * P.c + L * L) / (2 * L);
+  const h = Math.sqrt(Math.max(0, P.b * P.b - x * x));
+  const Bx = Ax + x * ux - uy * h;
+  const By = Ay + x * uy + ux * h;
+  const phi = Math.atan2(By - Ay, Bx - Ax);
+  const psi = Math.atan2(By, Bx - P.d);
+  return { th, Ax, Ay, Bx, By, phi, psi };
+}
+
+// Scene
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181f);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(65, -90, 480);
+camera.lookAt(65, 0, 0);
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x303030, 0.6));
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(200, -200, 400);
+scene.add(key);
+
+const matFrame = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.6, metalness: 0.3 });
+const matCrank = new THREE.MeshStandardMaterial({ color: 0xe0573a, roughness: 0.45, metalness: 0.2 });
+const matCoupler = new THREE.MeshStandardMaterial({ color: 0x3a8fe0, roughness: 0.45, metalness: 0.2 });
+const matRocker = new THREE.MeshStandardMaterial({ color: 0x3ec27a, roughness: 0.45, metalness: 0.2 });
+const matPin = new THREE.MeshStandardMaterial({ color: 0xd9d9d9, roughness: 0.3, metalness: 0.6 });
+
+// Link bar from local origin (0,0) to local (len,0), thickness along Z.
+function bar(len, width, thick, z, material) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, width, thick), material);
+  m.position.set(len / 2, 0, z);
+  return m;
+}
+
+// Pin (cylinder along Z) at local (x,y), spanning z0..z1.
+function pin(x, y, z0, z1, r, material) {
+  const g = new THREE.CylinderGeometry(r, r, z1 - z0, 24);
+  g.rotateX(Math.PI / 2);
+  const m = new THREE.Mesh(g, material);
+  m.position.set(x, y, (z0 + z1) / 2);
+  return m;
+}
+
+function marker(name, x, y, parent) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, 0);
+  parent.add(o);
+  return o;
+}
+
+// Frame (ground): O2 at origin, O4 at (d,0)
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+frame.add(bar(P.d, 14, 8, -16, matFrame));
+frame.add(pin(0, 0, -22, 26, 5, matPin));
+frame.add(pin(P.d, 0, -22, 26, 5, matPin));
+const plate = new THREE.Mesh(new THREE.BoxGeometry(P.d + 80, 6, 40), matFrame);
+plate.position.set(P.d / 2, -70, -16);
+frame.add(plate);
+marker('frame@O2', 0, 0, frame);
+marker('frame@O4', P.d, 0, frame);
+
+// Crank: pivot at O2 (group origin), rotated by theta
+const crank = new THREE.Object3D();
+crank.name = 'crank';
+crank.add(bar(P.a, 14, 8, 4, matCrank));
+crank.add(pin(0, 0, -22, 26, 5, matPin));
+crank.add(pin(P.a, 0, -22, 26, 5, matPin));
+marker('crank@O2', 0, 0, crank);
+marker('crank@A', P.a, 0, crank);
+
+// Coupler: group origin at A, rotated by phi = angle(A->B)
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';
+coupler.add(bar(P.b, 14, 8, 16, matCoupler));
+coupler.add(pin(0, 0, -22, 26, 5, matPin));
+coupler.add(pin(P.b, 0, -22, 26, 5, matPin));
+marker('coupler@A', 0, 0, coupler);
+marker('coupler@B', P.b, 0, coupler);
+
+// Rocker: group origin at O4, rotated by psi = angle(O4->B)
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';
+rocker.position.set(P.d, 0, 0);
+rocker.add(bar(P.c, 14, 8, -4, matRocker));
+rocker.add(pin(P.c, 0, -22, 26, 5, matPin));
+marker('rocker@B', P.c, 0, rocker);
+marker('rocker@O4', 0, 0, rocker);
+
+scene.add(frame, crank, coupler, rocker);
+
+const qCrank = document.querySelector('[data-q="crank_deg"]');
+const qRocker = document.querySelector('[data-q="rocker_deg"]');
+
+function render(t) {
+  const s = solve(t);
+  crank.rotation.z = s.th;
+  coupler.position.set(s.Ax, s.Ay, 0);
+  coupler.rotation.z = s.phi;
+  rocker.rotation.z = s.psi;
+  renderer.render(scene, camera);
+  qCrank.textContent = norm360(s.th).toFixed(1);
+  qRocker.textContent = norm360(s.psi).toFixed(1);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: TAU / P.omega,
+  params: { a: P.a, b: P.b, c: P.c, d: P.d, omega: P.omega, theta0: P.theta0 },
+  render
+};
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+if (!window.location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    requestAnimationFrame(loop);
+    render((performance.now() - t0) / 1000);
+  };
+  loop();
+}
+</script>
+</body>
+</html>
