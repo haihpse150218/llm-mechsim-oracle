@@ -1,0 +1,146 @@
+[
+  {
+    "file": "mutants/slider_crank__DIR.html",
+    "mech": "slider_crank",
+    "op": "DIR",
+    "desc": "crank turns clockwise"
+  },
+  {
+    "file": "mutants/slider_crank__LEN.html",
+    "mech": "slider_crank",
+    "op": "LEN",
+    "desc": "rod 10% longer in kinematics than drawn"
+  },
+  {
+    "file": "mutants/slider_crank__PHASE.html",
+    "mech": "slider_crank",
+    "op": "PHASE",
+    "desc": "crank drawn 15° ahead of kinematics"
+  },
+  {
+    "file": "mutants/slider_crank__BRANCH.html",
+    "mech": "slider_crank",
+    "op": "BRANCH",
+    "desc": "rod angle mirrored"
+  },
+  {
+    "file": "mutants/slider_crank__PANEL.html",
+    "mech": "slider_crank",
+    "op": "PANEL",
+    "desc": "piston_x offset by -r"
+  },
+  {
+    "file": "mutants/slider_crank__STATE.html",
+    "mech": "slider_crank",
+    "op": "STATE",
+    "desc": "time integrated with clamped dt"
+  },
+  {
+    "file": "mutants/four_bar__DIR.html",
+    "mech": "four_bar",
+    "op": "DIR",
+    "desc": "crank turns clockwise"
+  },
+  {
+    "file": "mutants/four_bar__LEN.html",
+    "mech": "four_bar",
+    "op": "LEN",
+    "desc": "coupler 10% longer in kinematics than drawn"
+  },
+  {
+    "file": "mutants/four_bar__PHASE.html",
+    "mech": "four_bar",
+    "op": "PHASE",
+    "desc": "rocker drawn 15° off"
+  },
+  {
+    "file": "mutants/four_bar__BRANCH.html",
+    "mech": "four_bar",
+    "op": "BRANCH",
+    "desc": "crossed assembly branch"
+  },
+  {
+    "file": "mutants/four_bar__PANEL.html",
+    "mech": "four_bar",
+    "op": "PANEL",
+    "desc": "rocker_deg shifted 180°"
+  },
+  {
+    "file": "mutants/four_bar__STATE.html",
+    "mech": "four_bar",
+    "op": "STATE",
+    "desc": "time integrated with clamped dt"
+  },
+  {
+    "file": "mutants/gear_train__DIR.html",
+    "mech": "gear_train",
+    "op": "DIR",
+    "desc": "gear2 turns same way as gear1"
+  },
+  {
+    "file": "mutants/gear_train__LEN.html",
+    "mech": "gear_train",
+    "op": "LEN",
+    "desc": "gear4 ratio off by one tooth"
+  },
+  {
+    "file": "mutants/gear_train__PHASE.html",
+    "mech": "gear_train",
+    "op": "PHASE",
+    "desc": "gear3 turns opposite to its shaft-mate gear2"
+  },
+  {
+    "file": "mutants/gear_train__BRANCH.html",
+    "mech": "gear_train",
+    "op": "BRANCH",
+    "desc": "gear4 centre 6 mm too far (no mesh)"
+  },
+  {
+    "file": "mutants/gear_train__PANEL.html",
+    "mech": "gear_train",
+    "op": "PANEL",
+    "desc": "ratio shown inverted"
+  },
+  {
+    "file": "mutants/gear_train__STATE.html",
+    "mech": "gear_train",
+    "op": "STATE",
+    "desc": "time integrated with clamped dt"
+  },
+  {
+    "file": "mutants/geneva__DIR.html",
+    "mech": "geneva",
+    "op": "DIR",
+    "desc": "wheel indexes the wrong way"
+  },
+  {
+    "file": "mutants/geneva__LEN.html",
+    "mech": "geneva",
+    "op": "LEN",
+    "desc": "pin radius 15% short in kinematics"
+  },
+  {
+    "file": "mutants/geneva__PHASE.html",
+    "mech": "geneva",
+    "op": "PHASE",
+    "desc": "wheel drawn 15° off"
+  },
+  {
+    "file": "mutants/geneva__BRANCH.html",
+    "mech": "geneva",
+    "op": "BRANCH",
+    "desc": "wheel turns continuously (no dwell)"
+  },
+  {
+    "file": "mutants/geneva__PANEL.html",
+    "mech": "geneva",
+    "op": "PANEL",
+    "desc": "wheel_deg shows continuous phi/4"
+  },
+  {
+    "file": "mutants/geneva__STATE.html",
+    "mech": "geneva",
+    "op": "STATE",
+    "desc": "time integrated with clamped dt"
+  }
+]
