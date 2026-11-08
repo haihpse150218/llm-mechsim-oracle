@@ -1,0 +1,142 @@
+{
+  "four_bar-99d9e139": {
+    "sheet": "sheets/mutants__four_bar__BRANCH.png",
+    "mech": "four_bar",
+    "source": "mutants/four_bar/BRANCH"
+  },
+  "four_bar-08831f92": {
+    "sheet": "sheets/mutants__four_bar__DIR.png",
+    "mech": "four_bar",
+    "source": "mutants/four_bar/DIR"
+  },
+  "four_bar-d0da253a": {
+    "sheet": "sheets/mutants__four_bar__LEN.png",
+    "mech": "four_bar",
+    "source": "mutants/four_bar/LEN"
+  },
+  "four_bar-cc9afb09": {
+    "sheet": "sheets/mutants__four_bar__PANEL.png",
+    "mech": "four_bar",
+    "source": "mutants/four_bar/PANEL"
+  },
+  "four_bar-02e5b1c7": {
+    "sheet": "sheets/mutants__four_bar__PHASE.png",
+    "mech": "four_bar",
+    "source": "mutants/four_bar/PHASE"
+  },
+  "four_bar-53052514": {
+    "sheet": "sheets/mutants__four_bar__STATE.png",
+    "mech": "four_bar",
+    "source": "mutants/four_bar/STATE"
+  },
+  "gear_train-736a3f04": {
+    "sheet": "sheets/mutants__gear_train__BRANCH.png",
+    "mech": "gear_train",
+    "source": "mutants/gear_train/BRANCH"
+  },
+  "gear_train-25d65f2b": {
+    "sheet": "sheets/mutants__gear_train__DIR.png",
+    "mech": "gear_train",
+    "source": "mutants/gear_train/DIR"
+  },
+  "gear_train-ce012c5f": {
+    "sheet": "sheets/mutants__gear_train__LEN.png",
+    "mech": "gear_train",
+    "source": "mutants/gear_train/LEN"
+  },
+  "gear_train-7e7ad3b8": {
+    "sheet": "sheets/mutants__gear_train__PANEL.png",
+    "mech": "gear_train",
+    "source": "mutants/gear_train/PANEL"
+  },
+  "gear_train-2a29c373": {
+    "sheet": "sheets/mutants__gear_train__PHASE.png",
+    "mech": "gear_train",
+    "source": "mutants/gear_train/PHASE"
+  },
+  "gear_train-df3487e6": {
+    "sheet": "sheets/mutants__gear_train__STATE.png",
+    "mech": "gear_train",
+    "source": "mutants/gear_train/STATE"
+  },
+  "geneva-d958686e": {
+    "sheet": "sheets/mutants__geneva__BRANCH.png",
+    "mech": "geneva",
+    "source": "mutants/geneva/BRANCH"
+  },
+  "geneva-fd3d3aaf": {
+    "sheet": "sheets/mutants__geneva__DIR.png",
+    "mech": "geneva",
+    "source": "mutants/geneva/DIR"
+  },
+  "geneva-4703cd24": {
+    "sheet": "sheets/mutants__geneva__LEN.png",
+    "mech": "geneva",
+    "source": "mutants/geneva/LEN"
+  },
+  "geneva-dfb72ff3": {
+    "sheet": "sheets/mutants__geneva__PANEL.png",
+    "mech": "geneva",
+    "source": "mutants/geneva/PANEL"
+  },
+  "geneva-7181c24f": {
+    "sheet": "sheets/mutants__geneva__PHASE.png",
+    "mech": "geneva",
+    "source": "mutants/geneva/PHASE"
+  },
+  "geneva-16ab81a1": {
+    "sheet": "sheets/mutants__geneva__STATE.png",
+    "mech": "geneva",
+    "source": "mutants/geneva/STATE"
+  },
+  "slider_crank-e662c113": {
+    "sheet": "sheets/mutants__slider_crank__BRANCH.png",
+    "mech": "slider_crank",
+    "source": "mutants/slider_crank/BRANCH"
+  },
+  "slider_crank-20297371": {
+    "sheet": "sheets/mutants__slider_crank__DIR.png",
+    "mech": "slider_crank",
+    "source": "mutants/slider_crank/DIR"
+  },
+  "slider_crank-89eac948": {
+    "sheet": "sheets/mutants__slider_crank__LEN.png",
+    "mech": "slider_crank",
+    "source": "mutants/slider_crank/LEN"
+  },
+  "slider_crank-52e8087e": {
+    "sheet": "sheets/mutants__slider_crank__PANEL.png",
+    "mech": "slider_crank",
+    "source": "mutants/slider_crank/PANEL"
+  },
+  "slider_crank-642672f0": {
+    "sheet": "sheets/mutants__slider_crank__PHASE.png",
+    "mech": "slider_crank",
+    "source": "mutants/slider_crank/PHASE"
+  },
+  "slider_crank-7c70338e": {
+    "sheet": "sheets/mutants__slider_crank__STATE.png",
+    "mech": "slider_crank",
+    "source": "mutants/slider_crank/STATE"
+  },
+  "four_bar-215e3130": {
+    "sheet": "sheets/reference__four_bar_ref.png",
+    "mech": "four_bar",
+    "source": "reference/four_bar_ref"
+  },
+  "gear_train-bc55fa68": {
+    "sheet": "sheets/reference__gear_train_ref.png",
+    "mech": "gear_train",
+    "source": "reference/gear_train_ref"
+  },
+  "geneva-c0a71f57": {
+    "sheet": "sheets/reference__geneva_ref.png",
+    "mech": "geneva",
+    "source": "reference/geneva_ref"
+  },
+  "slider_crank-edfa8cda": {
+    "sheet": "sheets/reference__slider_crank_ref.png",
+    "mech": "slider_crank",
+    "source": "reference/slider_crank_ref"
+  }
+}

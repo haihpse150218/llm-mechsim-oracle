@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Four-bar linkage</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#15181d;font-family:system-ui,sans-serif;color:#e8ecf1}
+canvas{display:block;position:fixed;left:0;top:0;width:100%;height:100%}
+#panel{position:fixed;left:16px;top:16px;background:rgba(10,12,16,.78);padding:12px 16px;border-radius:8px;font-size:15px;line-height:1.7;min-width:230px}
+#panel h1{font-size:16px;margin:0 0 6px;font-weight:600}
+#panel .row{white-space:nowrap}
+#panel .k{color:#9fb0c3;display:inline-block;width:140px}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Four-bar linkage (crank-rocker)</h1>
+  <div class="row"><span class="k">Crank angle</span><span data-q="crank_deg">0.0 deg</span></div>
+  <div class="row"><span class="k">Rocker angle</span><span data-q="rocker_deg">0.0 deg</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// Link lengths (mm), ground d = 100 mm, O2 at origin, O4 at (100, 0).
+const A_LEN = 40;    // crank O2-A
+const B_LEN = 120;   // coupler A-B
+const C_LEN = 80;    // rocker O4-B
+const D_LEN = 100;   // ground O2-O4
+const PERIOD = 4;    // seconds per crank revolution (CCW)
+
+// Kinematics: crank angle th -> A; B is the intersection of circle(A, b) and circle(O4, c)
+// lying on the LEFT of the directed line A -> O4 (cross(O4-A, B-A) > 0).
+function solve(t) {
+  const th = 2 * Math.PI * t / PERIOD;
+  const A = { x: A_LEN * Math.cos(th), y: A_LEN * Math.sin(th) };
+  const dx = D_LEN - A.x, dy = -A.y;
+  const D = Math.hypot(dx, dy);
+  const aP = (B_LEN * B_LEN - C_LEN * C_LEN + D * D) / (2 * D); // distance A -> foot along A->O4
+  const h = Math.sqrt(Math.max(0, B_LEN * B_LEN - aP * aP));     // offset from that foot
+  const mx = A.x + dx * aP / D, my = A.y + dy * aP / D;          // foot point M
+  const nx = -dy / D, ny = dx / D;                              // unit left normal of A->O4
+  const B = { x: mx + h * nx, y: my + h * ny };
+  const phi = Math.atan2(B.y - A.y, B.x - A.x);                 // coupler direction
+  const psi = Math.atan2(B.y, B.x - D_LEN);                     // rocker O4->B direction
+  return { th, A, B, phi, psi };
+}
+
+function wrapDeg(rad) {
+  let d = ((rad * 180 / Math.PI) % 360 + 360) % 360;
+  let s = d.toFixed(1);
+  if (s === '360.0') s = '0.0';
+  return s;
+}
+
+// Renderer, scene, camera
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.insertBefore(renderer.domElement, document.getElementById('panel'));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181d);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+function fitCamera() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  const k = Math.max(1, 1.1 / camera.aspect);
+  camera.position.set(50, -180 * k, 420 * k);
+  camera.lookAt(50, 20, 0);
+  camera.updateProjectionMatrix();
+}
+fitCamera();
+
+// Lights
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x202428, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(150, -200, 400);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9fb8ff, 0.5);
+fill.position.set(-200, 150, 150);
+scene.add(fill);
+
+// Materials
+const matCrank   = new THREE.MeshStandardMaterial({ color: 0x4aa3df, roughness: 0.45, metalness: 0.1 });
+const matCoupler = new THREE.MeshStandardMaterial({ color: 0xf0b429, roughness: 0.45, metalness: 0.1 });
+const matRocker  = new THREE.MeshStandardMaterial({ color: 0x7bd389, roughness: 0.45, metalness: 0.1 });
+const matGround  = new THREE.MeshStandardMaterial({ color: 0x6b7585, roughness: 0.7, metalness: 0.2 });
+const matPlate   = new THREE.MeshStandardMaterial({ color: 0x2a3038, roughness: 0.9, metalness: 0.0 });
+const matPin     = new THREE.MeshStandardMaterial({ color: 0xd0d6de, roughness: 0.25, metalness: 0.8 });
+
+// Helpers: link bar from local origin along +X, with real thickness (Z) and width (Y)
+function linkMesh(len, mat, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, 14, 10), mat);
+  m.position.set(len / 2, 0, z);
+  return m;
+}
+// Joint pin along Z, centred on the local origin plus offset x
+function pin(x, z = 0) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 40, 24), matPin);
+  m.rotation.x = Math.PI / 2;
+  m.position.set(x, 0, z);
+  return m;
+}
+
+// Fixed frame: ground link O2-O4 and a base plate
+const groundLink = new THREE.Mesh(new THREE.BoxGeometry(D_LEN + 30, 14, 10), matGround);
+groundLink.position.set(D_LEN / 2, 0, -12);
+scene.add(groundLink);
+const basePlate = new THREE.Mesh(new THREE.BoxGeometry(260, 110, 4), matPlate);
+basePlate.position.set(50, 10, -40);
+scene.add(basePlate);
+
+// Named moving bodies
+const crank = new THREE.Object3D();
+crank.name = 'crank';                       // origin O2, local +X toward A
+crank.add(linkMesh(A_LEN, matCrank, 0));
+crank.add(pin(0));                          // pivot O2
+crank.add(pin(A_LEN));                      // pivot A (on crank side)
+scene.add(crank);
+
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';                   // origin A, local +X toward B
+coupler.add(linkMesh(B_LEN, matCoupler, 12));
+coupler.add(pin(0));                        // pivot A
+scene.add(coupler);
+
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';                     // origin O4, local +X toward B
+rocker.add(linkMesh(C_LEN, matRocker, 0));
+rocker.add(pin(0));                         // pivot O4
+rocker.add(pin(C_LEN));                     // pivot B
+scene.add(rocker);
+
+// Ground pivot blocks (fixed)
+for (const x of [0, D_LEN]) {
+  const block = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 6, 32), matGround);
+  block.rotation.x = Math.PI / 2;
+  block.position.set(x, 0, -24);
+  scene.add(block);
+}
+
+// Panel elements
+const elCrank = document.querySelector('[data-q="crank_deg"]');
+const elRocker = document.querySelector('[data-q="rocker_deg"]');
+
+// Pure function of t (seconds)
+function render(t) {
+  const s = solve(t);
+  crank.position.set(0, 0, 0);
+  crank.rotation.set(0, 0, s.th);
+  coupler.position.set(s.A.x, s.A.y, 0);
+  coupler.rotation.set(0, 0, s.phi);
+  rocker.position.set(D_LEN, 0, 0);
+  rocker.rotation.set(0, 0, s.psi);
+
+  elCrank.textContent = wrapDeg(s.th) + ' deg';
+  elRocker.textContent = wrapDeg(s.psi) + ' deg';
+
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: PERIOD, render };
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  fitCamera();
+  render(0);
+});
+
+// Live loop unless capturing
+if (!window.location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = (now) => {
+    window.SIM.render((now - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Slider-Crank</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1f27; font-family: sans-serif; }
+  canvas { display: block; }
+  #panel { position: absolute; left: 12px; top: 12px; color: #eee; background: rgba(0,0,0,0.55); padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+  #panel h1 { font-size: 15px; margin: 0 0 6px 0; }
+  #panel div { margin: 2px 0; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Slider-crank (r = 40 mm, l = 120 mm)</h1>
+  <div>Crank angle: <span data-q="crank_deg">0.0 deg</span></div>
+  <div>Piston x: <span data-q="piston_x">160.0 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const R = 40, L = 120, PERIOD = 4;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(90, -60, 520);
+camera.lookAt(90, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(150, 250, 400);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-200, -100, 200);
+scene.add(dl2);
+
+function mat(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.4, roughness: 0.5 }); }
+
+function pin(radius, len, z, material) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 32), material);
+  m.rotation.x = Math.PI / 2;
+  m.position.z = z;
+  return m;
+}
+function box(x0, x1, h, d, z, material) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, h, d), material);
+  m.position.set((x0 + x1) / 2, 0, z);
+  return m;
+}
+
+// ---- fixed frame ----
+const frame = new THREE.Group();
+frame.name = 'frame';
+const mFrame = mat(0x667085);
+// base plate
+const base = new THREE.Mesh(new THREE.BoxGeometry(400, 6, 60), mFrame);
+base.position.set(120, -46, -10);
+frame.add(base);
+// pivot support (pedestal under O)
+const ped = new THREE.Mesh(new THREE.BoxGeometry(30, 40, 20), mFrame);
+ped.position.set(0, -23, -14);
+frame.add(ped);
+frame.add(pin(10, 8, -4, mat(0x9aa4b2)));
+// cylinder guide: two rails above and below the piston path
+const rail1 = new THREE.Mesh(new THREE.BoxGeometry(150, 6, 40), mFrame);
+rail1.position.set(235, 31, 0);
+frame.add(rail1);
+const rail2 = new THREE.Mesh(new THREE.BoxGeometry(150, 6, 40), mFrame);
+rail2.position.set(235, -31, 0);
+frame.add(rail2);
+const endcap = new THREE.Mesh(new THREE.BoxGeometry(8, 68, 40), mFrame);
+endcap.position.set(314, 0, 0);
+frame.add(endcap);
+// stand connecting rails to base
+const leg = new THREE.Mesh(new THREE.BoxGeometry(150, 12, 30), mFrame);
+leg.position.set(235, -40, -5);
+frame.add(leg);
+scene.add(frame);
+
+// ---- crank ----
+const crank = new THREE.Group();
+crank.name = 'crank';
+const mCrank = mat(0xd9534f);
+crank.add(box(0, R, 14, 8, 6, mCrank));
+crank.add(pin(13, 8, 6, mCrank));
+crank.add(pin(11, 8, 6, mCrank).translateX(R));
+crank.add(pin(5, 24, 8, mat(0xcfd6e0)));
+const bPin = pin(5, 22, 8, mat(0xcfd6e0)); bPin.position.x = R;
+crank.add(bPin);
+// counterweight
+const cw = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 8, 32, 1, false, 0, Math.PI), mat(0x8e3b38));
+cw.rotation.x = Math.PI / 2;
+cw.rotation.y = Math.PI / 2;
+cw.position.set(-8, 0, 6);
+crank.add(cw);
+scene.add(crank);
+
+// ---- rod ----
+const rod = new THREE.Group();
+rod.name = 'rod';
+const mRod = mat(0x4f9d69);
+rod.add(box(0, L, 10, 6, 14, mRod));
+rod.add(pin(12, 6, 14, mRod));
+const cEnd = pin(10, 6, 14, mRod); cEnd.position.x = L;
+rod.add(cEnd);
+scene.add(rod);
+
+// ---- piston ----
+const piston = new THREE.Group();
+piston.name = 'piston';
+const mPist = mat(0x5b8def);
+const body = new THREE.Mesh(new THREE.BoxGeometry(46, 52, 34), mPist);
+body.position.set(23, 0, 0);
+piston.add(body);
+const wristPin = pin(6, 30, 8, mat(0xcfd6e0));
+piston.add(wristPin);
+// slot-like boss for rod clearance
+const ring = new THREE.Mesh(new THREE.BoxGeometry(6, 56, 38), mat(0x3d64b8));
+ring.position.set(40, 0, 0);
+piston.add(ring);
+scene.add(piston);
+
+// ---- panel ----
+const elAng = document.querySelector('[data-q="crank_deg"]');
+const elX = document.querySelector('[data-q="piston_x"]');
+
+function render(t) {
+  const theta = 2 * Math.PI * t / PERIOD;
+  const s = Math.sin(theta), c = Math.cos(theta);
+  const bx = R * c, by = R * s;
+  const cx = bx + Math.sqrt(L * L - by * by);
+  const phi = Math.atan2(-by, cx - bx);
+
+  crank.position.set(0, 0, 0);
+  crank.rotation.set(0, 0, theta);
+
+  rod.position.set(bx, by, 0);
+  rod.rotation.set(0, 0, phi);
+
+  piston.position.set(cx, 0, 0);
+  piston.rotation.set(0, 0, 0);
+
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  elAng.textContent = deg.toFixed(1) + ' deg';
+  elX.textContent = cx.toFixed(1) + ' mm';
+
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: PERIOD, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
