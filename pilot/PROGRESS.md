@@ -9,10 +9,10 @@ Kế hoạch gốc: `../novelty_gate.md` mục 6 "Pilot tối thiểu". Bắt đ
 - [x] 4 simulator tham chiếu viết tay (`reference/`) — oracle phải PASS hết (kiểm false positive)
 - [x] Oracle v0 (`oracle/run_oracle.mjs`): determinism, periodicity, pose vs giải tích, joint closure, panel
 - [x] Mutants (`mutants/`) + đo oracle bắt được
-- [ ] Sinh simulator bằng LLM (`gen/<model>/<mech>_s<k>.html`)
-- [ ] Baseline VLM trên contact sheet (`sheets/`, `vlm/`)
-- [ ] Repair loop (oracle-feedback vs VLM-feedback)
-- [ ] Báo cáo `REPORT.md` + tiêu chí GO tiếp
+- [x] Sinh simulator bằng LLM — chỉ s1 (8 file), tất cả PASS; dừng s2–s5 vì spec quá chi tiết (xem REPORT.md)
+- [x] Baseline VLM: 28 sheet ẩn danh; recall 20/24, báo nhầm 0/4
+- [ ] Repair loop — bỏ qua: không có simulator tự nhiên nào lỗi để sửa
+- [x] Báo cáo `REPORT.md`: NO-GO theo tiêu chí; đề xuất pivot spec-lite + ablation VLM (chờ Hải quyết)
 
 - Kết quả tạm: 4/4 reference PASS (sai số ~1e-14); 24/24 mutant bị bắt (`results/mutants.jsonl`). Sheet VLM: 12 khung/chu kỳ input (8 khung bỏ lỡ pha ăn khớp Geneva).
 
