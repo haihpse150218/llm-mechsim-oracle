@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jansen Strandbeest Leg</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#14181f;font-family:monospace;color:#e8eef7}
+  canvas{display:block}
+  #panel{position:fixed;left:12px;top:12px;background:rgba(20,24,31,.8);padding:10px 14px;border:1px solid #3a4558;border-radius:6px;font-size:14px;line-height:1.6}
+  #panel b{display:inline-block;min-width:80px;font-weight:normal;color:#8fa3bf}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><b>crank</b><span data-q="crank_deg">0</span> deg</div>
+  <div><b>foot x</b><span data-q="foot_x">0</span> mm</div>
+  <div><b>foot y</b><span data-q="foot_y">0</span> mm</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0],
+  X: [-38.0, -7.8],
+  len: { OZ: 15.0, ZY: 50.0, XY: 41.5, ZW: 61.9, XW: 39.3, XV: 40.1, YV: 36.7,
+         VU: 55.8, WU: 39.4, UT: 49.0, WT: 65.7 },
+  omega: 1.5,
+  theta0: 0.0
+};
+const L = params.len;
+const period = 2 * Math.PI / params.omega;
+
+// circle intersection: point at distance r1 from P1 and r2 from P2; sign picks side
+function inter(P1, r1, P2, r2, sign) {
+  const dx = P2[0] - P1[0], dy = P2[1] - P1[1];
+  const d = Math.hypot(dx, dy);
+  const ux = dx / d, uy = dy / d;
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  return [P1[0] + a * ux - sign * h * uy, P1[1] + a * uy + sign * h * ux];
+}
+
+function solve(theta) {
+  const O = params.O, X = params.X;
+  const Z = [O[0] + L.OZ * Math.cos(theta), O[1] + L.OZ * Math.sin(theta)];
+  const Y = inter(X, L.XY, Z, L.ZY, +1);
+  const W = inter(X, L.XW, Z, L.ZW, -1);
+  const V = inter(X, L.XV, Y, L.YV, +1);
+  const U = inter(W, L.WU, V, L.VU, +1);
+  const T = inter(W, L.WT, U, L.UT, +1);
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+// ---------- scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x14181f);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(-50, -25, 420);
+camera.lookAt(-50, -25, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(150, 250, 300);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35);
+dl2.position.set(-250, -100, 150);
+scene.add(dl2);
+
+function mat(color) {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.3 });
+}
+
+const TH = 4;     // plate thickness
+const BW = 6;     // bar width
+
+// rigid part: group placed at pts[0], rotated toward pts[1]; markers in local frame
+function makePart(name, pts, names, color, zc) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  scene.add(g);
+  const m = mat(color);
+  const loc = pts.map(p => [p[0] - pts[0][0], p[1] - pts[0][1]]);
+  const ang = Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]);
+  const c = Math.cos(-ang), s = Math.sin(-ang);
+  const lp = loc.map(p => [c * p[0] - s * p[1], s * p[0] + c * p[1]]);
+  g.userData.local = lp;
+  // bars between consecutive points (closed loop if >=3)
+  const n = lp.length;
+  const edges = n === 2 ? [[0, 1]] : lp.map((_, i) => [i, (i + 1) % n]);
+  for (const [i, j] of edges) {
+    const a = lp[i], b = lp[j];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(len, BW, TH), m);
+    bar.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, zc);
+    bar.rotation.z = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    g.add(bar);
+  }
+  if (n >= 3) {
+    const sh = new THREE.Shape();
+    sh.moveTo(lp[0][0], lp[0][1]);
+    for (let i = 1; i < n; i++) sh.lineTo(lp[i][0], lp[i][1]);
+    sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: TH * 0.5, bevelEnabled: false });
+    const plate = new THREE.Mesh(geo, mat(color));
+    plate.position.z = zc - TH * 0.25;
+    g.add(plate);
+  }
+  for (let i = 0; i < n; i++) {
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(BW * 0.7, BW * 0.7, TH + 2, 20), mat(0xdddddd));
+    pin.rotation.x = Math.PI / 2;
+    pin.position.set(lp[i][0], lp[i][1], zc);
+    g.add(pin);
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + names[i];
+    mk.position.set(lp[i][0], lp[i][1], 0);
+    g.add(mk);
+  }
+  return g;
+}
+
+function poseGroup(g, pts) {
+  g.position.set(pts[0][0], pts[0][1], 0);
+  g.rotation.z = Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]);
+}
+
+const s0 = solve(params.theta0);
+const frame = makePart('frame', [s0.O, s0.X], ['O', 'X'], 0x6b7280, -6);
+// extra frame decoration: crank axle post
+{
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 30, 16), mat(0x4b5563));
+  post.rotation.x = Math.PI / 2; post.position.set(0, 0, -6);
+  frame.add(post);
+}
+const crank    = makePart('crank',         [s0.O, s0.Z], ['O', 'Z'], 0xe5484d, 6);
+const rodUpper = makePart('rodUpper',      [s0.Z, s0.Y], ['Z', 'Y'], 0xf2a33a, 12);
+const rodLower = makePart('rodLower',      [s0.Z, s0.W], ['Z', 'W'], 0xe8d44d, 18);
+const upperTri = makePart('upperTriangle', [s0.X, s0.Y, s0.V], ['X', 'Y', 'V'], 0x3fb37f, 0);
+const linkXW   = makePart('linkXW',        [s0.X, s0.W], ['X', 'W'], 0x3b82f6, -12);
+const linkVU   = makePart('linkVU',        [s0.V, s0.U], ['V', 'U'], 0x9b6bf2, 6);
+const legTri   = makePart('legTriangle',   [s0.W, s0.U, s0.T], ['W', 'U', 'T'], 0xe86ab0, 24);
+
+// foot marker ball (child of legTriangle, visual)
+{
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(6, 20, 16), mat(0xffffff));
+  const lp = legTri.userData.local[2];
+  ball.position.set(lp[0], lp[1], 24);
+  legTri.add(ball);
+}
+
+// foot path trace (static, precomputed)
+{
+  const pts = [];
+  for (let i = 0; i <= 360; i++) {
+    const s = solve(i / 360 * 2 * Math.PI);
+    pts.push(new THREE.Vector3(s.T[0], s.T[1], -2));
+  }
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x66ccff }));
+  scene.add(line);
+}
+
+const qCrank = document.querySelector('[data-q="crank_deg"]');
+const qFx = document.querySelector('[data-q="foot_x"]');
+const qFy = document.querySelector('[data-q="foot_y"]');
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const s = solve(theta);
+  poseGroup(frame, [s.O, s.X]);
+  poseGroup(crank, [s.O, s.Z]);
+  poseGroup(rodUpper, [s.Z, s.Y]);
+  poseGroup(rodLower, [s.Z, s.W]);
+  poseGroup(upperTri, [s.X, s.Y, s.V]);
+  poseGroup(linkXW, [s.X, s.W]);
+  poseGroup(linkVU, [s.V, s.U]);
+  poseGroup(legTri, [s.W, s.U, s.T]);
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  qCrank.textContent = deg.toFixed(1);
+  qFx.textContent = s.T[0].toFixed(2);
+  qFy.textContent = s.T[1].toFixed(2);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period, params, render };
+window.SIM_READY = true;
+render(0);
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    SIM.render((performance.now() - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

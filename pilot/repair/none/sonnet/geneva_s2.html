@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>External Geneva drive</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#14181f;font-family:sans-serif}
+  canvas{display:block}
+  #panel{position:fixed;left:12px;top:12px;padding:10px 14px;background:rgba(20,24,31,.8);color:#dfe6ee;border:1px solid #3a4452;border-radius:6px;font-size:14px;line-height:1.6}
+  #panel b{font-weight:600}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>External Geneva drive (n = 6)</div>
+  <div>Driver angle: <b data-q="driver_deg">0</b> deg</div>
+  <div>Wheel angle: <b data-q="wheel_deg">0</b> deg</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const n = 6;
+const C = 100;
+const a = C * Math.sin(Math.PI / n);   // pin radius (mm)
+const omega = 1.2;                     // rad/s, CCW
+const phi0 = 0.4;
+const step = 2 * Math.PI / n;
+const alpha = Math.PI / 2 - Math.PI / n;   // half engagement angle
+const TWO_PI = 2 * Math.PI;
+
+const pr = 5;            // pin radius
+const w = pr + 0.6;      // slot half width
+const R = 93;            // wheel outer radius
+const rl = 0.85 * a;     // lock disc radius
+const rw = rl + 0.6;     // wheel concave arc radius
+const rin = (C - a) - pr - 1; // slot bottom
+const T = 8;             // thickness
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14181f);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(C / 2, -120, 430);
+camera.lookAt(C / 2, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(150, 200, 400);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35);
+dl2.position.set(-200, -150, 200);
+scene.add(dl2);
+
+function mat(color, metal = 0.4, rough = 0.5) {
+  return new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
+}
+function extrude(shape, depth, z0) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 });
+  g.translate(0, 0, z0);
+  return g;
+}
+function polar(r, ang) { return [r * Math.cos(ang), r * Math.sin(ang)]; }
+
+// ---------------- frame ----------------
+const frame = new THREE.Object3D(); frame.name = 'frame';
+scene.add(frame);
+{
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(C + 240, 240, 6), mat(0x39424f, 0.2, 0.8));
+  plate.position.set(C / 2, 0, -14);
+  frame.add(plate);
+  const postM = mat(0x9aa5b4, 0.8, 0.3);
+  for (const x of [0, C]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 14, 32), postM);
+    post.rotation.x = Math.PI / 2;
+    post.position.set(x, 0, -8);
+    frame.add(post);
+  }
+  const mO = new THREE.Object3D(); mO.name = 'frame@O'; mO.position.set(0, 0, 0); frame.add(mO);
+  const mW = new THREE.Object3D(); mW.name = 'frame@W'; mW.position.set(C, 0, 0); frame.add(mW);
+}
+
+// ---------------- driver ----------------
+const driver = new THREE.Object3D(); driver.name = 'driver';
+scene.add(driver);
+{
+  // lock disc with relief computed against the actual wheel outline over the whole engagement
+  const pts = [];
+  const N = 360;
+  const K = 96;
+  const WP = wheelOutline();
+  const inPoly = (x, y) => {
+    let c = false;
+    for (let i = 0, j = WP.length - 1; i < WP.length; j = i++) {
+      const xi = WP[i][0], yi = WP[i][1], xj = WP[j][0], yj = WP[j][1];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  const thS = [];
+  for (let k = 0; k <= K; k++) {
+    const th = -alpha + 2 * alpha * k / K;
+    thS.push([th, wheelAngle(th)]);
+  }
+  for (let i = 0; i < N; i++) {
+    const ang = i / N * TWO_PI;
+    let r = rl;
+    for (const [th, wa] of thS) {
+      while (r > 4) {
+        const rr = r + 0.3;
+        const wx = rr * Math.cos(ang + th) - C, wy = rr * Math.sin(ang + th);
+        const c = Math.cos(-wa), s = Math.sin(-wa);
+        if (inPoly(wx * c - wy * s, wx * s + wy * c)) r -= 0.5; else break;
+      }
+    }
+    pts.push(new THREE.Vector2(...polar(r, ang)));
+  }
+  const disc = new THREE.Mesh(extrude(new THREE.Shape(pts), T, -T / 2), mat(0xc0733a, 0.5, 0.45));
+  driver.add(disc);
+  // arm carrying the pin (above the wheel plane)
+  const armShape = new THREE.Shape();
+  const hw = 6;
+  armShape.moveTo(0, -hw); armShape.lineTo(a, -hw);
+  armShape.absarc(a, 0, hw, -Math.PI / 2, Math.PI / 2, false);
+  armShape.lineTo(0, hw);
+  armShape.absarc(0, 0, hw, Math.PI / 2, 1.5 * Math.PI, false);
+  const arm = new THREE.Mesh(extrude(armShape, 4, T / 2), mat(0xc0733a, 0.5, 0.45));
+  driver.add(arm);
+  // pin
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(pr, pr, T + 4, 32), mat(0xe8e8ee, 0.9, 0.2));
+  pin.rotation.x = Math.PI / 2;
+  pin.position.set(a, 0, 2);
+  driver.add(pin);
+  // shaft
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 28, 24), mat(0x9aa5b4, 0.8, 0.3));
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.set(0, 0, 3);
+  driver.add(shaft);
+  const mO = new THREE.Object3D(); mO.name = 'driver@O'; mO.position.set(0, 0, 0); driver.add(mO);
+  const mP = new THREE.Object3D(); mP.name = 'driver@pin'; mP.position.set(a, 0, 0); driver.add(mP);
+}
+
+// ---------------- wheel ----------------
+const wheel = new THREE.Object3D(); wheel.name = 'wheel';
+scene.add(wheel);
+{
+  const sh = new THREE.Shape();
+  wheelOutline().forEach((p, i) => { if (i === 0) sh.moveTo(p[0], p[1]); else sh.lineTo(p[0], p[1]); });
+  sh.closePath();
+  const body = new THREE.Mesh(extrude(sh, T, -T / 2), mat(0x4a7fb0, 0.5, 0.45));
+  wheel.add(body);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, T + 6, 32), mat(0x9aa5b4, 0.8, 0.3));
+  hub.rotation.x = Math.PI / 2;
+  wheel.add(hub);
+  for (let k = 0; k < n; k++) {
+    const m = new THREE.Object3D(); m.name = 'wheel@s' + k;
+    const p = polar(80, k * step);
+    m.position.set(p[0], p[1], 0);
+    wheel.add(m);
+  }
+  const mW = new THREE.Object3D(); mW.name = 'wheel@W'; wheel.add(mW);
+  wheel.position.set(C, 0, 0);
+}
+function wheelOutline() {
+  const out = [];
+  const S = 28;
+  function pt(x, y) { out.push([x, y]); }
+  const wa = Math.asin(w / R);
+  for (let k = 0; k < n; k++) {
+    const ak = k * step;
+    const mid = ak + step / 2;
+    // rim / concave arc from slot k (+w side) to slot k+1 (-w side)
+    for (let i = 0; i <= S; i++) {
+      const ang = (ak + wa) + (step - 2 * wa) * i / S;
+      const d = ang - mid;
+      let r = R;
+      if (C * Math.abs(Math.sin(d)) < rw) {
+        const rr = C * Math.cos(d) - Math.sqrt(rw * rw - C * C * Math.sin(d) * Math.sin(d));
+        if (rr < r) r = rr;
+      }
+      const p = polar(r, ang);
+      pt(p[0], p[1]);
+    }
+    // slot k+1 : in along -w edge, across the bottom, out along +w edge
+    const an = (k + 1) * step;
+    const u = [Math.cos(an), Math.sin(an)], v = [-Math.sin(an), Math.cos(an)];
+    pt(u[0] * rin - v[0] * w, u[1] * rin - v[1] * w);
+    pt(u[0] * rin + v[0] * w, u[1] * rin + v[1] * w);
+  }
+  return out;
+}
+
+// ---------------- kinematics ----------------
+function wrap360(x) { let d = x % TWO_PI; if (d < 0) d += TWO_PI; return d; }
+
+function wheelAngle(phiD) {
+  // theta: driver angle relative to O->W (+X), in [-pi, pi)
+  const m = Math.floor((phiD + Math.PI) / TWO_PI);
+  const th = phiD - m * TWO_PI;
+  let psi;
+  if (th <= -alpha) psi = -Math.PI / n;
+  else if (th >= alpha) psi = Math.PI / n;
+  else psi = Math.atan2(a * Math.sin(th), C - a * Math.cos(th));
+  return Math.PI - psi - m * step;
+}
+
+const elDriver = document.querySelector('[data-q="driver_deg"]');
+const elWheel = document.querySelector('[data-q="wheel_deg"]');
+
+function render(t) {
+  const phiD = phi0 + omega * t;
+  const wAng = wheelAngle(phiD);
+  driver.rotation.z = phiD;
+  wheel.rotation.z = wAng;
+  elDriver.textContent = (wrap360(phiD) * 180 / Math.PI).toFixed(2);
+  elWheel.textContent = (wrap360(wAng) * 180 / Math.PI).toFixed(2);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = {
+  scene, camera, renderer,
+  period: TWO_PI / omega,
+  params: { n, C, a, omega, phi0 },
+  render
+};
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    window.SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
