@@ -36,3 +36,9 @@ node oracle/run_oracle.mjs gen/*/*.html --out results/gen.jsonl
 Tiêu chí: lỗi tự nhiên ≥20% ở (a) HOẶC VLM bỏ sót ≥30% ở (b) → GO lại; cả hai trượt → NO-GO.
 
 - Kết quả tạm pha 2: lỗi tự nhiên 6/16 (37,5%) đã kiểm tay là lỗi thật; ablation không panel: VLM recall 14/24 (bỏ PANEL: 14/20). Đang chạy VLM trên 19 sheet lite (`vlm_lite/`).
+
+## Pha 3 — RQ3 repair loop (2026-11-08)
+- [x] `oracle/repair_prep.mjs`: 7 file lỗi × 3 nhánh feedback (oracle | vlm | none) → `repair/<arm>/<model>/<file>.html` + `.feedback.md`
+- [x] 21 agent sửa (model = model đã sinh file), 1 vòng, sửa tại chỗ
+- [x] Chấm: oracle-lite trên `repair/*/*/*.html`; VLM ẩn danh trên bản đã sửa; kiểm tay geneva_s2 (đĩa khoá)
+- [x] Cập nhật REPORT.md mục RQ3 (3/7 mỗi nhánh; đề xuất sửa lặp có cổng oracle + feedback cụ thể)

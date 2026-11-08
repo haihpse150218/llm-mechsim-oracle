@@ -147,3 +147,37 @@ Không nói "VLM bỏ sót nhiều". Nói: **oracle thực thi được và VLM 
 1. RQ3: sửa 6 lỗi oracle bắt được bằng phản hồi oracle so với phản hồi VLM (1–2 vòng).
 2. Mở rộng n: 5 mẫu/ô, thêm 1 model hãng khác (cần API key), thêm 2–3 cơ cấu (cam có dwell, Watt 6 khâu).
 3. Đo inter-rater: chạy VLM review 2–3 lần trên cùng sheet.
+
+---
+
+# Pha 3 — RQ3: vòng sửa lỗi (2026-11-08)
+
+## Thiết kế
+- 7 simulator lỗi thật từ pha 2 × 3 nhánh feedback × 1 vòng; người sửa là **chính model đã sinh ra file** (sonnet/haiku), sửa tại chỗ, không được chạy thử (`oracle/repair_prep.mjs`, `repair/`).
+  - **oracle**: danh sách các kiểm bị fail, kèm số đo và dung sai.
+  - **vlm**: báo cáo của VLM ở pha 2.
+  - **none**: chỉ nói "có thể có lỗi, hãy kiểm lại".
+- Chấm: chạy lại oracle-lite cho cả 21 bản. Riêng geneva_s2 (lỗi nằm ngoài hợp đồng marker) chấm bằng mắt trên sheet (`sheets_repair/`).
+
+## Kết quả (✓ sửa đúng, ~ cải thiện một phần, ✗ không sửa được)
+
+| Lỗi gốc | oracle | vlm | none |
+|---|---|---|---|
+| sonnet four_bar_s2 (crash) | ✓ | ✓ | ✓ |
+| sonnet jansen_s1 (gán nhầm holy numbers) | ✗ đổi sai cặp YV↔VU | ✗ | ✗ "không thấy lỗi" |
+| sonnet jansen_s2 (như trên) | ✓ | ✓ | ✗ "không thấy lỗi" |
+| haiku jansen_s1 (khớp rời + holy numbers) | ~ sửa bug xoay khâu, META đã pass, còn DESIGN | ✗ không sửa gì | ~ như nhánh oracle |
+| haiku jansen_s2 | ✗ | ✗ | ✗ |
+| haiku planetary_s1 (điều kiện lắp) | ✓ | ✓ (dù được báo "không lỗi") | ✓ (tự phát hiện) |
+| sonnet geneva_s2 (đĩa khoá) | ✗ (oracle báo "pass") | ? phần khuyết không còn thấy | ✓ (kiểm bằng mắt) |
+| **Tổng sửa đúng** | **3/7** | **3/7** (+1 chưa rõ) | **3/7** |
+
+## Nhận xét
+1. **Với 1 vòng và n = 7, không nhánh nào hơn nhánh nào.** Không đủ cơ sở để nói "feedback từ oracle sửa tốt hơn".
+2. **Feedback của oracle quá thô.** Thông báo "holy numbers rel. error 0,341" khiến sonnet đoán mò và đổi nhầm cặp khâu (khớp với 0,341 nhưng là cặp sai). Feedback phải chỉ đích danh *cặp khâu nào sai* thì mới hành động được.
+3. **Câu nhắc chung "hãy kiểm lại" mạnh hơn dự đoán.** Nhánh none tự tìm ra lỗi lắp bánh hành tinh và lỗi đĩa khoá. Nhưng cũng nhánh đó lại khẳng định "không có lỗi" với Jansen sai (tin vào trí nhớ sai về holy numbers).
+4. **Giá trị rõ nhất của oracle là làm cổng nghiệm thu**: biết chính xác bản sửa nào đạt và bản nào chưa, gần như không tốn gì (vd. bắt được việc sonnet tự tin "đã sửa" nhưng sửa sai cặp). VLM không làm được việc này một cách đáng tin.
+5. Gợi ý thiết kế cho bài báo: chạy **sửa lặp có cổng oracle** (lặp đến khi pass, tối đa k vòng) với feedback cụ thể hơn, so với VLM-in-the-loop và self-refine. Đây là RQ3 hợp lý hơn so với "1 vòng".
+
+## Hạn chế
+n = 7, mỗi nhánh 1 lần chạy; agent sửa không được chạy thử trang; việc chấm geneva_s2 do một người (tác giả) xem sheet.
