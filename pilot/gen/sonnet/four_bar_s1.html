@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Four-bar crank-rocker</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#101418;font-family:sans-serif}
+canvas{display:block}
+#ui{position:fixed;left:12px;top:10px;color:#e8eef4;font-size:14px;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:6px}
+#ui h1{font-size:16px;margin:0 0 6px}
+#ui div{margin:2px 0}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="ui">
+<h1>Four-bar linkage (crank-rocker)</h1>
+<div>Crank angle: <span data-q="crank_deg">0.0</span>&deg;</div>
+<div>Rocker angle: <span data-q="rocker_deg">0.0</span>&deg;</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const a = 40, b = 120, c = 80, d = 100, PERIOD = 4;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a2028);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(50, -40, 330);
+camera.lookAt(50, 20, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(100, 150, 300);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x8899bb, 0.4);
+dl2.position.set(-150, -100, 100);
+scene.add(dl2);
+
+function mat(color) { return new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.5 }); }
+
+// Frame / ground
+const frame = new THREE.Group();
+frame.name = 'frame';
+const base = new THREE.Mesh(new THREE.BoxGeometry(180, 50, 6), mat(0x555d66));
+base.position.set(50, 0, -14);
+frame.add(base);
+function pin(x, y, r, h, zc, color) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 32), mat(color));
+  m.rotation.x = Math.PI / 2;
+  m.position.set(x, y, zc);
+  return m;
+}
+frame.add(pin(0, 0, 8, 22, -3, 0x8a939c));
+frame.add(pin(d, 0, 8, 22, -3, 0x8a939c));
+scene.add(frame);
+
+// Bar builder: bar along +X of length L, thickness in z, centred at zc
+function bar(L, w, t, zc, color) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(L, w, t), mat(color));
+  body.position.set(L / 2, 0, zc);
+  g.add(body);
+  const e1 = pin(0, 0, w * 0.6, t, zc, color);
+  const e2 = pin(L, 0, w * 0.6, t, zc, color);
+  g.add(e1, e2);
+  return g;
+}
+
+const crank = new THREE.Group(); crank.name = 'crank';
+crank.add(bar(a, 10, 5, 4, 0xd9534f));
+scene.add(crank);
+
+const coupler = new THREE.Group(); coupler.name = 'coupler';
+coupler.add(bar(b, 10, 5, 10, 0x5cb85c));
+scene.add(coupler);
+
+const rocker = new THREE.Group(); rocker.name = 'rocker';
+rocker.add(bar(c, 10, 5, 4, 0x4a90e2));
+scene.add(rocker);
+
+// joint pins on top
+const jointA = pin(0, 0, 4, 20, 8, 0xdddddd); coupler.add(jointA);
+const jointB = pin(b, 0, 4, 20, 8, 0xdddddd); coupler.add(jointB);
+
+const qCrank = document.querySelector('[data-q="crank_deg"]');
+const qRocker = document.querySelector('[data-q="rocker_deg"]');
+
+function wrapDeg(x) { x = x % 360; if (x < 0) x += 360; if (x >= 360) x = 0; return x; }
+
+function render(t) {
+  const th = 2 * Math.PI * t / PERIOD;
+  const ax = a * Math.cos(th), ay = a * Math.sin(th);
+  const dx = d - ax, dy = -ay;
+  const D = Math.hypot(dx, dy);
+  const ux = dx / D, uy = dy / D;
+  const l = (b * b - c * c + D * D) / (2 * D);
+  const h = Math.sqrt(Math.max(0, b * b - l * l));
+  const bx = ax + l * ux - h * uy;
+  const by = ay + l * uy + h * ux;
+
+  crank.position.set(0, 0, 0);
+  crank.rotation.set(0, 0, th);
+  coupler.position.set(ax, ay, 0);
+  coupler.rotation.set(0, 0, Math.atan2(by - ay, bx - ax));
+  rocker.position.set(d, 0, 0);
+  const phi = Math.atan2(by, bx - d);
+  rocker.rotation.set(0, 0, phi);
+
+  qCrank.textContent = wrapDeg(th * 180 / Math.PI).toFixed(1);
+  qRocker.textContent = wrapDeg(phi * 180 / Math.PI).toFixed(1);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: PERIOD, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

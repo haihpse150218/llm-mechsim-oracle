@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Compound Spur Gear Train</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1e24;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;color:#e8eaf0;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+#panel h1{font-size:15px;margin:0 0 4px}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+<h1>Two-stage compound spur gear train</h1>
+<div>input: <span data-q="input_deg">0.0</span>&deg;</div>
+<div>output: <span data-q="output_deg">0.0</span>&deg;</div>
+<div>ratio: <span data-q="ratio">6.00</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const M = 2, PERIOD = 4;
+const Z = { g1: 20, g2: 40, g3: 15, g4: 45 };
+const TH = 8; // face width
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1e24);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(42, 5, 330);
+camera.lookAt(42, 40, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(100, 150, 300);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x8899ff, 0.3);
+dl2.position.set(-150, -50, 100);
+scene.add(dl2);
+
+// ground plate
+const plate = new THREE.Mesh(
+  new THREE.BoxGeometry(170, 150, 4),
+  new THREE.MeshStandardMaterial({ color: 0x3a404c, roughness: 0.9 })
+);
+plate.position.set(42, 40, -10);
+scene.add(plate);
+
+function makeGearGeometry(z) {
+  const rp = M * z / 2, ra = rp + M, rf = rp - 1.25 * M;
+  const pitch = 2 * Math.PI / z;
+  const shape = new THREE.Shape();
+  const rootHalf = pitch * 0.27, tipHalf = pitch * 0.13;
+  const pts = [];
+  for (let k = 0; k < z; k++) {
+    const a = k * pitch;
+    pts.push([rf, a - pitch * 0.5 + 0.0001]);
+    pts.push([rf, a - rootHalf]);
+    pts.push([ra, a - tipHalf]);
+    pts.push([ra, a + tipHalf]);
+    pts.push([rf, a + rootHalf]);
+  }
+  pts.forEach((p, i) => {
+    const x = p[0] * Math.cos(p[1]), y = p[0] * Math.sin(p[1]);
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  });
+  shape.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 4, 0, Math.PI * 2, true);
+  shape.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(shape, { depth: TH, bevelEnabled: false });
+  g.translate(0, 0, -TH / 2);
+  return g;
+}
+
+function makeGear(name, z, pos, zc, color, toothPhase) {
+  const body = new THREE.Group();
+  body.name = name;
+  body.position.set(pos[0], pos[1], zc);
+  const mat = new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.45 });
+  const mesh = new THREE.Mesh(makeGearGeometry(z), mat);
+  mesh.rotation.z = toothPhase; // tooth phase lives on the child mesh
+  body.add(mesh);
+  // reference mark along local +X
+  const rp = M * z / 2;
+  const mark = new THREE.Mesh(
+    new THREE.BoxGeometry(rp * 0.6, 2.2, 1),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 })
+  );
+  mark.position.set(rp * 0.5, 0, TH / 2 + 0.5);
+  body.add(mark);
+  scene.add(body);
+  return body;
+}
+
+const P = Math.PI;
+const pitch = (z) => 2 * P / z;
+// gear1: tooth at angle 0 (contact direction toward gear2)
+const g1 = makeGear('gear1', Z.g1, [0, 0], 0, 0xd9a441, 0);
+// gear2: gap at angle pi (contact direction toward gear1) -> half pitch offset
+const g2 = makeGear('gear2', Z.g2, [60, 0], 0, 0x4a90d9, pitch(Z.g2) / 2);
+// gear3 (same shaft, in front of gear2): tooth at +Y toward gear4
+const g3 = makeGear('gear3', Z.g3, [60, 0], TH, 0xd9594a, P / 2);
+// gear4: gap at -Y (toward gear3)
+const g4 = makeGear('gear4', Z.g4, [60, 60], TH, 0x5cb85c, 3 * P / 2 - pitch(Z.g4) / 2);
+
+// shafts / pins
+function shaft(x, y, z0, z1, color) {
+  const c = new THREE.Mesh(
+    new THREE.CylinderGeometry(3, 3, z1 - z0, 24),
+    new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3 })
+  );
+  c.rotation.x = Math.PI / 2;
+  c.position.set(x, y, (z0 + z1) / 2);
+  scene.add(c);
+}
+shaft(0, 0, -8, 8, 0xbbbbbb);
+shaft(60, 0, -8, 14, 0xbbbbbb);
+shaft(60, 60, -8, 14, 0xbbbbbb);
+
+function wrap(d) {
+  let v = ((d % 360) + 360) % 360;
+  if (Number(v.toFixed(1)) >= 360) v = 0;
+  return v;
+}
+const elIn = document.querySelector('[data-q="input_deg"]');
+const elOut = document.querySelector('[data-q="output_deg"]');
+const elRatio = document.querySelector('[data-q="ratio"]');
+
+function render(t) {
+  const th1 = 2 * P * t / PERIOD;
+  const th2 = -th1 * Z.g1 / Z.g2;
+  const th3 = th2;
+  const th4 = -th3 * Z.g3 / Z.g4;
+  g1.rotation.z = th1;
+  g2.rotation.z = th2;
+  g3.rotation.z = th3;
+  g4.rotation.z = th4;
+  const d1 = th1 * 180 / P, d4 = th4 * 180 / P;
+  elIn.textContent = wrap(d1).toFixed(1);
+  elOut.textContent = wrap(d4).toFixed(1);
+  const ratio = Math.abs(1 / (Z.g1 / Z.g2 * Z.g3 / Z.g4)) ;
+  elRatio.textContent = (Z.g2 / Z.g1 * Z.g4 / Z.g3).toFixed(2);
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: PERIOD, render };
+window.SIM_READY = true;
+render(0);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    window.SIM.render((performance.now() - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

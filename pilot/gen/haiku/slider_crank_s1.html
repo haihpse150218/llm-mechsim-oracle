@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slider-crank (inline)</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#14181f;color:#e8ecf2;font-family:system-ui,sans-serif}
+canvas{display:block;position:fixed;left:0;top:0}
+#panel{position:fixed;left:16px;top:16px;background:rgba(10,12,16,.78);padding:10px 14px;border-radius:8px;font-size:15px;line-height:1.6;pointer-events:none}
+#title{font-weight:600;margin-bottom:4px}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div id="title">Slider-crank (inline, zero offset)</div>
+  <div>Crank angle: <span data-q="crank_deg">0.0 deg</span></div>
+  <div>Piston x: <span data-q="piston_x">160.00 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// Geometry (mm). Crank pivot O at origin, piston slides along world +X.
+const R = 40;          // crank radius
+const L = 120;         // connecting rod length
+const PERIOD = 4;      // seconds per crank revolution (CCW about +Z)
+const TWO_PI = Math.PI * 2;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14181f);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 5000);
+
+function frameCamera() {
+  const aspect = window.innerWidth / window.innerHeight;
+  camera.aspect = aspect;
+  // Slight angle from the front; back off further on portrait screens.
+  camera.position.set(60, -150, aspect < 1 ? 900 : 480);
+  camera.lookAt(60, 0, 0);
+  camera.updateProjectionMatrix();
+}
+frameCamera();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x303640, 1.0));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(120, -200, 400);
+scene.add(key);
+
+function mat(color) {
+  return new THREE.MeshStandardMaterial({ color, metalness: 0.2, roughness: 0.5 });
+}
+function box(w, h, d, color, x, y, z, parent) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+// Cylinder whose axis is along Z (the mechanism's out-of-plane direction).
+function cylZ(radius, height, color, x, y, z, parent) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 24), mat(color));
+  m.rotation.x = Math.PI / 2;
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+
+// ---- Fixed ground / frame ----
+const GROUND = 0x3a4250;
+const RAIL = 0x5a6475;
+box(300, 8, 40, GROUND, 60, -56, -10, scene);      // ground plate, top at y = -52
+box(24, 40, 16, GROUND, 0, -32, 0, scene);         // pivot bracket under O
+box(230, 6, 8, RAIL, 70, 0, -22, scene);           // slider guide rail (piston runs along it)
+box(10, 52, 8, RAIL, -40, -26, -22, scene);        // rail posts
+box(10, 52, 8, RAIL, 180, -26, -22, scene);
+
+// ---- Named moving bodies ----
+// crank: origin at O, local +X toward crank pin B.
+const crank = new THREE.Group();
+crank.name = 'crank';
+scene.add(crank);
+box(R, 14, 8, 0xe07a3f, R / 2, 0, 0, crank);      // arm from O to B
+cylZ(9, 30, 0xe07a3f, 0, 0, 0, crank);            // hub at O
+cylZ(5, 30, 0xcccccc, R, 0, 0, crank);            // crank pin B
+
+// rod: origin at B, local +X toward piston pin C.
+const rod = new THREE.Group();
+rod.name = 'rod';
+scene.add(rod);
+box(L, 12, 6, 0x8fb8de, L / 2, 0, 0, rod);        // rod body
+cylZ(9, 10, 0x8fb8de, 0, 0, 0, rod);              // big end at B
+cylZ(7, 10, 0x8fb8de, L, 0, 0, rod);              // small end at C
+
+// piston: origin at piston pin C, local +X = world +X, never rotated.
+const piston = new THREE.Group();
+piston.name = 'piston';
+scene.add(piston);
+box(36, 26, 24, 0xd9d9d9, -6, 0, 0, piston);      // piston body (lies toward the crank)
+cylZ(5, 30, 0xcccccc, 0, 0, 0, piston);           // piston pin C
+
+// Pure function of t: sets every pose from t only.
+function pose(t) {
+  const th = TWO_PI * t / PERIOD;
+  const bx = R * Math.cos(th);
+  const by = R * Math.sin(th);
+  const xc = bx + Math.sqrt(L * L - by * by);       // piston pin x (y_C = 0)
+  const phi = Math.atan2(-by, xc - bx);             // rod direction from B to C
+
+  crank.rotation.set(0, 0, th);
+  rod.position.set(bx, by, 0);
+  rod.rotation.set(0, 0, phi);
+  piston.position.set(xc, 0, 0);
+
+  let deg = ((th * 180 / Math.PI) % 360 + 360) % 360;
+  return { deg, xc };
+}
+
+const qDeg = document.querySelector('[data-q="crank_deg"]');
+const qX = document.querySelector('[data-q="piston_x"]');
+
+const SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  render(t) {
+    const p = pose(t);
+    let d = Math.round(p.deg * 10) / 10 % 360;
+    qDeg.textContent = d.toFixed(1) + ' deg';
+    qX.textContent = p.xc.toFixed(2) + ' mm';
+    renderer.render(scene, camera);
+  },
+};
+
+window.SIM = SIM;
+SIM.render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  frameCamera();
+});
+
+const capture = window.location.search.includes('capture');
+if (!capture) {
+  const start = performance.now();
+  const loop = (now) => {
+    SIM.render((now - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
