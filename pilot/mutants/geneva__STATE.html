@@ -1,0 +1,77 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Geneva drive (reference)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#15181d;font-family:system-ui,sans-serif}
+#panel{position:fixed;top:12px;left:12px;color:#e8e8e8;background:rgba(0,0,0,.55);padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.6}
+#panel b{color:#9fd3ff}</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel"><div><b>Geneva drive (4 slots)</b></div>
+<div>driver: <span data-q="driver_deg">0</span></div>
+<div>wheel: <span data-q="wheel_deg">0</span></div></div>
+<script type="module">
+import * as THREE from 'three';
+const C = 100, A = C * Math.sin(Math.PI / 4), PERIOD = 4;
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181d);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 5000);
+camera.position.set(50, 0, 430);
+camera.lookAt(50, 0, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.2));
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(100, 200, 300);
+scene.add(sun);
+const mat = (c) => new THREE.MeshStandardMaterial({color: c, metalness: 0.45, roughness: 0.4});
+// driver: disc + arm + pin, local +X toward pin
+const driver = new THREE.Group(); driver.name = 'driver';
+const ddisc = new THREE.Mesh(new THREE.CylinderGeometry(A * 0.55, A * 0.55, 8, 48), mat(0xd9822b));
+ddisc.rotation.x = Math.PI / 2; driver.add(ddisc);
+const arm = new THREE.Mesh(new THREE.BoxGeometry(A, 14, 6), mat(0xd9822b)); arm.position.set(A / 2, 0, 6); driver.add(arm);
+const pin = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 20, 24), mat(0xeeeeee)); pin.rotation.x = Math.PI / 2; pin.position.set(A, 0, 10); driver.add(pin);
+// wheel: disc with 4 radial slots along local ±X, ±Y
+const wheel = new THREE.Group(); wheel.name = 'wheel'; wheel.position.set(C, 0, 10);
+const Rw = C * Math.cos(Math.PI / 4);
+const wdisc = new THREE.Mesh(new THREE.CylinderGeometry(Rw, Rw, 8, 64), mat(0x4f8fd6)); wdisc.rotation.x = Math.PI / 2; wheel.add(wdisc);
+const slotLen = A + Rw - C + 8;
+for (let i = 0; i < 4; i++) {
+  const a = (i * Math.PI) / 2;
+  const s = new THREE.Mesh(new THREE.BoxGeometry(slotLen, 12, 9), mat(0x101318));
+  s.position.set(Math.cos(a) * (Rw - slotLen / 2 + 1), Math.sin(a) * (Rw - slotLen / 2 + 1), 0.5);
+  s.rotation.z = a;
+  wheel.add(s);
+}
+const frame = new THREE.Mesh(new THREE.BoxGeometry(260, 160, 4), mat(0x2a2e35)); frame.position.set(50, 0, -12); scene.add(frame);
+scene.add(driver, wheel);
+function wheelAngle(phi) {
+  const TAU = 2 * Math.PI, n = Math.round(phi / TAU), dl = phi - TAU * n, q = Math.PI / 4;
+  if (dl > q) return -(Math.PI / 2) * n - q;
+  if (dl < -q) return -(Math.PI / 2) * n + q;
+  const dir = Math.atan2(A * Math.sin(dl), A * Math.cos(dl) - C);
+  return -(Math.PI / 2) * n + Math.atan2(Math.sin(dir - Math.PI), Math.cos(dir - Math.PI));
+}
+const qq = (k) => document.querySelector(`[data-q="${k}"]`);
+const wrap = (d) => ((d % 360) + 360) % 360;
+let __last = 0, __acc = 0;
+function render(t) {
+  __acc += Math.min(t - __last, 0.1); __last = t;
+  const phi = (2 * Math.PI * __acc) / PERIOD;
+  const psi = wheelAngle(phi);
+  driver.rotation.z = phi;
+  wheel.rotation.z = psi;
+  qq('driver_deg').textContent = `${wrap((phi * 180) / Math.PI).toFixed(1)}°`;
+  qq('wheel_deg').textContent = `${wrap((psi * 180) / Math.PI).toFixed(1)}°`;
+  renderer.render(scene, camera);
+  return {};
+}
+window.SIM = {scene, camera, renderer, period: PERIOD, render};
+window.SIM_READY = true;
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  loop();
+}
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+</script></body></html>

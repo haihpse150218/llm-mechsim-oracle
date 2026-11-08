@@ -1,0 +1,77 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Gear train (reference)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#15181d;font-family:system-ui,sans-serif}
+#panel{position:fixed;top:12px;left:12px;color:#e8e8e8;background:rgba(0,0,0,.55);padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.6}
+#panel b{color:#9fd3ff}</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel"><div><b>Compound gear train</b></div>
+<div>input: <span data-q="input_deg">0</span></div>
+<div>output: <span data-q="output_deg">0</span></div>
+<div>ratio: <span data-q="ratio">0</span></div></div>
+<script type="module">
+import * as THREE from 'three';
+const M = 2, Z1 = 20, Z2 = 40, Z3 = 15, Z4 = 45, PERIOD = 4;
+const rp = (z) => (M * z) / 2;
+const C2 = [rp(Z1) + rp(Z2), 0], C4 = [C2[0], rp(Z3) + rp(Z4)];
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181d);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 5000);
+camera.position.set(40, 30, 420);
+camera.lookAt(40, 30, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.2));
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(100, 200, 300);
+scene.add(sun);
+const mat = (c) => new THREE.MeshStandardMaterial({color: c, metalness: 0.5, roughness: 0.4});
+function gear(z, color, phase) {
+  const g = new THREE.Group();
+  const r = rp(z), th = 8;
+  const inner = new THREE.Group();
+  inner.rotation.z = phase;
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(r - M, r - M, th, 64), mat(color));
+  disc.rotation.x = Math.PI / 2;
+  inner.add(disc);
+  for (let i = 0; i < z; i++) {
+    const a = (i / z) * Math.PI * 2;
+    const tooth = new THREE.Mesh(new THREE.BoxGeometry(2.4 * M, 1.5 * M, th), mat(color));
+    tooth.position.set(Math.cos(a) * r, Math.sin(a) * r, 0);
+    tooth.rotation.z = a;
+    inner.add(tooth);
+  }
+  const mark = new THREE.Mesh(new THREE.BoxGeometry(r * 0.7, 3, th + 1), mat(0xffffff));
+  mark.position.x = r * 0.35;
+  g.add(inner, mark);
+  return g;
+}
+const g1 = gear(Z1, 0xd9822b, 0); g1.name = 'gear1';
+const g2 = gear(Z2, 0x4f8fd6, Math.PI / Z2); g2.name = 'gear2'; g2.position.set(C2[0], C2[1], 0);
+const g3 = gear(Z3, 0x5cbf73, 0); g3.name = 'gear3'; g3.position.set(C2[0], C2[1], 10);
+const g4 = gear(Z4, 0xb06bd6, Math.PI / Z4); g4.name = 'gear4'; g4.position.set(C4[0], C4[1], 10);
+scene.add(g1, g2, g3, g4);
+const q = (k) => document.querySelector(`[data-q="${k}"]`);
+const wrap = (d) => ((d % 360) + 360) % 360;
+function render(t) {
+  const t1 = (2 * Math.PI * t) / PERIOD;
+  const t2 = (-t1 * Z1) / Z2;
+  const t4 = (-t2 * Z3) / Z4;
+  g1.rotation.z = t1; g2.rotation.z = t2; g3.rotation.z = -t2; g4.rotation.z = t4;
+  q('input_deg').textContent = `${wrap((t1 * 180) / Math.PI).toFixed(1)}°`;
+  q('output_deg').textContent = `${wrap((t4 * 180) / Math.PI).toFixed(1)}°`;
+  q('ratio').textContent = `${((Z2 * Z4) / (Z1 * Z3)).toFixed(3)}`;
+  renderer.render(scene, camera);
+  return {};
+}
+window.SIM = {scene, camera, renderer, period: PERIOD, render};
+window.SIM_READY = true;
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  loop();
+}
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+</script></body></html>
