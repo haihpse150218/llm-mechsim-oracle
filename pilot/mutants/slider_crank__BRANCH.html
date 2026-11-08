@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Slider-crank (reference)</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#15181d;font-family:system-ui,sans-serif}
+#panel{position:fixed;top:12px;left:12px;color:#e8e8e8;background:rgba(0,0,0,.55);padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.6}
+#panel b{color:#9fd3ff}</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel"><div><b>Slider-crank</b></div>
+<div>crank: <span data-q="crank_deg">0</span></div>
+<div>piston x: <span data-q="piston_x">0</span></div></div>
+<script type="module">
+import * as THREE from 'three';
+const R = 40, L = 120, PERIOD = 4;
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181d);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 5000);
+camera.position.set(80, -60, 420);
+camera.lookAt(80, 0, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.2));
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(100, 200, 300);
+scene.add(sun);
+
+const mat = (c) => new THREE.MeshStandardMaterial({color: c, metalness: 0.4, roughness: 0.45});
+function bar(len, w, th, color) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, w, th), mat(color));
+  m.position.x = len / 2;
+  g.add(m);
+  for (const x of [0, len]) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.6, w * 0.6, th + 2, 24), mat(0xdddddd));
+    c.rotation.x = Math.PI / 2;
+    c.position.x = x;
+    g.add(c);
+  }
+  return g;
+}
+// frame: cylinder bore along +X and pivot block
+const frame = new THREE.Mesh(new THREE.BoxGeometry(260, 4, 30), mat(0x3a3f47));
+frame.position.set(110, -22, -20);
+scene.add(frame);
+const bore = new THREE.Mesh(new THREE.BoxGeometry(110, 46, 6), mat(0x2a2e35));
+bore.position.set(150, 0, -14);
+scene.add(bore);
+
+const crank = bar(R, 14, 10, 0xd9822b); crank.name = 'crank'; crank.position.z = 0; scene.add(crank);
+const rod = bar(L, 10, 8, 0x4f8fd6); rod.name = 'rod'; rod.position.z = 10; scene.add(rod);
+const piston = new THREE.Group(); piston.name = 'piston';
+const pm = new THREE.Mesh(new THREE.BoxGeometry(40, 40, 24), mat(0x9aa3ad)); pm.position.x = 12; piston.add(pm);
+scene.add(piston);
+
+const q = (k) => document.querySelector(`[data-q="${k}"]`);
+function render(t) {
+  const th = (2 * Math.PI * t) / PERIOD;
+  const bx = R * Math.cos(th), by = R * Math.sin(th);
+  const cx = bx + Math.sqrt(L * L - by * by);
+  crank.rotation.z = th;
+  rod.position.set(bx, by, 10);
+  rod.rotation.z = Math.atan2(by, cx - bx);
+  piston.position.set(cx, 0, 0);
+  const d = ((th * 180) / Math.PI) % 360;
+  q('crank_deg').textContent = `${(d < 0 ? d + 360 : d).toFixed(1)}°`;
+  q('piston_x').textContent = `${cx.toFixed(2)} mm`;
+  renderer.render(scene, camera);
+  return {};
+}
+window.SIM = {scene, camera, renderer, period: PERIOD, render};
+window.SIM_READY = true;
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  loop();
+}
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+</script></body></html>
