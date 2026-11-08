@@ -1,0 +1,97 @@
+{
+  "four_bar-5d71136b": {
+    "sheet": "sheets_lite/gen_lite__haiku__four_bar_s1.png",
+    "mech": "four_bar",
+    "source": "gen_lite/haiku/four_bar_s1"
+  },
+  "four_bar-6e53e11c": {
+    "sheet": "sheets_lite/gen_lite__haiku__four_bar_s2.png",
+    "mech": "four_bar",
+    "source": "gen_lite/haiku/four_bar_s2"
+  },
+  "geneva-93376c7f": {
+    "sheet": "sheets_lite/gen_lite__haiku__geneva_s1.png",
+    "mech": "geneva",
+    "source": "gen_lite/haiku/geneva_s1"
+  },
+  "geneva-56031bf9": {
+    "sheet": "sheets_lite/gen_lite__haiku__geneva_s2.png",
+    "mech": "geneva",
+    "source": "gen_lite/haiku/geneva_s2"
+  },
+  "jansen-75bdcbf7": {
+    "sheet": "sheets_lite/gen_lite__haiku__jansen_s1.png",
+    "mech": "jansen",
+    "source": "gen_lite/haiku/jansen_s1"
+  },
+  "jansen-66bdb57c": {
+    "sheet": "sheets_lite/gen_lite__haiku__jansen_s2.png",
+    "mech": "jansen",
+    "source": "gen_lite/haiku/jansen_s2"
+  },
+  "planetary-9be3a633": {
+    "sheet": "sheets_lite/gen_lite__haiku__planetary_s1.png",
+    "mech": "planetary",
+    "source": "gen_lite/haiku/planetary_s1"
+  },
+  "planetary-bd3e4d43": {
+    "sheet": "sheets_lite/gen_lite__haiku__planetary_s2.png",
+    "mech": "planetary",
+    "source": "gen_lite/haiku/planetary_s2"
+  },
+  "four_bar-a41c3805": {
+    "sheet": "sheets_lite/gen_lite__sonnet__four_bar_s1.png",
+    "mech": "four_bar",
+    "source": "gen_lite/sonnet/four_bar_s1"
+  },
+  "geneva-9f7c6d0d": {
+    "sheet": "sheets_lite/gen_lite__sonnet__geneva_s1.png",
+    "mech": "geneva",
+    "source": "gen_lite/sonnet/geneva_s1"
+  },
+  "geneva-35bcdc1d": {
+    "sheet": "sheets_lite/gen_lite__sonnet__geneva_s2.png",
+    "mech": "geneva",
+    "source": "gen_lite/sonnet/geneva_s2"
+  },
+  "jansen-2b23a303": {
+    "sheet": "sheets_lite/gen_lite__sonnet__jansen_s1.png",
+    "mech": "jansen",
+    "source": "gen_lite/sonnet/jansen_s1"
+  },
+  "jansen-c2248f91": {
+    "sheet": "sheets_lite/gen_lite__sonnet__jansen_s2.png",
+    "mech": "jansen",
+    "source": "gen_lite/sonnet/jansen_s2"
+  },
+  "planetary-6c44f10d": {
+    "sheet": "sheets_lite/gen_lite__sonnet__planetary_s1.png",
+    "mech": "planetary",
+    "source": "gen_lite/sonnet/planetary_s1"
+  },
+  "planetary-de940fd3": {
+    "sheet": "sheets_lite/gen_lite__sonnet__planetary_s2.png",
+    "mech": "planetary",
+    "source": "gen_lite/sonnet/planetary_s2"
+  },
+  "four_bar-f097b60c": {
+    "sheet": "sheets_lite/reference_lite__four_bar_ref.png",
+    "mech": "four_bar",
+    "source": "reference_lite/four_bar_ref"
+  },
+  "geneva-6e04c1e8": {
+    "sheet": "sheets_lite/reference_lite__geneva_ref.png",
+    "mech": "geneva",
+    "source": "reference_lite/geneva_ref"
+  },
+  "jansen-3d2aba1e": {
+    "sheet": "sheets_lite/reference_lite__jansen_ref.png",
+    "mech": "jansen",
+    "source": "reference_lite/jansen_ref"
+  },
+  "planetary-3ea4e676": {
+    "sheet": "sheets_lite/reference_lite__planetary_ref.png",
+    "mech": "planetary",
+    "source": "reference_lite/planetary_ref"
+  }
+}

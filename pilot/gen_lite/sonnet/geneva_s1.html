@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>External Geneva drive</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#161a20;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;color:#dde;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+</style></head><body>
+<div id="panel">
+<div>Driver angle: <span data-q="driver_deg">0</span> deg</div>
+<div>Wheel angle: <span data-q="wheel_deg">0</span> deg</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const n = 6, C = 100, a = C * Math.sin(Math.PI / n);
+const omega = 1.2, phi0 = 0.3;
+const PI = Math.PI, TWO = 2 * PI;
+const beta = PI / 2 - PI / n;
+const Rw = 88, rb = 40, hwl = 6.6, rho = 0.8 * a, pinR = 6, T = 10;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161a20);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(C / 2, -70, 300);
+camera.lookAt(C / 2, 0, 0);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(-100, 150, 300);
+scene.add(dl);
+
+function mat(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.4, roughness: 0.5 }); }
+function marker(parent, name, x, y) {
+  const o = new THREE.Object3D(); o.name = name; o.position.set(x, y, 0); parent.add(o); return o;
+}
+function extrude(shape, depth, z0, m) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 });
+  const mesh = new THREE.Mesh(g, m); mesh.position.z = z0; return mesh;
+}
+
+// frame
+const frame = new THREE.Object3D(); frame.name = 'frame'; scene.add(frame);
+{
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(C + 220, 220, 8), mat(0x3a4250));
+  plate.position.set(C / 2, 0, -14); frame.add(plate);
+  for (const x of [0, C]) {
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 40, 24), mat(0x9aa3b0));
+    sh.rotation.x = PI / 2; sh.position.set(x, 0, 0); frame.add(sh);
+  }
+  marker(frame, 'frame@O', 0, 0);
+  marker(frame, 'frame@W', C, 0);
+}
+
+// driver (local +X = direction to pin)
+const driver = new THREE.Object3D(); driver.name = 'driver'; scene.add(driver);
+{
+  const sh = new THREE.Shape();
+  const N = 120;
+  for (let i = 0; i < N; i++) {
+    let p = -PI + TWO * i / N;
+    const ad = Math.abs(p);
+    let r = rho;
+    const notchW = 0.5, blend = 0.12;
+    if (ad < notchW + blend) {
+      const t = Math.min(1, Math.max(0, (ad - notchW) / blend));
+      r = 9 + (rho - 9) * t;
+    }
+    const x = r * Math.cos(p), y = r * Math.sin(p);
+    if (i === 0) sh.moveTo(x, y); else sh.lineTo(x, y);
+  }
+  sh.closePath();
+  driver.add(extrude(sh, T, 0, mat(0x3b82c4)));
+  // arm over the wheel plane
+  const arm = new THREE.Shape();
+  arm.moveTo(0, -5); arm.lineTo(a, -pinR); arm.lineTo(a, pinR); arm.lineTo(0, 5); arm.closePath();
+  driver.add(extrude(arm, 5, T, mat(0x2f6aa3)));
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(pinR, pinR, T + 5 + 4, 24), mat(0xe0b030));
+  pin.rotation.x = PI / 2; pin.position.set(a, 0, (T + 5 + 4) / 2 - 4); driver.add(pin);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 22, 24), mat(0x2a4f7a));
+  hub.rotation.x = PI / 2; hub.position.set(0, 0, 8); driver.add(hub);
+  marker(driver, 'driver@O', 0, 0);
+  marker(driver, 'driver@pin', a, 0);
+}
+
+// wheel (local +X = slot s0)
+const wheel = new THREE.Object3D(); wheel.name = 'wheel'; wheel.position.set(C, 0, 0); scene.add(wheel);
+{
+  const sh = new THREE.Shape();
+  const L = Math.sqrt(Rw * Rw - hwl * hwl);
+  let first = true;
+  const pt = (x, y) => { if (first) { sh.moveTo(x, y); first = false; } else sh.lineTo(x, y); };
+  for (let k = 0; k < n; k++) {
+    const psi = TWO * k / n, ux = Math.cos(psi), uy = Math.sin(psi), nx = -uy, ny = ux;
+    pt(L * ux - hwl * nx, L * uy - hwl * ny);
+    pt(rb * ux - hwl * nx, rb * uy - hwl * ny);
+    pt(rb * ux + hwl * nx, rb * uy + hwl * ny);
+    pt(L * ux + hwl * nx, L * uy + hwl * ny);
+    // arc over sector to next slot's right rim point
+    const mid = psi + PI / n;
+    const a0 = psi + Math.asin(hwl / Rw), a1 = psi + TWO / n - Math.asin(hwl / Rw);
+    const M = 24;
+    for (let i = 0; i <= M; i++) {
+      const ph = a0 + (a1 - a0) * i / M;
+      const D = ph - mid, sD = C * Math.sin(D);
+      let r = Rw;
+      if (Math.abs(sD) < rho) {
+        const rc = C * Math.cos(D) - Math.sqrt(rho * rho - sD * sD);
+        r = Math.min(Rw, rc);
+      }
+      pt(r * Math.cos(ph), r * Math.sin(ph));
+    }
+  }
+  sh.closePath();
+  wheel.add(extrude(sh, T, 0, mat(0xc2562f)));
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 14, 24), mat(0x8a3a1f));
+  hub.rotation.x = PI / 2; hub.position.set(0, 0, 5); wheel.add(hub);
+  marker(wheel, 'wheel@W', 0, 0);
+  for (let k = 0; k < n; k++) {
+    const ang = TWO * k / n;
+    marker(wheel, 'wheel@s' + k, 80 * Math.cos(ang), 80 * Math.sin(ang));
+  }
+}
+
+const dEl = document.querySelector('[data-q="driver_deg"]');
+const wEl = document.querySelector('[data-q="wheel_deg"]');
+const mod360 = d => ((d % 360) + 360) % 360;
+
+function render(t) {
+  const th = phi0 + omega * t;
+  const j = Math.round(th / TWO);
+  const d = th - TWO * j;
+  const dc = Math.max(-beta, Math.min(beta, d));
+  const delta = Math.atan2(a * Math.sin(dc), C - a * Math.cos(dc));
+  const w = PI - TWO / n * j - delta;
+  driver.rotation.z = th;
+  wheel.rotation.z = w;
+  dEl.textContent = mod360(th * 180 / PI).toFixed(2) + ' deg';
+  wEl.textContent = mod360(w * 180 / PI).toFixed(2) + ' deg';
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: TWO / omega,
+  params: { n, C, a, omega, phi0 }, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { window.SIM.render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

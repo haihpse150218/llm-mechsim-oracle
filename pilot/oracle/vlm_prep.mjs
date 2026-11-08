@@ -12,17 +12,18 @@ for (const id of Object.keys(MECHS)) {
   const full = buildPrompt(id);
   fs.writeFileSync(path.join(ROOT, 'specs', `${id}.mech.md`), full.split('## Output contract')[0].trim() + '\n');
 }
-const keyPath = path.join(ROOT, 'vlm', 'key.json');
+const SET = process.env.VLM_SET || 'vlm';
+const keyPath = path.join(ROOT, SET, 'key.json');
 const key = fs.existsSync(keyPath) ? JSON.parse(fs.readFileSync(keyPath, 'utf8')) : {};
 const bySheet = Object.fromEntries(Object.entries(key).map(([k, v]) => [v.sheet, k]));
-fs.mkdirSync(path.join(ROOT, 'vlm', 'inputs'), {recursive: true});
+fs.mkdirSync(path.join(ROOT, SET, 'inputs'), {recursive: true});
 for (const s of process.argv.slice(2)) {
   const sheet = path.relative(ROOT, path.resolve(s)).replace(/\\/g, '/');
   if (bySheet[sheet]) continue;
   const base = path.basename(sheet, '.png');
-  const mech = Object.keys(MECHS).find((m) => base.includes(m));
+  const mech = [...Object.keys(MECHS), 'jansen', 'planetary'].find((m) => base.includes(m));
   const id = `${mech}-${crypto.createHash('sha1').update(sheet).digest('hex').slice(0, 8)}`;
-  fs.copyFileSync(path.join(ROOT, sheet), path.join(ROOT, 'vlm', 'inputs', `${id}.png`));
+  fs.copyFileSync(path.join(ROOT, sheet), path.join(ROOT, SET, 'inputs', `${id}.png`));
   key[id] = {sheet, mech, source: base.replace(/__/g, '/')};
 }
 fs.writeFileSync(keyPath, JSON.stringify(key, null, 2));
