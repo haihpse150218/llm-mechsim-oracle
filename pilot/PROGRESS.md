@@ -31,8 +31,8 @@ node oracle/run_oracle.mjs gen/*/*.html --out results/gen.jsonl
 - [x] Sinh 16 simulator lite (sonnet/haiku × 2 mẫu) → `gen_lite/<model>/<mech>_s<k>.html`
 - [x] Oracle lite (`oracle/run_oracle_lite.mjs`) + 4 reference lite PASS
 - [x] Ablation VLM: 28 sheet cũ ẩn panel → `vlm_nopanel/`
-- [ ] VLM trên 16 simulator lite
-- [ ] Cập nhật REPORT.md (mục pha 2) + quyết định GO/NO-GO
+- [x] VLM trên 16 simulator lite (15 render được)
+- [x] Cập nhật REPORT.md (mục pha 2): GO theo tiêu chí (a), đóng khung lại thành "oracle + VLM bổ sung nhau"
 Tiêu chí: lỗi tự nhiên ≥20% ở (a) HOẶC VLM bỏ sót ≥30% ở (b) → GO lại; cả hai trượt → NO-GO.
 
 - Kết quả tạm pha 2: lỗi tự nhiên 6/16 (37,5%) đã kiểm tay là lỗi thật; ablation không panel: VLM recall 14/24 (bỏ PANEL: 14/20). Đang chạy VLM trên 19 sheet lite (`vlm_lite/`).
