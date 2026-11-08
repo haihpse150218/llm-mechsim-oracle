@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Four-bar crank-rocker linkage</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:system-ui,sans-serif}
+  canvas{display:block;width:100vw;height:100vh}
+  #panel{position:fixed;left:12px;top:12px;padding:10px 14px;background:rgba(0,0,0,.55);color:#e8ecf3;border-radius:8px;font-size:14px;line-height:1.6}
+  #panel b{display:inline-block;min-width:110px;font-weight:600;color:#9fb4d6}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><b>Crank angle</b><span data-q="crank_deg">0.0 deg</span></div>
+  <div><b>Rocker angle</b><span data-q="rocker_deg">0.0 deg</span></div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const params = { a: 40, b: 100, c: 80, d: 90, omega: 2.0, theta0: 0.0 };
+const { a, b, c, d, omega, theta0 } = params;
+const period = 2 * Math.PI / omega;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(50, -40, 330);
+camera.lookAt(50, 15, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(100, 200, 300);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35);
+dl2.position.set(-200, -100, 100);
+scene.add(dl2);
+
+const W = 10, T = 6;
+
+function bar(len, color, z) {
+  // bar from x=0 to x=len along +X, with rounded-ish ends via boxes + cylinders
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.5 });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(len, W, T), mat);
+  box.position.set(len / 2, 0, z);
+  g.add(box);
+  for (const x of [0, len]) {
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(W * 0.8, W * 0.8, T, 24), mat);
+    cyl.rotation.x = Math.PI / 2;
+    cyl.position.set(x, 0, z);
+    g.add(cyl);
+  }
+  return g;
+}
+
+function pin(x, y, z, h) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, h, 16),
+    new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8, roughness: 0.3 }));
+  m.rotation.x = Math.PI / 2;
+  m.position.set(x, y, z);
+  return m;
+}
+
+function marker(parent, name, x, y) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, 0);
+  parent.add(o);
+  return o;
+}
+
+// frame
+const frame = new THREE.Object3D(); frame.name = 'frame';
+scene.add(frame);
+{
+  const mat = new THREE.MeshStandardMaterial({ color: 0x555d6b, metalness: 0.2, roughness: 0.7 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(d + 60, 8, 10), mat);
+  base.position.set(d / 2, -22, -8);
+  frame.add(base);
+  for (const x of [0, d]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(12, 22, 10), mat);
+    post.position.set(x, -11, -8);
+    frame.add(post);
+    frame.add(pin(x, 0, -2, 22));
+  }
+  marker(frame, 'frame@O2', 0, 0);
+  marker(frame, 'frame@O4', d, 0);
+}
+
+const crank = new THREE.Object3D(); crank.name = 'crank';
+crank.add(bar(a, 0xd9534f, 4));
+marker(crank, 'crank@O2', 0, 0);
+marker(crank, 'crank@A', a, 0);
+scene.add(crank);
+
+const coupler = new THREE.Object3D(); coupler.name = 'coupler';
+coupler.add(bar(b, 0x4aa3df, 11));
+marker(coupler, 'coupler@A', 0, 0);
+marker(coupler, 'coupler@B', b, 0);
+scene.add(coupler);
+
+const rocker = new THREE.Object3D(); rocker.name = 'rocker';
+rocker.add(bar(c, 0x5cb85c, 4));
+marker(rocker, 'rocker@B', c, 0);
+marker(rocker, 'rocker@O4', 0, 0);
+scene.add(rocker);
+
+// joint pins (decorative, in scene root, positioned each render)
+const pinA = pin(0, 0, 7, 20), pinB = pin(0, 0, 7, 20);
+scene.add(pinA, pinB);
+
+const crankEl = document.querySelector('[data-q="crank_deg"]');
+const rockerEl = document.querySelector('[data-q="rocker_deg"]');
+
+const TWO_PI = 2 * Math.PI;
+const wrapDeg = r => {
+  let deg = (r * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  if (deg >= 360) deg = 0;
+  return deg;
+};
+
+function solve(theta) {
+  const Ax = a * Math.cos(theta), Ay = a * Math.sin(theta);
+  const dx = d - Ax, dy = -Ay;
+  const L = Math.hypot(dx, dy);
+  const ux = dx / L, uy = dy / L;
+  const k = (b * b - c * c + L * L) / (2 * L);
+  const h = Math.sqrt(Math.max(0, b * b - k * k));
+  // elbow-up branch: perpendicular (-uy, ux)
+  const Bx = Ax + k * ux - h * uy;
+  const By = Ay + k * uy + h * ux;
+  return { Ax, Ay, Bx, By };
+}
+
+function render(t) {
+  const theta = theta0 + omega * t;
+  const { Ax, Ay, Bx, By } = solve(theta);
+
+  crank.position.set(0, 0, 0);
+  crank.rotation.set(0, 0, theta);
+
+  const cAng = Math.atan2(By - Ay, Bx - Ax);
+  coupler.position.set(Ax, Ay, 0);
+  coupler.rotation.set(0, 0, cAng);
+
+  const rAng = Math.atan2(By, Bx - d);
+  rocker.position.set(d, 0, 0);
+  rocker.rotation.set(0, 0, rAng);
+
+  pinA.position.set(Ax, Ay, 7);
+  pinB.position.set(Bx, By, 7);
+
+  crankEl.textContent = wrapDeg(theta).toFixed(2) + ' deg';
+  rockerEl.textContent = wrapDeg(rAng).toFixed(2) + ' deg';
+
+  scene.updateMatrixWorld(true);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  render(window.__lastT || 0);
+});
+
+window.SIM = { scene, camera, renderer, period, params, render };
+window.SIM_READY = true;
+
+render(0);
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    const t = (performance.now() - start) / 1000;
+    window.__lastT = t;
+    SIM.render(t);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

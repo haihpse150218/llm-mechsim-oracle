@@ -25,3 +25,14 @@ Kế hoạch gốc: `../novelty_gate.md` mục 6 "Pilot tối thiểu". Bắt đ
 node oracle/run_oracle.mjs reference/*.html          # phải PASS
 node oracle/run_oracle.mjs gen/*/*.html --out results/gen.jsonl
 ```
+
+## Pha 2 — pivot (Hải chọn hướng 1, 2026-11-08)
+- [x] Hợp đồng lite (marker `<part>@<point>`, `SIM.params`), prompt 4 cơ cấu: four_bar, geneva, jansen, planetary (`oracle/mechs_lite.mjs`, `specs_lite/`)
+- [x] Sinh 16 simulator lite (sonnet/haiku × 2 mẫu) → `gen_lite/<model>/<mech>_s<k>.html`
+- [x] Oracle lite (`oracle/run_oracle_lite.mjs`) + 4 reference lite PASS
+- [x] Ablation VLM: 28 sheet cũ ẩn panel → `vlm_nopanel/`
+- [ ] VLM trên 16 simulator lite
+- [ ] Cập nhật REPORT.md (mục pha 2) + quyết định GO/NO-GO
+Tiêu chí: lỗi tự nhiên ≥20% ở (a) HOẶC VLM bỏ sót ≥30% ở (b) → GO lại; cả hai trượt → NO-GO.
+
+- Kết quả tạm pha 2: lỗi tự nhiên 6/16 (37,5%) đã kiểm tay là lỗi thật; ablation không panel: VLM recall 14/24 (bỏ PANEL: 14/20). Đang chạy VLM trên 19 sheet lite (`vlm_lite/`).

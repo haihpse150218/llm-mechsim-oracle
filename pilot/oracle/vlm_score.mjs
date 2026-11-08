@@ -4,9 +4,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {ROOT} from './serve.mjs';
 
-const key = JSON.parse(fs.readFileSync(path.join(ROOT, 'vlm/key.json'), 'utf8'));
+const SET = process.env.VLM_SET || 'vlm';
+const key = JSON.parse(fs.readFileSync(path.join(ROOT, SET, 'key.json'), 'utf8'));
 const oracle = {};
-for (const f of ['results/mutants.jsonl', 'results/gen.jsonl', 'results/reference.jsonl']) {
+for (const f of ['results/mutants.jsonl', 'results/gen.jsonl', 'results/reference.jsonl', 'results/gen_lite.jsonl', 'results/reference_lite.jsonl']) {
   const p = path.join(ROOT, f);
   if (!fs.existsSync(p)) continue;
   for (const l of fs.readFileSync(p, 'utf8').split('\n').filter(Boolean)) {
@@ -16,7 +17,7 @@ for (const f of ['results/mutants.jsonl', 'results/gen.jsonl', 'results/referenc
 }
 const rows = [];
 for (const [id, k] of Object.entries(key)) {
-  const outP = path.join(ROOT, 'vlm/out', `${id}.json`);
+  const outP = path.join(ROOT, SET, 'out', `${id}.json`);
   if (!fs.existsSync(outP)) continue;
   let v;
   try {
@@ -27,7 +28,7 @@ for (const [id, k] of Object.entries(key)) {
   const src = k.source; // e.g. mutants/four_bar/BRANCH, reference/four_bar_ref, gen/sonnet/four_bar_s1
   const isMut = src.startsWith('mutants/');
   const orc = oracle[src.replace(/^mutants\/(\w+?)\/(\w+)$/, 'mutants/$1__$2')];
-  const truth = isMut ? 'error' : orc ? (orc.pass ? 'correct' : 'error') : src.startsWith('reference/') ? 'correct' : '?';
+  const truth = isMut ? 'error' : orc ? (orc.pass ? 'correct' : 'error') : /^reference/.test(src) ? 'correct' : '?';
   rows.push({
     id, mech: k.mech, source: src, op: isMut ? src.split('/').pop() : '-', truth,
     vlm: v.verdict, vlmConf: v.confidence, vlmWhat: (v.errors || []).map((e) => e.what).join(' | ').slice(0, 160),
@@ -47,4 +48,4 @@ console.log(`VLM missed but oracle caught: ${missed.length}/${faulty.filter((r) 
 const byOp = {};
 for (const r of faulty) (byOp[r.op] ||= []).push(r.vlm === 'error' ? 1 : 0);
 console.log('VLM recall by fault class:', Object.entries(byOp).map(([k, v]) => `${k} ${v.reduce((a, b) => a + b, 0)}/${v.length}`).join('  '));
-fs.writeFileSync(path.join(ROOT, 'results/vlm_vs_oracle.json'), JSON.stringify(rows, null, 2));
+fs.writeFileSync(path.join(ROOT, `results/${SET}_vs_oracle.json`), JSON.stringify(rows, null, 2));

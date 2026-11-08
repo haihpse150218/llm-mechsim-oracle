@@ -17,6 +17,10 @@ const opt = (n, d) => {
 };
 const outdir = path.resolve(opt('outdir', path.join(ROOT, 'sheets')));
 const nFrames = Number(opt('frames', '12'));
+const hideIdx = argv.indexOf('--hide-panel');
+const hidePanel = hideIdx >= 0;
+if (hidePanel) argv.splice(hideIdx, 1);
+const periodOverride = opt('period', null);
 fs.mkdirSync(outdir, {recursive: true});
 
 const srv = await startServer();
@@ -25,12 +29,22 @@ const ctx = await browser.newContext({viewport: {width: 640, height: 400}});
 for (const f of argv) {
   const abs = path.resolve(f);
   const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
-  const T = MECHS[mechOf(abs)]?.period || 4;
+  let T = MECHS[mechOf(abs)]?.period || 4;
   const page = await ctx.newPage();
   const shots = [];
   try {
     await page.goto(`${srv.url}/${rel}?capture`, {waitUntil: 'load', timeout: 20000});
     await page.waitForFunction(() => window.SIM_READY === true, null, {timeout: 15000});
+    if (hidePanel) {
+      // hide the top-level overlay block(s) that contain panel numbers
+      await page.evaluate(() => document.querySelectorAll('[data-q]').forEach((e) => {
+        let n = e;
+        while (n.parentElement && n.parentElement !== document.body) n = n.parentElement;
+        if (n.tagName !== 'CANVAS') n.style.display = 'none';
+      }));
+    }
+    const simPeriod = Number(periodOverride) || (await page.evaluate(() => Number(window.SIM.period))) || T;
+    T = simPeriod;
     for (let k = 0; k < nFrames; k++) {
       const t = (k * T) / nFrames;
       await page.evaluate((t) => window.SIM.render(t), t);
