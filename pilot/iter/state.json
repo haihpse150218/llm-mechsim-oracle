@@ -1,0 +1,150 @@
+{
+  "oracle_spec": {
+    "sonnet/four_bar_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/jansen_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/jansen_s2": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "oracle pass"
+    },
+    "haiku/planetary_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/geneva_s2": {
+      "active": false,
+      "stopRound": 0,
+      "stopReason": "oracle pass"
+    }
+  },
+  "oracle_coarse": {
+    "sonnet/four_bar_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s1": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/jansen_s1": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s2": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/planetary_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/geneva_s2": {
+      "active": false,
+      "stopRound": 0,
+      "stopReason": "oracle pass"
+    }
+  },
+  "vlm": {
+    "sonnet/four_bar_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "vlm says correct"
+    },
+    "sonnet/jansen_s1": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "vlm says correct"
+    },
+    "sonnet/jansen_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "vlm says correct"
+    },
+    "haiku/jansen_s1": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "vlm says correct"
+    },
+    "haiku/jansen_s2": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/planetary_s1": {
+      "active": false,
+      "stopRound": 0,
+      "stopReason": "vlm says correct"
+    },
+    "sonnet/geneva_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "vlm says correct"
+    }
+  },
+  "none": {
+    "sonnet/four_bar_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "sonnet/jansen_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "sonnet/jansen_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/jansen_s1": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/jansen_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/planetary_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "sonnet/geneva_s2": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    }
+  }
+}

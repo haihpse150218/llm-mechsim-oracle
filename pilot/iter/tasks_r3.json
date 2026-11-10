@@ -1,0 +1,38 @@
+[
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/oracle_coarse/haiku/jansen_s1.html",
+    "history": [
+      "iter/oracle_coarse/haiku/jansen_s1.fb1.md",
+      "iter/oracle_coarse/haiku/jansen_s1.fb2.md",
+      "iter/oracle_coarse/haiku/jansen_s1.fb3.md"
+    ],
+    "reply": "iter/oracle_coarse/haiku/jansen_s1.reply3.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/oracle_coarse/haiku/jansen_s2.html",
+    "history": [
+      "iter/oracle_coarse/haiku/jansen_s2.fb1.md",
+      "iter/oracle_coarse/haiku/jansen_s2.fb2.md",
+      "iter/oracle_coarse/haiku/jansen_s2.fb3.md"
+    ],
+    "reply": "iter/oracle_coarse/haiku/jansen_s2.reply3.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/vlm/haiku/jansen_s2.html",
+    "history": [
+      "iter/vlm/haiku/jansen_s2.fb1.md",
+      "iter/vlm/haiku/jansen_s2.fb2.md",
+      "iter/vlm/haiku/jansen_s2.fb3.md"
+    ],
+    "reply": "iter/vlm/haiku/jansen_s2.reply3.txt"
+  }
+]

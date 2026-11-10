@@ -1,0 +1,1 @@
+NO_CHANGE: Static trace finds the rigid-body marker transforms and the circle-intersection solves consistent (Y's circle pair always intersects since |Z-X| stays in [23,53] mm), and LEN matches the canonical Jansen holy numbers, so I could not localize the reported joint and assembly failures without running the page; I left the file unchanged rather than guess at geometry.

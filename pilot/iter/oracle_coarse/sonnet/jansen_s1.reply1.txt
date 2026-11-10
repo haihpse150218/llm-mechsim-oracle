@@ -1,0 +1,1 @@
+CHANGED: Swapped the leg-triangle lengths so UT=65.7 and WT=49.0 (previously UT=49.0, WT=65.7), matching Jansen's published assignment of the holy numbers.

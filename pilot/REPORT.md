@@ -181,3 +181,76 @@ Không nói "VLM bỏ sót nhiều". Nói: **oracle thực thi được và VLM 
 
 ## Hạn chế
 n = 7, mỗi nhánh 1 lần chạy; agent sửa không được chạy thử trang; việc chấm geneva_s2 do một người (tác giả) xem sheet.
+
+---
+
+# Pha 4 — RQ3b: sửa lặp có cổng oracle (2026-11-10)
+
+## Thiết kế
+- 7 simulator lỗi gốc (`gen_lite`, giống pha 3) × 4 nhánh × tối đa **K = 3 vòng**. Người sửa là chính model đã sinh file. Mỗi vòng là một agent mới, đọc spec + file hiện tại + toàn bộ lịch sử feedback, không được chạy trang (`iter/PROMPT.md`, `oracle/iter_repair.mjs`).
+- Nhánh và luật dừng:
+  - **oracle_spec**: cổng oracle + feedback *cụ thể*. Oracle thêm trường `detail`: khâu nào lệch bao nhiêu so với holy numbers ở tỉ lệ khớp nhất, cặp nào "trông như bị đổi chỗ", khớp nào hở ở t nào, toạ độ vẽ so với lời giải, điều kiện bánh răng nào vi phạm. **Tiêu chí pass/fail không đổi** (4/4 tham chiếu PASS, gen_lite cho kết quả y hệt pha 2). Dừng khi oracle pass.
+  - **oracle_coarse**: cổng oracle + feedback *thô* kiểu pha 3 (tên kiểm, số đo, dung sai). Dừng khi oracle pass. Nhánh này tách hiệu ứng "lặp" khỏi hiệu ứng "cụ thể".
+  - **vlm**: VLM ẩn danh review sheet mỗi vòng (vòng 0 dùng lại review pha 2). Dừng khi VLM nói "correct".
+  - **none** (self-refine): prompt chung "hãy kiểm lại". Dừng khi người sửa trả NO_CHANGE.
+- Mọi vòng của mọi nhánh đều được chấm bằng oracle (`iter/results/r<k>.jsonl`, bản chụp `*.r<k>.html`), nhưng chỉ hai nhánh oracle được thấy kết quả.
+
+## Kết quả (6 lỗi oracle thấy được; geneva_s2 xét riêng)
+
+Số file pass oracle sau mỗi vòng:
+
+| Nhánh | v0 | v1 | v2 | v3 (cuối) | Lượt gọi agent |
+|---|---|---|---|---|---|
+| **oracle_spec** | 0/6 | 5/6 | **6/6** | **6/6** | 7 sửa |
+| oracle_coarse | 0/6 | 3/6 | 4/6 | 4/6 | 11 sửa |
+| vlm | 0/6 | 2/6 | 2/6 | 2/6 | 10 sửa + 9 review VLM |
+| none | 0/6 | 0/6 | 0/6 | 0/6 | 9 sửa |
+
+Theo từng file (✓ = pass oracle ở cuối):
+
+| File lỗi | oracle_spec | oracle_coarse | vlm | none |
+|---|---|---|---|---|
+| sonnet four_bar_s2 (crash) | ✓ v1 | ✓ v1 | ✓ v1 | ✗ NO_CHANGE ("không lỗi") |
+| sonnet jansen_s1 (VU↔WU, UT↔WT) | ✓ v1 | ✓ v2 (sửa từng cặp) | ✗ VLM nói correct ở v2 | ✗ NO_CHANGE |
+| sonnet jansen_s2 (UT↔WT) | ✓ v1 | ✓ v1 | ✓ v1 | ✗ NO_CHANGE |
+| haiku jansen_s1 (xáo trộn + bug xoay khâu) | ✓ v1 | ✗ hết ngân sách (khăng khăng "độ dài đúng") | ✗ VLM nói correct ở v2 | ✗ NO_CHANGE ở v2 |
+| haiku jansen_s2 (xáo trộn + bộ giải) | ✓ v2 | ✗ hết ngân sách | ✗ hết ngân sách (tự đặt VU = 50) | ✗ NO_CHANGE |
+| haiku planetary_s1 (Zs+Zr không chia hết 3) | ✓ v1 | ✓ v1 | ✗ VLM nói correct từ v0 | ✗ NO_CHANGE |
+| sonnet geneva_s2 (đĩa khoá, ngoài hợp đồng marker) | ✗ oracle pass từ v0 nên không sửa | ✗ như trên | ~ v1, VLM nói correct | ~ v1, NO_CHANGE ở v2 |
+
+geneva_s2 (kiểm tay trên sheet `iter/sheets_check/`): nhánh vlm và nhánh none cho ra **bản sửa giống hệt nhau từng byte**. Phần khuyết sai phía đã bị xoá, nhưng đĩa khoá bây giờ tròn kín, nên vẫn đè lên cánh bánh lúc ăn khớp (t = 0, t = 4,8 s). Chấm: sửa một phần.
+
+## Nhận xét
+1. **Cổng oracle + feedback cụ thể sửa được 6/6 trong ≤ 2 vòng với ít lượt gọi nhất (7).** Pha 3 (1 vòng, feedback thô) mỗi nhánh chỉ được 3/7. Hai yếu tố đều đóng góp:
+   - *Lặp*: nhánh coarse từ 3 lên 4. Sonnet suy ngược từ con số 0,0736 ra cặp còn lại.
+   - *Cụ thể*: spec hơn coarse 6 so với 4, và nhanh hơn. Hai ca coarse không sửa được đều là haiku: model khăng khăng bộ độ dài sai của mình "chính là holy numbers" và cho rằng bộ chấm sai.
+2. **Luật dừng dựa vào tự đánh giá thì không đáng tin.**
+   - none: 7/7 lần dừng là NO_CHANGE. 6/6 lần trong số đó file vẫn fail oracle, kể cả trang crash không nạp được.
+   - vlm: 6 lần VLM nói "correct". 3 lần sai hẳn (planetary v0, sonnet jansen_s1 v2, haiku jansen_s1 v2), 1 lần chỉ đúng một phần (geneva).
+   - Riêng sonnet jansen_s1 nhánh vlm: vòng 2 hoàn tác bản sửa vòng 1, file trở về đúng trạng thái lỗi ban đầu. Pha 2 VLM bắt được trạng thái này (conf 0,55), lần này lại nói "correct" (conf 0,6). Đây là bằng chứng VLM không ổn định giữa các lần chấm.
+3. **Feedback từ VLM dẫn người sửa đi sai hướng.** Có các ca:
+   - xoay chân đế 20° để "làm phẳng" quỹ đạo chân;
+   - đổi VU thành 50 (không phải holy number) để hết "kẹt gối";
+   - viết lại bộ giải nhưng giữ nguyên độ dài sai.
+
+   VLM mô tả triệu chứng chứ không chỉ ra nguyên nhân; người sửa chữa triệu chứng.
+4. **Self-refine tự tin sai một cách có hệ thống trên tri thức miền.** Nhiều lần người sửa liệt kê nguyên bảng độ dài sai rồi khẳng định chúng "khớp holy numbers". Ở pha 3, cũng prompt đó tự tìm ra lỗi bánh hành tinh; ở pha này thì không. Vậy self-refine còn không ổn định giữa các lần chạy.
+5. **Điểm mù của oracle được xác nhận:**
+   - Lỗi ngoài hợp đồng marker (geneva) bị oracle chấp nhận ngay từ v0. Đây là chỗ VLM/người duyệt còn cần thiết, dù chính VLM cũng chấp nhận bản sửa một phần.
+   - Feedback cụ thể suy cho cùng là đưa đáp án, vì bộ kiểm DESIGN mã hoá holy numbers. Đây là đặc tính của oracle đặc tả, không phải gian lận, nhưng cần nói rõ trong bài: giá trị nằm ở chỗ *oracle có thể tạo tự động/tái dùng*, không ở chỗ nó "gợi ý khéo".
+
+## Hệ quả cho bài báo
+- RQ3 có câu trả lời rõ hơn pha 3: **oracle làm cổng nghiệm thu + nguồn feedback chẩn đoán > VLM-in-the-loop > self-refine**, trên cả tỉ lệ sửa lẫn chi phí. Luận điểm mạnh nhất là *luật dừng*: chỉ cổng oracle không bao giờ dừng sai.
+- Đề xuất đóng khung: *"executable oracles as acceptance gates for LLM-generated simulators"*, với VLM là kênh bổ sung cho phần nằm ngoài hợp đồng.
+
+## Hạn chế
+- n = 6 (+1), mỗi ô 1 lần chạy, chỉ họ Claude (sonnet/haiku làm người sửa, sonnet làm VLM).
+- Lỗi tập trung vào Jansen (4/6), nên kết quả có thể phản ánh riêng độ khó của tri thức holy numbers.
+- Nhánh oracle_spec được hưởng lợi từ việc DESIGN mã hoá đáp án.
+- geneva_s2 do tác giả kiểm tay một mình.
+
+## Bước tiếp theo đề xuất
+1. Thêm 2–3 cơ cấu có lỗi tự nhiên ngoài Jansen (cam có dwell, Watt 6 khâu), 5 mẫu/ô, lặp mỗi nhánh 2–3 lần để có khoảng tin cậy.
+2. Ablation mức cụ thể của feedback ở nhánh oracle: chỉ chỉ ra *cặp nào sai*, không đưa giá trị đúng.
+3. Một model hãng khác (cần API key) cho cả sinh và sửa.
+4. Bắt đầu dàn ý bài báo theo cách đóng khung "acceptance gate".

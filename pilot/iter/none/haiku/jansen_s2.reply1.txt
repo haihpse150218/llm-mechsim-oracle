@@ -1,0 +1,1 @@
+NO_CHANGE: I checked the geometry, constraints, marker and part naming, rigid placement, panel, SIM exposure and purity against the spec, and the reference pose satisfies all ten link lengths to about 0.1 mm, so nothing is clearly wrong; I did not numerically verify the flat-bottomed foot path.

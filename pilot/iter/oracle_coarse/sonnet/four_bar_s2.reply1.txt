@@ -1,0 +1,1 @@
+CHANGED: Replaced the Object.assign that assigned the read-only Mesh.position (which threw at load) with position.set() on the frame boss cylinders.

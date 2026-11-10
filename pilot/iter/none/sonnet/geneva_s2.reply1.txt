@@ -1,0 +1,1 @@
+CHANGED: Fixed the driver lock-disc profile so the pin-relief notch only applies on the pin side (cos d > 0); previously it also triggered on the opposite side, producing negative radii and a garbled disc.

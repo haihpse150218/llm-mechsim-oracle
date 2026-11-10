@@ -32,6 +32,8 @@ function circ(P, rp, Q, rq, side) {
   const M = [P[0] + a * u[0], P[1] + a * u[1]];
   return [M[0] - side * h * u[1], M[1] + side * h * u[0]];
 }
+const f1 = (x) => (Number.isFinite(x) ? +x.toFixed(1) : x);
+const fp = (p) => (p ? `(${f1(p[0])}, ${f1(p[1])})` : 'n/a');
 const crossSide = (P, Q, R) => Math.sign((Q[0] - P[0]) * (R[1] - P[1]) - (Q[1] - P[1]) * (R[0] - P[0])) || 1;
 
 export function mechOfLite(file) {
@@ -52,7 +54,8 @@ const MECH = {
       R.param('len c', S.P('rocker@O4').map((p, k) => Math.abs(dist(p, S.P('rocker@B')[k]) - c)));
       R.param('len d', [Math.abs(dist(O2, O4) - d)]);
       const s = [a, b, c, d].sort((x, y) => x - y);
-      R.design('Grashof crank-rocker (crank shortest, s+l<=p+q)', s[0] + s[3] <= s[1] + s[2] + 1e-9 && a === s[0] && d !== s[0] ? 0 : 1, 0.5);
+      R.design('Grashof crank-rocker (crank shortest, s+l<=p+q)', s[0] + s[3] <= s[1] + s[2] + 1e-9 && a === s[0] && d !== s[0] ? 0 : 1, 0.5,
+        `a=${a}, b=${b}, c=${c}, d=${d}: shortest+longest = ${f1(s[0] + s[3])} vs sum of other two = ${f1(s[1] + s[2])}; crank a must be the shortest link and s+l <= p+q`);
       const th = S.times.map((t) => theta0 + omega * t);
       R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('crank@O2')[k], S.P('crank@A')[k]), th[k])), 'deg');
       // GT: branch taken from the simulator at the first sample, then held
@@ -61,7 +64,8 @@ const MECH = {
       const gtB = th.map((x) => circ([O2[0] + a * Math.cos(x), O2[1] + a * Math.sin(x)], b, O4, c, side));
       if (gtB.some((p) => !p)) R.design('linkage assembles for all crank angles', 1, 0.5);
       else {
-        R.gt('B vs solution', gtB.map((p, k) => dist(p, S.P('rocker@B')[k])));
+        R.gt('B vs solution', gtB.map((p, k) => dist(p, S.P('rocker@B')[k])), 'mm', undefined,
+          (k) => `at t=${S.times[k].toFixed(3)} s (crank ${f1(deg(th[k]))} deg) rocker@B is drawn at ${fp(S.P('rocker@B')[k])}, the solution from your params puts B at ${fp(gtB[k])}`);
         R.panel('crank_deg', S.panel('crank_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
         R.panel('rocker_deg', S.panel('rocker_deg').map((x, k) => panelAngDiff(x, deg(ang(O4, gtB[k])))), 'deg');
       }
@@ -74,7 +78,8 @@ const MECH = {
       const O = S.P('frame@O')[0], W = S.P('frame@W')[0];
       R.param('len C', [Math.abs(dist(O, W) - C)]);
       R.param('len a (pin radius)', S.P('driver@O').map((p, k) => Math.abs(dist(p, S.P('driver@pin')[k]) - a)));
-      R.design('tangential entry a = C sin(pi/n) (mm)', Math.abs(a - C * Math.sin(Math.PI / n)), 1);
+      R.design('tangential entry a = C sin(pi/n) (mm)', Math.abs(a - C * Math.sin(Math.PI / n)), 1,
+        `n=${n}, C=${C}: pin radius a=${a} but tangential (shock-free) entry needs a = C*sin(pi/n) = ${f1(C * Math.sin(Math.PI / n))}`);
       const phi = S.times.map((t) => phi0 + omega * t);
       R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('driver@O')[k], S.P('driver@pin')[k]), phi[k])), 'deg');
       const slots = Array.from({length: n}, (_, j) => S.P(`wheel@s${j}`));
@@ -126,7 +131,7 @@ const MECH = {
       const holyErr = Object.entries(this.HOLY).map(([k, v]) => Math.abs(len[k] / sc - v) / v);
       const dx = (X[0] - O[0]) / sc, dy = (X[1] - O[1]) / sc;
       holyErr.push(Math.abs(Math.abs(dx) - 38) / 38, Math.abs(dy + 7.8) / 7.8);
-      R.design('holy numbers (max rel. error)', Math.max(...holyErr), 0.03);
+      R.design('holy numbers (max rel. error)', Math.max(...holyErr), 0.03, () => holyDetail(len, O, X, this.HOLY));
       const th = S.times.map((t) => theta0 + omega * t);
       R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('crank@O')[k], S.P('crank@Z')[k]), th[k])), 'deg');
       // canonical branches (standard orientation: X left of O): Y up, W down, V outer-left, U outer-left, T lowest
@@ -145,24 +150,30 @@ const MECH = {
         return T ? {Z, Y, W, V, U, T} : null;
       });
       if (gt.some((g) => !g)) {
-        R.design('linkage assembles for all crank angles', 1, 0.5);
+        R.design('linkage assembles for all crank angles', 1, 0.5, () => {
+          const k = gt.findIndex((g) => !g);
+          return `with your SIM.params the loops cannot close at t=${S.times[k].toFixed(3)} s (crank ${f1(deg(th[k]))} deg): some pair of links is too short to reach`;
+        });
         return;
       }
       for (const j of ['Y', 'W', 'V', 'U', 'T']) {
         const mk = {Y: 'rodUpper@Y', W: 'rodLower@W', V: 'upperTriangle@V', U: 'linkVU@U', T: 'legTriangle@T'}[j];
-        R.gt(`${j} vs canonical solution`, gt.map((g, k) => dist(g[j], S.P(mk)[k])));
+        R.gt(`${j} vs canonical solution`, gt.map((g, k) => dist(g[j], S.P(mk)[k])), 'mm', undefined,
+          (k) => `at t=${S.times[k].toFixed(3)} s (crank ${f1(deg(th[k]))} deg) marker ${mk} is drawn at ${fp(S.P(mk)[k])}; solving the linkage from your SIM.params (standard assembly: Y above, W below, V/U on the outer side, T lowest) puts ${j} at ${fp(gt[k][j])}`);
       }
       R.panel('crank_deg', S.panel('crank_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
-      R.panel('foot_x', S.panel('foot_x').map((x, k) => Math.abs(x - gt[k].T[0])));
-      R.panel('foot_y', S.panel('foot_y').map((x, k) => Math.abs(x - gt[k].T[1])));
+      const fd = (q, i) => (k) => `at t=${S.times[k].toFixed(3)} s the panel ${q} reads ${S.panel(q)[k]}, the foot T from your SIM.params is at ${f1(gt[k].T[i])} mm (and drawn at ${f1(S.P('legTriangle@T')[k][i])} mm)`;
+      R.panel('foot_x', S.panel('foot_x').map((x, k) => Math.abs(x - gt[k].T[0])), 'mm', undefined, fd('foot_x', 0));
+      R.panel('foot_y', S.panel('foot_y').map((x, k) => Math.abs(x - gt[k].T[1])), 'mm', undefined, fd('foot_y', 1));
     },
   },
   planetary: {
     revs: () => 1,
     check(S, R) {
       const {module: m, Zs, Zp, Zr, omega, theta0} = S.params;
-      R.design('Zr = Zs + 2 Zp', Math.abs(Zr - Zs - 2 * Zp), 0.5);
-      R.design('equal spacing (Zs+Zr) divisible by 3', (Zs + Zr) % 3 === 0 ? 0 : 1, 0.5);
+      R.design('Zr = Zs + 2 Zp', Math.abs(Zr - Zs - 2 * Zp), 0.5, `Zs=${Zs}, Zp=${Zp}, Zr=${Zr}: concentric meshing needs Zr = Zs + 2*Zp = ${Zs + 2 * Zp}`);
+      R.design('equal spacing (Zs+Zr) divisible by 3', (Zs + Zr) % 3 === 0 ? 0 : 1, 0.5,
+        `Zs + Zr = ${Zs} + ${Zr} = ${Zs + Zr} is not divisible by 3, so three planets spaced 120 deg apart cannot all mesh with sun and ring at once`);
       const C = S.P('frame@C')[0];
       R.param('sun pitch radius', [Math.abs(dist(C, S.P('sun@sunRef')[0]) - (m * Zs) / 2)]);
       R.param('ring pitch radius', [Math.abs(dist(C, S.P('ring@ringRef')[0]) - (m * Zr) / 2)]);
@@ -183,13 +194,15 @@ const MECH = {
       const us = unwrap(as), ur = unwrap(ar), uc = unwrap(ac);
       R.gt('ring fixed (deg)', ur.map(Math.abs).map(deg), 'deg');
       const wc = (omega * Zs) / (Zs + Zr);
-      R.gt('carrier vs Willis (deg)', S.times.map((t, k) => Math.abs(deg(uc[k] - wc * (t - S.times[0])))), 'deg');
+      R.gt('carrier vs Willis (deg)', S.times.map((t, k) => Math.abs(deg(uc[k] - wc * (t - S.times[0])))), 'deg', undefined,
+        (k) => `with the ring fixed the carrier must turn at omega*Zs/(Zs+Zr) = ${wc.toFixed(4)} rad/s; at t=${S.times[k].toFixed(3)} s it has turned ${f1(deg(uc[k]))} deg, expected ${f1(deg(wc * (S.times[k] - S.times[0])))} deg`);
       for (let j = 0; j < 3; j++) {
         const ap = S.P(`planet${j}@planet${j}Ref`).map((p, k) => ang(S.P(`planet${j}@P${j}`)[k], p));
         const up = unwrap(ap);
         // rolling without slip: Zs*(ds - dc) = -Zp*(dp - dc), and Zp*(dp - dc) = Zr*(dr - dc); error expressed in sun degrees
-        R.gt(`planet${j} sun mesh (deg)`, us.map((_, k) => Math.abs(deg(Zs * (us[k] - uc[k]) + Zp * (up[k] - uc[k])) / Zs)), 'deg');
-        R.gt(`planet${j} ring mesh (deg)`, us.map((_, k) => Math.abs(deg(Zp * (up[k] - uc[k]) - Zr * (ur[k] - uc[k])) / Zs)), 'deg');
+        const relSpin = (k) => `at t=${S.times[k].toFixed(3)} s: sun turned ${f1(deg(us[k]))} deg, carrier ${f1(deg(uc[k]))} deg, planet${j} ${f1(deg(up[k]))} deg; rolling without slip requires planet spin relative to carrier = -(Zs/Zp)*(sun - carrier) = ${f1(deg(-(Zs / Zp) * (us[k] - uc[k])))} deg, drawn ${f1(deg(up[k] - uc[k]))} deg`;
+        R.gt(`planet${j} sun mesh (deg)`, us.map((_, k) => Math.abs(deg(Zs * (us[k] - uc[k]) + Zp * (up[k] - uc[k])) / Zs)), 'deg', undefined, relSpin);
+        R.gt(`planet${j} ring mesh (deg)`, us.map((_, k) => Math.abs(deg(Zp * (up[k] - uc[k]) - Zr * (ur[k] - uc[k])) / Zs)), 'deg', undefined, relSpin);
       }
       R.panel('sun_deg', S.panel('sun_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
       R.panel('carrier_deg', S.panel('carrier_deg').map((x, k) => panelAngDiff(x, deg(ac[0] + wc * (S.times[k] - S.times[0])))), 'deg');
@@ -197,6 +210,24 @@ const MECH = {
     },
   },
 };
+
+// per-link holy-number diagnosis: robust scale = median(len/H), list off links, flag swapped pairs
+function holyDetail(len, O, X, H) {
+  const ks = Object.keys(H);
+  const r = ks.map((k) => len[k] / H[k]).filter(Number.isFinite).sort((a, b) => a - b);
+  const s = r[Math.floor(r.length / 2)];
+  const bad = ks.filter((k) => !(Math.abs(len[k] / s - H[k]) / H[k] <= 0.03));
+  const out = [`best-fit uniform scale = ${s.toFixed(3)} x the published Jansen numbers (OZ 15, ZY 50, XY 41.5, ZW 61.9, XW 39.3, XV 40.1, YV 55.8, VU 39.4, WU 36.7, UT 65.7, WT 49; fixed pivot X 38 to the side of O and 7.8 below it). Links that do not match at this scale:`];
+  for (const k of bad) {
+    const sw = ks.find((j) => j !== k && Math.abs(len[k] / s - H[j]) / H[j] <= 0.03 && Math.abs(len[j] / s - H[k]) / H[k] <= 0.03);
+    out.push(`len.${k} = ${f1(len[k])} mm, expected ${f1(H[k] * s)} mm${sw ? ` (looks swapped with len.${sw})` : ''}`);
+  }
+  const dx = (X[0] - O[0]) / s, dy = (X[1] - O[1]) / s;
+  if (Math.abs(Math.abs(dx) - 38) / 38 > 0.03 || Math.abs(dy + 7.8) / 7.8 > 0.03)
+    out.push(`X - O = (${f1(X[0] - O[0])}, ${f1(X[1] - O[1])}) mm, expected (+/-${f1(38 * s)}, ${f1(-7.8 * s)}) mm`);
+  if (out.length === 1) out.push('(none individually at this scale)');
+  return out[0] + ' ' + out.slice(1).join('; ');
+}
 
 let _sides = null;
 function canonicalSides() {
@@ -220,15 +251,22 @@ const TOL = {mm: 1.0, deg: 1.0, rel: 0.01};
 
 function makeRecorder(scaleMM) {
   const checks = [];
-  const add = (family) => (name, vals, unit = 'mm', tolOverride) => {
-    const v = Math.max(...vals.map((x) => (Number.isFinite(x) ? x : Infinity)));
+  // detail(k) -> string: specific diagnostic at the worst sample k (only evaluated on failure)
+  const add = (family) => (name, vals, unit = 'mm', tolOverride, detail) => {
+    const xs = vals.map((x) => (Number.isFinite(x) ? x : Infinity));
+    const v = Math.max(...xs);
+    const k = xs.indexOf(v);
     const tol = tolOverride ?? (unit === 'deg' ? TOL.deg : unit === 'rel' ? TOL.rel : TOL.mm * scaleMM);
-    checks.push({family, name, value: v, tol, pass: v <= tol});
+    const c = {family, name, value: v, tol, pass: v <= tol, k, unit};
+    if (!c.pass && detail) {
+      try { c.detail = detail(k); } catch (e) { c.detail = null; }
+    }
+    checks.push(c);
   };
   return {
     checks,
     meta: add('META'), param: add('PARAM'), gt: add('GT'), panel: add('PANEL'),
-    design: (name, v, tol) => checks.push({family: 'DESIGN', name, value: v, tol, pass: v <= tol}),
+    design: (name, v, tol, detail) => checks.push({family: 'DESIGN', name, value: v, tol, pass: v <= tol, ...(v > tol && detail ? {detail: typeof detail === 'function' ? detail() : detail} : {})}),
   };
 }
 
@@ -327,7 +365,15 @@ export async function checkLite(page, url, id) {
       const ds = fwd.map((s) => dist(s.m[mk[i]], s.m[mk[j]]));
       rig = Math.max(rig, Math.max(...ds) - Math.min(...ds));
     }
-    if (mk.length > 1) R.meta(`rigid ${p}`, [rig]);
+    if (mk.length > 1) {
+      let worst = null, wv = -1;
+      for (let i = 0; i < mk.length; i++) for (let j = i + 1; j < mk.length; j++) {
+        const ds = fwd.map((s) => dist(s.m[mk[i]], s.m[mk[j]]));
+        const r = Math.max(...ds) - Math.min(...ds);
+        if (r > wv) { wv = r; worst = [mk[i], mk[j], Math.min(...ds), Math.max(...ds)]; }
+      }
+      R.meta(`rigid ${p}`, [rig], 'mm', undefined, () => `distance ${worst[0]} - ${worst[1]} varies between ${f1(worst[2])} and ${f1(worst[3])} mm over the cycle; markers of one part must move rigidly together`);
+    }
   }
   const byPoint = {};
   for (const [p, ptsOf] of Object.entries(parts)) for (const x of ptsOf) (byPoint[x] ||= []).push(`${p}@${x}`);
@@ -335,7 +381,9 @@ export async function checkLite(page, url, id) {
     if (mks.length < 2) continue;
     let c = 0;
     for (const s of fwd) for (let i = 1; i < mks.length; i++) c = Math.max(c, dist(s.m[mks[0]], s.m[mks[i]]));
-    R.meta(`joint ${x} coincident`, [c]);
+    const cs = fwd.map((s) => Math.max(...mks.slice(1).map((m) => dist(s.m[mks[0]], s.m[m]))));
+    R.meta(`joint ${x} coincident`, cs, 'mm', undefined,
+      (k) => `at t=${times[k].toFixed(3)} s the markers ${mks.join(', ')} are at ${mks.map((m) => fp(fwd[k].m[m])).join(', ')} (${f1(cs[k])} mm apart); parts sharing joint ${x} must meet there at every instant`);
   }
   const fr = names.filter((n) => n.startsWith('frame@'));
   R.meta('frame static', fr.map((n) => Math.max(...fwd.map((s) => dist(s.m[n], fwd[0].m[n])))));
@@ -376,7 +424,7 @@ async function main() {
     console.log(`${rec.pass ? 'PASS' : 'FAIL'} ${rel} [${r.fails.join(',')}]`);
     if (!quiet) {
       if (r.load.ok === false) console.log('   load:', JSON.stringify(r.load).slice(0, 300));
-      for (const c of r.checks.filter((c) => !c.pass)) console.log(`   ${c.family.padEnd(6)} ${c.name}: ${+c.value.toPrecision(3)} (tol ${+c.tol.toPrecision(3)})`);
+      for (const c of r.checks.filter((c) => !c.pass)) console.log(`   ${c.family.padEnd(6)} ${c.name}: ${+c.value.toPrecision(3)} (tol ${+c.tol.toPrecision(3)})${c.detail ? '\n          ' + c.detail : ''}`);
     }
   }
   await browser.close();

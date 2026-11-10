@@ -1,0 +1,1 @@
+CHANGED: The lock-disc relief notch was also being cut on the side opposite the pin (the sin test matched d near 180 deg and produced a negative radius); it is now restricted to cos(d) > 0 so the relief is only at the pin direction and the full disc arc faces the wheel at dwell.

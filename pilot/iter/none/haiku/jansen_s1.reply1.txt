@@ -1,0 +1,1 @@
+CHANGED: Removed the stray "- g.a0" from the per-part rotation in render(), since the part geometry and marker/pin offsets are already built in the a0-aligned frame and so the body rotation must equal the current p0->p1 direction, otherwise every bar, pin and marker except the crank and frame was rotated off its joints by -a0.

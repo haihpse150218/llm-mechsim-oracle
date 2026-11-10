@@ -1,0 +1,1 @@
+CHANGED: Corrected the Jansen holy-number geometry by setting the crank length OZ to 15 mm (it was 38 mm, which was the frame distance) and moving the second fixed pivot X to (38, 7.8) mm (it was (15, 0)), so the crank is short and the frame pivots are separated by the holy-number offsets.

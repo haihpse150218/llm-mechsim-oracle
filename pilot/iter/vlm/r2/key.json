@@ -1,0 +1,14 @@
+{
+  "jansen-2625dbfd": {
+    "source": "vlm/sonnet/jansen_s1",
+    "mech": "jansen"
+  },
+  "jansen-102e9db4": {
+    "source": "vlm/haiku/jansen_s1",
+    "mech": "jansen"
+  },
+  "jansen-b138a9f3": {
+    "source": "vlm/haiku/jansen_s2",
+    "mech": "jansen"
+  }
+}

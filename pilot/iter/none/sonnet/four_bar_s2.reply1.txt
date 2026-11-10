@@ -1,0 +1,1 @@
+NO_CHANGE: Grashof holds (40+100<90+80, crank shortest), the loop closure and branch are continuous, angles/markers/panel/contract all check out against the spec.

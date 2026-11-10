@@ -1,0 +1,1 @@
+CHANGED: Replaced the iterative Newton/continuation pose solver (which could stall, silently return a stale pose, and jump branches) with a closed-form chain of circle intersections (Y, W, V, U, T) on fixed reference-matched branches, so the foot path is continuous and every link length is met exactly at each crank angle.

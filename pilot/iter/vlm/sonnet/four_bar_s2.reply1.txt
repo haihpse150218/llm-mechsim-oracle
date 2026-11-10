@@ -1,0 +1,1 @@
+CHANGED: Removed the Object.assign that tried to overwrite the read-only Object3D.position (a TypeError in module code that aborted the script before any frame), setting boss.position.x instead.

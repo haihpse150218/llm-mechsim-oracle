@@ -1,0 +1,1 @@
+CHANGED: Rotated the second fixed pivot X about the crank axle by 20 degrees CCW (link lengths unchanged) so the foot's low stroke is level in world coordinates, giving the flat-bottomed D-shaped path instead of a tilted ellipse.

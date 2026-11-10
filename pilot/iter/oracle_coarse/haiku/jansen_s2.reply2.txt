@@ -1,0 +1,1 @@
+CHANGED: Made the constraint solver's Newton iteration more robust (up to 60 iterations with step length capped at 5 mm), so the solved joint positions converge to the loop-closure constraints instead of drifting off-branch, which should fix the U-coincidence and foot-panel failures.

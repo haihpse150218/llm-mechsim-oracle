@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jansen Leg Simulator</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14161c; font-family: system-ui, sans-serif; color: #e5e7eb; }
+  canvas { display: block; }
+  #panel { position: fixed; left: 12px; top: 12px; background: rgba(0, 0, 0, 0.55); padding: 10px 14px; border-radius: 6px; font-size: 14px; line-height: 1.6; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>crank angle: <span data-q="crank_deg">0.00 deg</span></div>
+  <div>foot x: <span data-q="foot_x">0.00 mm</span></div>
+  <div>foot y: <span data-q="foot_y">0.00 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------------------------------------------------------------------------
+// Geometry. Lengths (mm) from Jansen's published "holy numbers" (crank a = 38):
+// a=38 OZ, b=41.5 ZY, c=39.3 ZW, d=40.1 XW, f=39.4 XY, g=36.7 XV, e=55.8 YV,
+// h=65.7 VU, i=49 WU, j=50 UT, k=61.9 WT. The ground distance OX (35 mm) is
+// a free choice that keeps both four-bar loops double-crank (no toggles).
+// ---------------------------------------------------------------------------
+const TWO_PI = Math.PI * 2;
+const L = { OZ: 38, ZY: 41.5, XY: 39.4, ZW: 39.3, XW: 40.1, XV: 36.7, YV: 55.8, VU: 65.7, WU: 49, UT: 50, WT: 61.9 };
+const O = [0, 0];
+const X = [-35, 0];
+const OMEGA = 1.0;      // rad/s, counter-clockwise
+const THETA0 = 0;       // reference pose is the crank at angle 0
+
+const mod2pi = (v) => ((v % TWO_PI) + TWO_PI) % TWO_PI;
+
+// Unknowns: Y, V, W, U, T (10 scalars). Z is driven by the crank.
+const IDX = { Y: 0, V: 2, W: 4, U: 6, T: 8 };
+const CONS = [
+  ['Z', 'Y', L.ZY], ['X', 'Y', L.XY], ['X', 'V', L.XV], ['Y', 'V', L.YV],
+  ['Z', 'W', L.ZW], ['X', 'W', L.XW], ['V', 'U', L.VU], ['W', 'U', L.WU],
+  ['U', 'T', L.UT], ['W', 'T', L.WT]
+];
+
+function pointsOf(x, th) {
+  return {
+    O, X,
+    Z: [L.OZ * Math.cos(th), L.OZ * Math.sin(th)],
+    Y: [x[0], x[1]], V: [x[2], x[3]], W: [x[4], x[5]], U: [x[6], x[7]], T: [x[8], x[9]]
+  };
+}
+
+function resJac(x, th) {
+  const P = pointsOf(x, th);
+  const r = new Array(10);
+  const J = [];
+  for (let k = 0; k < 10; k++) J.push(new Array(10).fill(0));
+  CONS.forEach(([a, b, d], k) => {
+    const pa = P[a], pb = P[b];
+    const dx = pa[0] - pb[0], dy = pa[1] - pb[1];
+    r[k] = dx * dx + dy * dy - d * d;
+    if (a in IDX) { J[k][IDX[a]] += 2 * dx; J[k][IDX[a] + 1] += 2 * dy; }
+    if (b in IDX) { J[k][IDX[b]] -= 2 * dx; J[k][IDX[b] + 1] -= 2 * dy; }
+  });
+  return { r, J };
+}
+
+function solveLin(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => row.slice().concat([b[i]]));
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    const tmp = M[c]; M[c] = M[p]; M[p] = tmp;
+    const piv = M[c][c];
+    if (Math.abs(piv) < 1e-14) return null;
+    for (let r = c + 1; r < n; r++) {
+      const f = M[r][c] / piv;
+      if (f !== 0) for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k];
+    }
+  }
+  const xs = new Array(n).fill(0);
+  for (let r = n - 1; r >= 0; r--) {
+    let s = M[r][n];
+    for (let k = r + 1; k < n; k++) s -= M[r][k] * xs[k];
+    xs[r] = s / M[r][r];
+  }
+  return xs;
+}
+
+// Newton correction of the closed-loop constraints at crank angle th.
+function newton(x0, th) {
+  let x = x0.slice();
+  for (let it = 0; it < 12; it++) {
+    const { r, J } = resJac(x, th);
+    let err = 0;
+    for (const v of r) err = Math.max(err, Math.abs(v));
+    if (err < 1e-9) break;
+    const dx = solveLin(J, r.map((v) => -v));
+    if (!dx) break;
+    for (let i = 0; i < 10; i++) x[i] += dx[i];
+  }
+  return x;
+}
+
+// Reference pose (crank angle 0), polished from hand-placed guess.
+const REF_GUESS = [0.33, 17.44, -21.2, -34.0, 1.93, -15.63, 44.18, -40.45, 10.06, -76.99];
+const X_REF = newton(REF_GUESS, 0);
+const REF = pointsOf(X_REF, 0);
+
+// Continuation table: solutions at crank angles k * DTH (k = 0..NSTEP), built
+// once at load from the reference pose in 0.1-degree steps. Each step starts
+// from the previous solution, so Newton stays on the same assembly branch.
+// Constants only: no per-call state.
+const NSTEP = 3600;
+const DTH = TWO_PI / NSTEP;
+const TABLE = [X_REF];
+for (let k = 1; k <= NSTEP; k++) TABLE.push(newton(TABLE[k - 1], k * DTH));
+
+// Pose at crank angle th (rad): start from the nearest tabulated solution
+// below th and Newton-correct to th. Pure function of th.
+function poseAt(th) {
+  const t = mod2pi(th);
+  const k = Math.min(Math.floor(t / DTH), NSTEP - 1);
+  return newton(TABLE[k], t);
+}
+
+// Foot trace over one revolution (constant, computed once at load).
+const TRACE = [];
+for (let k = 0; k <= NSTEP; k += 10) {
+  TRACE.push(new THREE.Vector3(TABLE[k][8], TABLE[k][9], -1));
+}
+
+// ---------------------------------------------------------------------------
+// Scene
+// ---------------------------------------------------------------------------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14161c);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(0, -15, 300);
+camera.lookAt(-5, -20, 0);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.0);
+key.position.set(120, 160, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x8899ff, 0.35);
+fill.position.set(-200, -100, 150);
+scene.add(fill);
+
+const WB = 6;   // bar width (mm)
+const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, metalness: 0.15 });
+
+const objs = {};
+// Create a part Object3D. Its local frame is anchored at `anchor` and
+// oriented so that the reference direction anchor->dir is along +X.
+function makePart(name, anchor, dir, pts) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  const a = anchor ? REF[anchor] : [0, 0];
+  const L2 = (p) => [REF[p][0] - a[0], REF[p][1] - a[1]];
+  for (const p of pts) {
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + p;
+    const q = L2(p);
+    mk.position.set(q[0], q[1], 0);
+    g.add(mk);
+  }
+  scene.add(g);
+  objs[name] = { g, anchor, dir, L2 };
+  return objs[name];
+}
+
+function bar(g, p, q, z, depth, color) {
+  const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, WB, depth), mat(color));
+  m.position.set((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, z);
+  m.rotation.z = Math.atan2(q[1] - p[1], q[0] - p[0]);
+  g.add(m);
+}
+
+function plate(g, pts, z, depth, color) {
+  const shape = new THREE.Shape(pts.map((p) => new THREE.Vector2(p[0], p[1])));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
+  geo.translate(0, 0, -depth / 2);
+  const m = new THREE.Mesh(geo, mat(color));
+  m.position.z = z;
+  g.add(m);
+}
+
+function pin(g, p, color) {
+  const geo = new THREE.CylinderGeometry(3.4, 3.4, 30, 20);
+  geo.rotateX(Math.PI / 2);
+  const m = new THREE.Mesh(geo, mat(color));
+  m.position.set(p[0], p[1], 0);
+  g.add(m);
+}
+
+// frame (fixed, world coordinates)
+{
+  const P = makePart('frame', null, null, ['O', 'X']);
+  const L2 = P.L2;
+  bar(P.g, L2('O'), L2('X'), 0, 8, 0x6b7280);
+  pin(P.g, L2('O'), 0x9ca3af);
+  pin(P.g, L2('X'), 0x9ca3af);
+}
+// crank
+{
+  const P = makePart('crank', 'O', 'Z', ['O', 'Z']);
+  bar(P.g, P.L2('O'), P.L2('Z'), 0, 6, 0xf59e0b);
+  pin(P.g, P.L2('O'), 0xfde68a);
+  pin(P.g, P.L2('Z'), 0xfde68a);
+}
+// rodUpper (Z -> Y)
+{
+  const P = makePart('rodUpper', 'Z', 'Y', ['Z', 'Y']);
+  bar(P.g, P.L2('Z'), P.L2('Y'), 8, 5, 0x60a5fa);
+  pin(P.g, P.L2('Z'), 0xbfdbfe);
+  pin(P.g, P.L2('Y'), 0xbfdbfe);
+}
+// rodLower (Z -> W)
+{
+  const P = makePart('rodLower', 'Z', 'W', ['Z', 'W']);
+  bar(P.g, P.L2('Z'), P.L2('W'), -8, 5, 0x34d399);
+  pin(P.g, P.L2('Z'), 0xa7f3d0);
+  pin(P.g, P.L2('W'), 0xa7f3d0);
+}
+// upperTriangle (X, Y, V)
+{
+  const P = makePart('upperTriangle', 'X', 'Y', ['X', 'Y', 'V']);
+  plate(P.g, [P.L2('X'), P.L2('Y'), P.L2('V')], 8, 5, 0xa78bfa);
+  pin(P.g, P.L2('X'), 0xddd6fe);
+  pin(P.g, P.L2('Y'), 0xddd6fe);
+  pin(P.g, P.L2('V'), 0xddd6fe);
+}
+// linkXW (X -> W)
+{
+  const P = makePart('linkXW', 'X', 'W', ['X', 'W']);
+  bar(P.g, P.L2('X'), P.L2('W'), -8, 5, 0xf472b6);
+  pin(P.g, P.L2('X'), 0xfbcfe8);
+  pin(P.g, P.L2('W'), 0xfbcfe8);
+}
+// linkVU (V -> U)
+{
+  const P = makePart('linkVU', 'V', 'U', ['V', 'U']);
+  bar(P.g, P.L2('V'), P.L2('U'), 0, 5, 0xfb7185);
+  pin(P.g, P.L2('V'), 0xfecdd3);
+  pin(P.g, P.L2('U'), 0xfecdd3);
+}
+// legTriangle (W, U, T)
+{
+  const P = makePart('legTriangle', 'W', 'U', ['W', 'U', 'T']);
+  plate(P.g, [P.L2('W'), P.L2('U'), P.L2('T')], -8, 5, 0xfacc15);
+  pin(P.g, P.L2('W'), 0xfef08a);
+  pin(P.g, P.L2('U'), 0xfef08a);
+  pin(P.g, P.L2('T'), 0xfef08a);
+}
+
+// Foot trace (not a part; visual aid only)
+{
+  const tg = new THREE.BufferGeometry().setFromPoints(TRACE);
+  const trace = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0xfbbf24 }));
+  trace.name = 'footPath';
+  scene.add(trace);
+}
+
+// Rigid placement of every moving part from the current points.
+function applyPose(P) {
+  for (const name in objs) {
+    const s = objs[name];
+    if (!s.anchor) continue;
+    const A = P[s.anchor], Q = P[s.dir];
+    const ra = REF[s.anchor], rq = REF[s.dir];
+    const ang = Math.atan2(Q[1] - A[1], Q[0] - A[0]) - Math.atan2(rq[1] - ra[1], rq[0] - ra[0]);
+    s.g.position.set(A[0], A[1], 0);
+    s.g.rotation.set(0, 0, ang);
+  }
+}
+
+const panelEls = {};
+document.querySelectorAll('[data-q]').forEach((el) => { panelEls[el.dataset.q] = el; });
+
+function render(t) {
+  const th = mod2pi(THETA0 + OMEGA * t);
+  const x = poseAt(th);
+  const P = pointsOf(x, th);
+  applyPose(P);
+  panelEls.crank_deg.textContent = ((th * 180 / Math.PI) % 360).toFixed(2) + ' deg';
+  panelEls.foot_x.textContent = P.T[0].toFixed(2) + ' mm';
+  panelEls.foot_y.textContent = P.T[1].toFixed(2) + ' mm';
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: TWO_PI / OMEGA,
+  params: { O, X, len: { ...L }, omega: OMEGA, theta0: THETA0 },
+  render
+};
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+if (window.location.search.indexOf('capture') < 0) {
+  const t0 = performance.now();
+  const frame = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
