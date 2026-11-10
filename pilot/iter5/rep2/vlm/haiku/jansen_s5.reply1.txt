@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from (28, 0) to (-20, -10), left of and slightly below the crank axle O as the review requested, keeping all link lengths unchanged; not verified by running the page, so the foot path shape is still unconfirmed.

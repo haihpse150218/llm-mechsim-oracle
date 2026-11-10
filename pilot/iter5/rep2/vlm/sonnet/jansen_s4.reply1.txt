@@ -1,0 +1,1 @@
+CHANGED: Swapped crank-rod lengths (ZY=50, ZW=41.5) and reselected assembly branches (Y, W, V on the right side, U and T on the left) so the leg hangs below with a wide foot loop around y of -70 to -108.

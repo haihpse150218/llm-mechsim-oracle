@@ -1,0 +1,1 @@
+CHANGED: Moved O6 to (210,70) and made the ternary rocker's O4B-O4C angle -90 degrees so C swings toward O6, letting loop 2 close for the full crank revolution (CD/O6D distance stays about 60-75 mm, transmission angles about 55-70 deg), and re-centered the camera.

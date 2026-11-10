@@ -1,0 +1,1 @@
+CHANGED: Flipped the circle-intersection branch for V (X-Y-V apex, now +1), U (knee, now -1) and T (foot, now +1) so the upper triangle apex, knee and foot match the canonical solution; Y and W branches were already correct.

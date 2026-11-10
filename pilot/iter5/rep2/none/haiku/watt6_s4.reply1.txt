@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (230, 40) to (-72, 40) and re-centred the camera, because with O6 at (230, 40) the distance from C to O6 (about 220-256 mm) always exceeded CD+O6D = 185 mm, so the D circle-intersection returned null at every crank angle and render() never posed the mechanism.

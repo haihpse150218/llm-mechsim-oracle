@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths and pivot offsets match Jansen's holy numbers, I hand-checked the circle-intersection branches at theta=0 and they give the correct configuration (Y up, W down, V left, foot below), and the output contract is met.

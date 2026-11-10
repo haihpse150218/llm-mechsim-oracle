@@ -1,0 +1,1 @@
+CHANGED: Switched the circle-intersection branches (Y, W first; V, U, T second) so the whole linkage is in Jansen's real assembly mode, hanging below the crank with a flat-bottomed D foot path, and recentred the camera.

@@ -1,0 +1,1 @@
+CHANGED: Replaced the iterative Newton solver (which diverged, giving foot values in the tens of thousands and broken link lengths) with a closed-form circle-circle intersection solver on branches fixed from the reference pose, so all ten link lengths hold exactly at every crank angle.

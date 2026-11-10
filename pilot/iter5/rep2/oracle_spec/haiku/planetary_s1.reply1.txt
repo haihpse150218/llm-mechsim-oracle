@@ -1,0 +1,1 @@
+CHANGED: Changed tooth counts from Zs=20, Zr=80 to Zs=21, Zr=81 (Zp=30 kept, ring still rs+2rp) so Zs+Zr=102 is divisible by 3 and three equally spaced planets can mesh, updating the dependent comments and the static ratio default to 4.86.

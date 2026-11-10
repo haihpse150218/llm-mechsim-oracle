@@ -1,0 +1,1 @@
+NO_CHANGE: Hand-checked the solver at crank angles 0, 61, 150, 200 and 241 degrees: B, C and D always exist, branches stay continuous, the transmission angles at B (about 45 to 103 deg) and at C and D in loop 2 (about 40 to 120 deg) stay inside 30 to 150 deg, the markers match the named parts, and render(t) is a pure function of t.

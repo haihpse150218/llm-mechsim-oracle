@@ -1,0 +1,1 @@
+CHANGED: Moved the ground pivot X to (-30, 0) and mirrored the upper triangle (V on the far side of XY) with the reference pose recomputed, because with the old layout |VW| dropped below the 16.7 mm limit (VU-WU) around crank 60 deg, collapsing the knee branch and causing the foot jumps.

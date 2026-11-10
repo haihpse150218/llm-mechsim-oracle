@@ -1,0 +1,1 @@
+CHANGED: Lengthened the output loop (CD 110 -> 150, O6D 75 -> 120) because with the old values the circle-intersection for D had no solution at phi=0 (|C-O6| about 231 > 185), so solvePose returned null and render() left every part unposed, which explains the coincidence, GT and panel failures.

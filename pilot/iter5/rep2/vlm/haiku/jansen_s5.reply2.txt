@@ -1,0 +1,1 @@
+NO_CHANGE: The kinematic solve, link-length mapping and marker/part structure match the spec and the holy-number lengths, but the reported tall, folded foot path points to the fixed pivot X position or assembly branch, and I could not verify a corrected position without running the simulator, so I left the file unedited rather than guess.

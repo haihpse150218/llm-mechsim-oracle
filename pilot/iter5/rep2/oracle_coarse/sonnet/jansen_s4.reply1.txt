@@ -1,0 +1,1 @@
+CHANGED: Swapped the Jansen link lengths YV and WU (YV 36.7->65.7, WU 65.7->36.7) so the upper triangle and leg triangle use the published holy-number assignment.

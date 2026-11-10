@@ -1,0 +1,1 @@
+CHANGED: Corrected the fixed pivot to X=(-37.3,-7.7) and crank length OZ to 14.7 with the holy-number link lengths the report lists (ZY 49.1, XY 40.8, ZW 60.8, XW 38.6, YV 54.8, VU 38.7, WU 36.1, UT 64.6, WT 48.1), and replaced the single left-side circle rule with per-joint side selection (Y above, W below, V/U outer, T lowest) so the assembly matches the canonical solution.

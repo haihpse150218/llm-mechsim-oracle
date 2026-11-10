@@ -1,0 +1,1 @@
+CHANGED: Reassigned Jansen holy numbers so XV=36.7 and WU=55.8 (YV=65.7, VU=39.4 kept), which lets the knee U and foot T assemble at all crank angles with U coincident.

@@ -19,11 +19,12 @@ import {ROOT} from './serve.mjs';
 
 const K = 3; // max repair rounds
 const ARMS = ['oracle_spec', 'oracle_coarse', 'vlm', 'none'];
-const FAULTY = [
+// phase 5: ITER_DIR=iter5/rep1 (relative to the pilot dir) with <ITER_DIR>/faulty.json = ["model/file", ...]
+const IT = process.env.ITER_DIR ? path.resolve(ROOT, process.env.ITER_DIR) : path.join(ROOT, 'iter');
+const FAULTY = fs.existsSync(path.join(IT, 'faulty.json')) ? JSON.parse(fs.readFileSync(path.join(IT, 'faulty.json'), 'utf8')) : [
   'sonnet/four_bar_s2', 'sonnet/jansen_s1', 'sonnet/jansen_s2',
   'haiku/jansen_s1', 'haiku/jansen_s2', 'haiku/planetary_s1', 'sonnet/geneva_s2',
 ];
-const IT = path.join(ROOT, 'iter');
 const statePath = path.join(IT, 'state.json');
 const rd = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
 const loadState = () => (fs.existsSync(statePath) ? rd(statePath) : {});
@@ -70,15 +71,18 @@ function vlmText(v) {
 }
 // round-0 VLM reviews are the phase-2 ones (same originals)
 function phase2Vlm(src) {
-  const key = rd(path.join(ROOT, 'vlm_lite/key.json'));
-  for (const [id, k] of Object.entries(key)) if (k.source === 'gen_lite/' + src) {
-    const p = path.join(ROOT, 'vlm_lite/out', `${id}.json`);
-    return fs.existsSync(p) ? rd(p) : null;
+  for (const set of ['vlm_lite', 'vlm_lite5']) {
+    if (!fs.existsSync(path.join(ROOT, set, 'key.json'))) continue;
+    const key = rd(path.join(ROOT, set, 'key.json'));
+    for (const [id, k] of Object.entries(key)) if (k.source === 'gen_lite/' + src) {
+      const p = path.join(ROOT, set, 'out', `${id}.json`);
+      return fs.existsSync(p) ? rd(p) : null;
+    }
   }
   return null;
 }
 function vlmReview(round, arm, src) {
-  if (round === 0) return phase2Vlm(src);
+  if (round === 0 && !fs.existsSync(path.join(IT, 'vlm', 'r0', 'key.json'))) return phase2Vlm(src);
   const key = rd(path.join(IT, 'vlm', `r${round}`, 'key.json'));
   for (const [id, k] of Object.entries(key)) if (k.source === `${arm}/${src}`) {
     const p = path.join(IT, 'vlm', `r${round}`, 'out', `${id}.json`);

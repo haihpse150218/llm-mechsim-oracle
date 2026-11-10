@@ -1,0 +1,1 @@
+CHANGED: The ternary rocker's C point was at |O6C| up to ~178 mm (beyond CD+O6D=130, so loop 2 could not close); I flipped the fixed O4B-O4C angle to -60 deg so C swings at 58-113 mm from O6 (transmission angles ~50-120 deg) and re-centred the camera.

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Disk cam with translating roller follower</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;color:#e8ecf2;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+#panel b{display:inline-block;min-width:90px;font-weight:normal;color:#9fb0c8}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel">
+<div><b>Cam angle</b><span data-q="cam_deg">0 deg</span></div>
+<div><b>Follower lift</b><span data-q="lift">0 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const TAU = Math.PI * 2;
+const params = {
+  Rb: 40, Rr: 8, e: 5, h: 15,
+  axisAngle: Math.PI / 2,
+  betaRise: 2 * Math.PI / 3, betaDwellTop: Math.PI / 3,
+  betaReturn: 2 * Math.PI / 3, betaDwellBottom: Math.PI / 3,
+  omega: 1.5, theta0: 0.5
+};
+const P = params;
+const a = P.axisAngle;
+const u = new THREE.Vector2(Math.cos(a), Math.sin(a));
+const nrm = new THREE.Vector2(-Math.sin(a), Math.cos(a));
+const s0 = Math.sqrt((P.Rb + P.Rr) ** 2 - P.e ** 2);
+const STEM = 70;
+const sG = s0 + P.h + STEM + 25;
+
+// cycloidal motion: returns [L, dL/ddelta] for cam rotation delta since t=0
+function motion(delta) {
+  let d = ((delta % TAU) + TAU) % TAU;
+  const b1 = P.betaRise, b2 = b1 + P.betaDwellTop, b3 = b2 + P.betaReturn;
+  if (d < b1) {
+    const x = d / b1;
+    return [P.h * (x - Math.sin(TAU * x) / TAU), P.h / b1 * (1 - Math.cos(TAU * x))];
+  }
+  if (d < b2) return [P.h, 0];
+  if (d < b3) {
+    const x = (d - b2) / P.betaReturn;
+    return [P.h * (1 - x + Math.sin(TAU * x) / TAU), -P.h / P.betaReturn * (1 - Math.cos(TAU * x))];
+  }
+  return [0, 0];
+}
+function worldC(L) {
+  const s = s0 + L;
+  return new THREE.Vector2(P.e * nrm.x + s * u.x, P.e * nrm.y + s * u.y);
+}
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(0, 40, 340);
+camera.lookAt(0, 40, 0);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.1);
+dl.position.set(80, 120, 220);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35);
+dl2.position.set(-150, -50, 100);
+scene.add(dl2);
+
+function mat(c, m = 0.4, r = 0.5) { return new THREE.MeshStandardMaterial({ color: c, metalness: m, roughness: r }); }
+function marker(parent, name, x, y, z) {
+  const o = new THREE.Object3D();
+  o.name = name; o.position.set(x, y, z || 0);
+  parent.add(o); return o;
+}
+function cyl(r, h, m) {
+  const g = new THREE.CylinderGeometry(r, r, h, 48);
+  g.rotateX(Math.PI / 2);
+  return new THREE.Mesh(g, m);
+}
+
+// ---------- frame ----------
+const frame = new THREE.Group(); frame.name = 'frame';
+scene.add(frame);
+{
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(220, 260, 6), mat(0x39424f, 0.2, 0.8));
+  plate.position.set(0, 45, -22);
+  frame.add(plate);
+  const axle = cyl(5, 40, mat(0xb0b6c0, 0.8, 0.3));
+  axle.position.set(0, 0, -6);
+  frame.add(axle);
+  // guide block (behind the stem, offset in z), centred on the follower line at G
+  const Gx = P.e * nrm.x + sG * u.x, Gy = P.e * nrm.y + sG * u.y;
+  const guide = new THREE.Mesh(new THREE.BoxGeometry(26, 20, 10), mat(0x6c7a8c, 0.3, 0.6));
+  guide.position.set(Gx, Gy, -14);
+  guide.rotation.z = a - Math.PI / 2;
+  frame.add(guide);
+  // slot rail along the line of motion
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(3, sG - s0 + 40, 2), mat(0x808c9c, 0.3, 0.6));
+  rail.position.set(P.e * nrm.x + (s0 + sG - 40) / 2 * u.x - 0, P.e * nrm.y + (s0 + sG - 40) / 2 * u.y, -17);
+  rail.rotation.z = a - Math.PI / 2;
+  frame.add(rail);
+  marker(frame, 'frame@O', 0, 0, 0);
+  marker(frame, 'frame@G', Gx, Gy, 0);
+}
+
+// ---------- cam ----------
+const cam = new THREE.Group(); cam.name = 'cam';
+scene.add(cam);
+{
+  const N = 720, pts = [];
+  for (let i = 0; i < N; i++) {
+    const delta = TAU * i / N;
+    const [L, dL] = motion(delta);
+    const W = worldC(L);
+    const T = new THREE.Vector2(dL * u.x + W.y, dL * u.y - W.x); // dL*u - J*W, J W = (-Wy, Wx)
+    const len = T.length();
+    const Nn = new THREE.Vector2(-T.y / len, T.x / len); // outward normal
+    const S = new THREE.Vector2(W.x - P.Rr * Nn.x, W.y - P.Rr * Nn.y);
+    const phi = P.theta0 + delta, c = Math.cos(phi), s = Math.sin(phi);
+    pts.push(new THREE.Vector2(S.x * c + S.y * s, -S.x * s + S.y * c));
+  }
+  const shape = new THREE.Shape(pts);
+  const hole = new THREE.Path(); hole.absarc(0, 0, 7, 0, TAU, true);
+  shape.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 12, bevelEnabled: false, curveSegments: 12 });
+  geo.translate(0, 0, -6);
+  const m = new THREE.Mesh(geo, mat(0xd08a3c, 0.5, 0.4));
+  cam.add(m);
+  const hub = cyl(10, 16, mat(0x9aa3af, 0.8, 0.3));
+  cam.add(hub);
+  const dot = cyl(2.5, 1, mat(0xff3030, 0.1, 0.5));
+  dot.position.set(22, 0, 6.5);
+  cam.add(dot);
+  marker(cam, 'cam@O', 0, 0, 0);
+  marker(cam, 'cam@camRef', 22, 0, 0);
+}
+
+// ---------- follower ----------
+const follower = new THREE.Group(); follower.name = 'follower';
+scene.add(follower);
+{
+  const roller = cyl(P.Rr, 10, mat(0x4aa3e0, 0.5, 0.3));
+  follower.add(roller);
+  const pin = cyl(3, 14, mat(0xcfd5dd, 0.8, 0.3));
+  follower.add(pin);
+  const stem = new THREE.Mesh(new THREE.BoxGeometry(7, STEM, 5), mat(0xc9ced6, 0.7, 0.35));
+  stem.position.set(0, STEM / 2, 0);
+  follower.add(stem);
+  const fork = new THREE.Mesh(new THREE.BoxGeometry(P.Rr * 2 + 6, 5, 5), mat(0xc9ced6, 0.7, 0.35));
+  fork.position.set(0, P.Rr + 2, 0);
+  follower.add(fork);
+  const top = new THREE.Mesh(new THREE.SphereGeometry(5, 24, 16), mat(0xe04a4a, 0.3, 0.4));
+  top.position.set(0, STEM, 0);
+  follower.add(top);
+  marker(follower, 'follower@C', 0, 0, 0);
+  marker(follower, 'follower@F', 0, STEM, 0);
+  follower.rotation.z = a - Math.PI / 2;
+}
+
+// ---------- panel ----------
+const elCam = document.querySelector('[data-q="cam_deg"]');
+const elLift = document.querySelector('[data-q="lift"]');
+
+function render(t) {
+  const delta = P.omega * t;
+  const phi = P.theta0 + delta;
+  const [L] = motion(delta);
+  cam.rotation.z = phi;
+  const C = worldC(L);
+  follower.position.set(C.x, C.y, 0);
+  let deg = (phi * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  elCam.textContent = deg.toFixed(1) + ' deg';
+  elLift.textContent = L.toFixed(2) + ' mm';
+  scene.updateMatrixWorld(true);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: TAU / P.omega, params: { ...P }, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { SIM.render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

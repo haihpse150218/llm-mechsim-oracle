@@ -1,0 +1,1 @@
+CHANGED: Replaced the per-frame min/max branch pickers with fixed-chirality solutions (Y,W,U second intersection, V,T first) because the old picks made V-W exceed VU+WU (unreachable, clamped) and flipped branches, detaching the links and distorting the foot path.

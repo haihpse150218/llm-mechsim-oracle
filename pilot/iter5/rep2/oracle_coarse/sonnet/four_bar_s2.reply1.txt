@@ -1,0 +1,1 @@
+CHANGED: Fixed the load error by setting the frame boss mesh position via boss.position.x instead of Object.assign onto the read-only 'position' property.

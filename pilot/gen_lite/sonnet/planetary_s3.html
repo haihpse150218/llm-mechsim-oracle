@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Planetary gear set</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#161a22;font-family:system-ui,sans-serif}
+  canvas{display:block}
+  #panel{position:fixed;left:12px;top:12px;background:rgba(10,14,22,.78);color:#dfe6f2;padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.6}
+  #panel b{display:inline-block;min-width:96px;font-weight:500;color:#8fa3c4}
+  #panel span.v{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><b>Sun angle</b><span class="v" data-q="sun_deg">0</span>&deg;</div>
+  <div><b>Carrier angle</b><span class="v" data-q="carrier_deg">0</span>&deg;</div>
+  <div><b>Speed ratio</b><span class="v" data-q="ratio">0</span> : 1</div>
+  <div style="font-size:12px;color:#8fa3c4">Ring fixed, sun input, carrier output</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const m = 2, Zs = 24, Zp = 12, Zr = Zs + 2 * Zp;
+const params = { module: m, Zs, Zp, Zr, omega: 2 * Math.PI / 6, theta0: 0.4 };
+const rs = m * Zs / 2, rp = m * Zp / 2, rr = m * Zr / 2, rc = rs + rp;
+const kc = Zs / (Zs + Zr);           // carrier speed / sun speed
+const TH = 8;                        // gear thickness
+const TAU = Math.PI * 2;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161a22);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(0, -110, 210);
+camera.up.set(0, 1, 0);
+camera.lookAt(0, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(80, -60, 200); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4); dl2.position.set(-100, 80, 60); scene.add(dl2);
+
+// gear outline points: teeth centred at angle phase + j*2pi/Z, tip at 'tip', root at 'root'
+function toothPts(Z, tip, root, phase) {
+  const p = TAU / Z, pts = [];
+  for (let j = 0; j < Z; j++) {
+    const c = phase + j * p;
+    const f = [[-0.5, root], [-0.3, root], [-0.17, tip], [0.17, tip], [0.3, root]];
+    for (const [a, r] of f) pts.push(new THREE.Vector2(r * Math.cos(c + a * p), r * Math.sin(c + a * p)));
+  }
+  return pts;
+}
+function extrude(shape, z0, depth) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 });
+  g.translate(0, 0, z0);
+  return g;
+}
+function mat(color) { return new THREE.MeshStandardMaterial({ color, metalness: 0.4, roughness: 0.45 }); }
+function addMesh(parent, geo, color) { const mesh = new THREE.Mesh(geo, mat(color)); parent.add(mesh); return mesh; }
+function marker(parent, name, x, y) { const o = new THREE.Object3D(); o.name = name; o.position.set(x, y, 0); parent.add(o); return o; }
+function cyl(r, h, z0, color, parent, x = 0, y = 0) {
+  const g = new THREE.CylinderGeometry(r, r, h, 32); g.rotateX(Math.PI / 2); g.translate(x, y, z0 + h / 2);
+  return addMesh(parent, g, color);
+}
+
+// ---------- frame ----------
+const frame = new THREE.Object3D(); frame.name = 'frame'; scene.add(frame);
+{
+  const g = new THREE.CylinderGeometry(rr + 14, rr + 14, 6, 64); g.rotateX(Math.PI / 2); g.translate(0, 0, -16 + 0);
+  addMesh(frame, g, 0x3a4252);
+  cyl(5, 22, -13, 0x6a7488, frame);                       // fixed support post at the axis (through hub)
+  for (let i = 0; i < 4; i++) {                           // standoffs holding the ring
+    const a = i * TAU / 4 + Math.PI / 4, R = rr + 7;
+    cyl(3, 14, -13, 0x6a7488, frame, R * Math.cos(a), R * Math.sin(a));
+  }
+  marker(frame, 'frame@C', 0, 0);
+}
+
+// ---------- sun ----------
+const sun = new THREE.Object3D(); sun.name = 'sun'; scene.add(sun);
+{
+  const s = new THREE.Shape(toothPts(Zs, rs + m, rs - 1.25 * m, 0));
+  s.holes.push(new THREE.Path().absarc(0, 0, 4.5, 0, TAU, true));
+  addMesh(sun, extrude(s, 0, TH), 0xe0a030);
+  cyl(7, 8, TH, 0xe0a030, sun);                           // hub boss
+  cyl(5, 22, TH + 4, 0xb88020, sun);                      // input shaft stub (above)
+  marker(sun, 'sun@C', 0, 0);
+  marker(sun, 'sun@sunRef', rs, 0);
+}
+
+// ---------- ring ----------
+const ring = new THREE.Object3D(); ring.name = 'ring'; scene.add(ring);
+const ringPhase = (() => {
+  const f0 = ((0 - params.theta0) * Zs / TAU);
+  const phi0 = Math.PI - (0.5 - f0) * TAU / Zp;
+  const g2 = (0 - phi0) * Zp / TAU;
+  return 0 - (g2 + 0.5) * TAU / Zr;
+})();
+{
+  const s = new THREE.Shape(); s.absarc(0, 0, rr + 2.5 * m + 3, 0, TAU, false);
+  s.holes.push(new THREE.Path(toothPts(Zr, rr - m, rr + 1.25 * m, ringPhase).reverse()));
+  addMesh(ring, extrude(s, 0, TH), 0x5b8fd0);
+  marker(ring, 'ring@C', 0, 0);
+  marker(ring, 'ring@ringRef', rr, 0);
+}
+
+// ---------- carrier ----------
+const carrier = new THREE.Object3D(); carrier.name = 'carrier'; scene.add(carrier);
+{
+  const zc = -5, th = 4;
+  const hub = new THREE.CylinderGeometry(10, 10, th, 40); hub.rotateX(Math.PI / 2); hub.translate(0, 0, zc + th / 2);
+  addMesh(carrier, hub, 0x58b878);
+  for (let i = 0; i < 3; i++) {
+    const a = i * TAU / 3;
+    const arm = new THREE.BoxGeometry(rc, 7, th);
+    arm.translate(rc / 2, 0, zc + th / 2); arm.rotateZ(a);
+    addMesh(carrier, arm, 0x58b878);
+    const px = rc * Math.cos(a), py = rc * Math.sin(a);
+    cyl(5, 14, zc, 0x58b878, carrier, px, py);            // planet axle through the planet
+    cyl(8, th, zc, 0x58b878, carrier, px, py);
+    marker(carrier, 'carrier@P' + i, px, py);
+  }
+  cyl(7, 12, -15 + 0, 0x3f8a58, carrier);                 // output shaft (below)
+  marker(carrier, 'carrier@C', 0, 0);
+}
+
+// ---------- planets ----------
+const planets = [];
+for (let i = 0; i < 3; i++) {
+  const o = new THREE.Object3D(); o.name = 'planet' + i; scene.add(o);
+  const s = new THREE.Shape(toothPts(Zp, rp + m, rp - 1.25 * m, 0));
+  s.holes.push(new THREE.Path().absarc(0, 0, 5.2, 0, TAU, true));
+  addMesh(o, extrude(s, 0, TH), i === 0 ? 0xe05a4a : 0xc0705a);
+  marker(o, 'planet' + i + '@P' + i, 0, 0);
+  marker(o, 'planet' + i + '@planet' + i + 'Ref', rp, 0);
+  planets.push(o);
+}
+
+// initial planet phases (teeth mesh with sun at t=0)
+const phi0 = [0, 1, 2].map(i => {
+  const a = i * TAU / 3;
+  const f = (a - params.theta0) * Zs / TAU;
+  return a + Math.PI - (0.5 - f) * TAU / Zp;
+});
+
+const deg = v => ((v * 180 / Math.PI) % 360 + 360) % 360;
+const qSun = document.querySelector('[data-q="sun_deg"]');
+const qCar = document.querySelector('[data-q="carrier_deg"]');
+const qRat = document.querySelector('[data-q="ratio"]');
+
+function render(t) {
+  const ths = params.theta0 + params.omega * t;       // sun angle
+  const thc = kc * params.omega * t;                  // carrier angle (carrier ref P0 starts at +X)
+  sun.rotation.z = ths;
+  carrier.rotation.z = thc;
+  for (let i = 0; i < 3; i++) {
+    const a = thc + i * TAU / 3;
+    planets[i].position.set(rc * Math.cos(a), rc * Math.sin(a), 0);
+    planets[i].rotation.z = phi0[i] + thc - (Zs / Zp) * (params.omega * t - thc);
+  }
+  qSun.textContent = deg(ths).toFixed(2);
+  qCar.textContent = deg(thc).toFixed(2);
+  qRat.textContent = (1 + Zr / Zs).toFixed(3);
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: TAU / params.omega, params, render };
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  render(window.__lastT || 0);
+});
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    window.__lastT = (performance.now() - start) / 1000;
+    window.SIM.render(window.__lastT);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

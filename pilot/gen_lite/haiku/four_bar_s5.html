@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Four-bar crank-rocker</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#141821;font-family:system-ui,sans-serif;color:#e8ecf2}
+canvas{display:block}
+#panel{position:fixed;left:16px;top:16px;background:rgba(20,24,33,.85);padding:12px 16px;border-radius:8px;font-size:15px;line-height:1.6;min-width:220px}
+#panel b{color:#9fb3c8;font-weight:600}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><b>Crank angle</b> <span data-q="crank_deg">0.0</span> deg</div>
+  <div><b>Rocker angle</b> <span data-q="rocker_deg">0.0</span> deg</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// Link lengths in mm, crank speed in rad/s (CCW positive), crank start angle in rad.
+// Grashof check: s+l = 40+120 = 160 <= p+q = 80+100 = 180, shortest link = crank -> crank-rocker.
+const P = { a: 40, b: 120, c: 80, d: 100, omega: Math.PI / 2, theta0: 0 };
+const PERIOD = 2 * Math.PI / Math.abs(P.omega);
+
+// ---------- renderer / scene / camera ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x141821);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(50, 10, 330);
+camera.lookAt(50, 10, 0);
+
+scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x222833, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(120, 150, 250);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+fill.position.set(-150, -80, 120);
+scene.add(fill);
+
+// ---------- materials ----------
+const mkMat = (c) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.3, roughness: 0.45 });
+const matFrame = mkMat(0x6b7280);
+const matCrank = mkMat(0xf59e0b);
+const matCoup = mkMat(0x14b8a6);
+const matRock = mkMat(0xa78bfa);
+const matPin = mkMat(0xd1d5db);
+
+// ---------- part groups ----------
+const frame = new THREE.Object3D();   frame.name = 'frame';
+const crank = new THREE.Object3D();   crank.name = 'crank';
+const coupler = new THREE.Object3D(); coupler.name = 'coupler';
+const rocker = new THREE.Object3D();  rocker.name = 'rocker';
+
+// link bar from local x0 to x1, at height z (thickness along z), width along y
+function addBar(group, x0, x1, z, w, t, m) {
+  const g = new THREE.BoxGeometry(x1 - x0, w, t);
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.set((x0 + x1) / 2, 0, z);
+  group.add(mesh);
+}
+// pin along z centred at local (x, y)
+function addPin(group, x, y, len, m) {
+  const g = new THREE.CylinderGeometry(4.5, 4.5, len, 24);
+  g.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.set(x, y, 0);
+  group.add(mesh);
+}
+function addMarker(group, name, x, y) {
+  const m = new THREE.Object3D();
+  m.name = name;
+  m.position.set(x, y, 0);
+  group.add(m);
+}
+
+// frame: ground link O2-O4 plus pivot pins
+addBar(frame, 0, P.d, -26, 14, 6, matFrame);
+addPin(frame, 0, 0, 60, matPin);
+addPin(frame, P.d, 0, 60, matPin);
+addMarker(frame, 'frame@O2', 0, 0);
+addMarker(frame, 'frame@O4', P.d, 0);
+
+// crank: O2 -> A
+addBar(crank, 0, P.a, 0, 12, 6, matCrank);
+addPin(crank, 0, 0, 40, matPin);
+addPin(crank, P.a, 0, 40, matPin);
+addMarker(crank, 'crank@O2', 0, 0);
+addMarker(crank, 'crank@A', P.a, 0);
+
+// coupler: A -> B (sits on a higher layer)
+addBar(coupler, 0, P.b, 12, 12, 6, matCoup);
+addPin(coupler, 0, 0, 60, matPin);
+addPin(coupler, P.b, 0, 60, matPin);
+addMarker(coupler, 'coupler@A', 0, 0);
+addMarker(coupler, 'coupler@B', P.b, 0);
+
+// rocker: O4 -> B (lower layer)
+addBar(rocker, 0, P.c, -12, 12, 6, matRock);
+addPin(rocker, 0, 0, 60, matPin);
+addPin(rocker, P.c, 0, 60, matPin);
+addMarker(rocker, 'rocker@O4', 0, 0);
+addMarker(rocker, 'rocker@B', P.c, 0);
+
+rocker.position.set(P.d, 0, 0); // pivot O4 in world
+
+scene.add(frame, crank, coupler, rocker);
+
+// ---------- kinematics ----------
+function norm360(rad) {
+  const deg = rad * 180 / Math.PI;
+  return ((deg % 360) + 360) % 360;
+}
+function fmt(deg) {
+  const s = deg.toFixed(1);
+  return s === '360.0' ? '0.0' : s;
+}
+
+const elCrank = document.querySelector('[data-q="crank_deg"]');
+const elRocker = document.querySelector('[data-q="rocker_deg"]');
+
+// Solve the four-bar pose at time t (pure function of t).
+// Coupler point B is the intersection of circle(A, b) and circle(O4, c),
+// taken on the branch with B above the line A->O4 (fixed for this geometry).
+function pose(t) {
+  const th = P.theta0 + P.omega * t;
+  const Ax = P.a * Math.cos(th);
+  const Ay = P.a * Math.sin(th);
+  const dx = P.d - Ax;          // vector A -> O4
+  const dy = -Ay;
+  const D = Math.hypot(dx, dy);
+  const ux = dx / D, uy = dy / D;
+  const x = (P.b * P.b - P.c * P.c + D * D) / (2 * D);
+  const h = Math.sqrt(Math.max(0, P.b * P.b - x * x));
+  // normal n = (-uy, ux), which points upward since ux > 0 here
+  const Bx = Ax + x * ux - h * uy;
+  const By = Ay + x * uy + h * ux;
+
+  const phiC = Math.atan2(By - Ay, Bx - Ax);
+  const phiR = Math.atan2(By, Bx - P.d);
+
+  crank.rotation.set(0, 0, th);
+  coupler.position.set(Ax, Ay, 0);
+  coupler.rotation.set(0, 0, phiC);
+  rocker.rotation.set(0, 0, phiR);
+
+  return { crank: norm360(th), rocker: norm360(phiR) };
+}
+
+function render(t) {
+  const q = pose(t);
+  elCrank.textContent = fmt(q.crank);
+  elRocker.textContent = fmt(q.rocker);
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: { a: P.a, b: P.b, c: P.c, d: P.d, omega: P.omega, theta0: P.theta0 },
+  render
+};
+
+render(0);
+window.SIM_READY = true;
+
+// ---------- resize ----------
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ---------- live loop (skipped in capture mode) ----------
+if (window.location.href.indexOf('?capture') < 0) {
+  let start = null;
+  const loop = (ts) => {
+    if (start === null) start = ts;
+    SIM.render((ts - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

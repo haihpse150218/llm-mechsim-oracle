@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watt II six-bar linkage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #15181d; color: #e8ecf1; font-family: system-ui, sans-serif; }
+  canvas { display: block; position: fixed; inset: 0; z-index: 0; }
+  #panel { position: fixed; left: 12px; top: 12px; z-index: 2; background: rgba(10, 12, 16, 0.72); padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.7; pointer-events: none; }
+  #panel .l { display: inline-block; width: 150px; color: #9fb0c4; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><span class="l">Crank O2-A</span><span data-q="crank_deg">0.0</span>&deg;</div>
+  <div><span class="l">Ternary rocker O4-B</span><span data-q="rocker1_deg">0.0</span>&deg;</div>
+  <div><span class="l">Output rocker O6-D</span><span data-q="output_deg">0.0</span>&deg;</div>
+</div>
+
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- geometry (mm). O4 is the world origin of the ternary pivot. ----
+const L = { O2A: 25, AB: 90, O4B: 70, O4C: 60, BC: 55, CD: 90, O6D: 70 };
+const O2 = [-90, 0], O4 = [0, 0], O6 = [90, 0];
+const PERIOD = 6;                       // seconds per crank revolution
+const OMEGA = 2 * Math.PI / PERIOD;     // rad/s, counter-clockwise
+const THETA0 = 0;
+// angle at O4 between rocker1 arms O4B and O4C (triangle O4-B-C with sides 70, 60, 55)
+const EPS = Math.acos((L.O4B * L.O4B + L.O4C * L.O4C - L.BC * L.BC) / (2 * L.O4B * L.O4C));
+
+// intersection of circle(c1, r1) and circle(c2, r2); s=+1 / -1 selects the side
+function circleHit(c1, r1, c2, r2, s) {
+  const dx = c2[0] - c1[0], dy = c2[1] - c1[1];
+  const d = Math.hypot(dx, dy);
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  const ux = dx / d, uy = dy / d;
+  const px = c1[0] + a * ux, py = c1[1] + a * uy;
+  return [px - s * h * uy, py + s * h * ux];
+}
+
+// closed-form pose at time t (pure function of t)
+function solve(t) {
+  const th = THETA0 + OMEGA * t;
+  const A = [O2[0] + L.O2A * Math.cos(th), O2[1] + L.O2A * Math.sin(th)];
+  const B = circleHit(A, L.AB, O4, L.O4B, +1);
+  const phiB = Math.atan2(B[1] - O4[1], B[0] - O4[0]);
+  const phiC = phiB - EPS;
+  const C = [O4[0] + L.O4C * Math.cos(phiC), O4[1] + L.O4C * Math.sin(phiC)];
+  const D = circleHit(O6, L.O6D, C, L.CD, -1);
+  return { th, A, B, C, D, phiB };
+}
+
+// ---- three.js scene ----
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x15181d, 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(150, -200, 400);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xbfd4ff, 0.5);
+fill.position.set(-300, 200, 200);
+scene.add(fill);
+
+const mat = {
+  frame:    new THREE.MeshStandardMaterial({ color: 0x4a5565, roughness: 0.6, metalness: 0.2 }),
+  crank:    new THREE.MeshStandardMaterial({ color: 0xe07b39, roughness: 0.45, metalness: 0.1 }),
+  coupler1: new THREE.MeshStandardMaterial({ color: 0x3d7ed6, roughness: 0.45, metalness: 0.1 }),
+  rocker1:  new THREE.MeshStandardMaterial({ color: 0x3fb27f, roughness: 0.45, metalness: 0.1 }),
+  coupler2: new THREE.MeshStandardMaterial({ color: 0xa66bd6, roughness: 0.45, metalness: 0.1 }),
+  rocker2:  new THREE.MeshStandardMaterial({ color: 0xd65a5a, roughness: 0.45, metalness: 0.1 }),
+  pin:      new THREE.MeshStandardMaterial({ color: 0xcfd6df, roughness: 0.3, metalness: 0.8 }),
+};
+
+// convex hull (monotone chain) for link outlines
+function hull(pts) {
+  pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of pts) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+    lo.push(p);
+  }
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop();
+    up.push(p);
+  }
+  up.pop(); lo.pop();
+  return lo.concat(up);
+}
+
+// extruded link plate in the part's local XY plane, rounded around each joint
+function plate(joints, r, material, z) {
+  const pts = [];
+  for (const [x, y] of joints) {
+    for (let k = 0; k < 24; k++) {
+      const a = k / 24 * Math.PI * 2;
+      pts.push([x + r * Math.cos(a), y + r * Math.sin(a)]);
+    }
+  }
+  const h = hull(pts);
+  const shape = new THREE.Shape(h.map(p => new THREE.Vector2(p[0], p[1])));
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: 4, bevelEnabled: true, bevelThickness: 1, bevelSize: 1, bevelSegments: 2, curveSegments: 1,
+  });
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.z = z;
+  return mesh;
+}
+
+// pin along Z through a joint, owned by one part (local coordinates)
+function pin(group, x, y) {
+  const geo = new THREE.CylinderGeometry(3.2, 3.2, 34, 16);
+  geo.rotateX(Math.PI / 2);
+  const m = new THREE.Mesh(geo, mat.pin);
+  m.position.set(x, y, 0);
+  group.add(m);
+}
+
+// named part group + marker children
+const parts = {};
+function part(name) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  scene.add(g);
+  parts[name] = g;
+  return g;
+}
+function marker(group, point, x, y) {
+  const m = new THREE.Object3D();
+  m.name = group.name + '@' + point;
+  m.position.set(x, y, 0);
+  group.add(m);
+}
+
+// frame: ground pivots O2, O4, O6 (world coordinates)
+const frame = part('frame');
+frame.add(plate([O2, O4, O6], 9, mat.frame, -12));
+pin(frame, O2[0], O2[1]);
+pin(frame, O4[0], O4[1]);
+pin(frame, O6[0], O6[1]);
+marker(frame, 'O2', O2[0], O2[1]);
+marker(frame, 'O4', O4[0], O4[1]);
+marker(frame, 'O6', O6[0], O6[1]);
+
+// crank: origin O2, local X along the crank at theta
+const crank = part('crank');
+crank.add(plate([[0, 0], [L.O2A, 0]], 6, mat.crank, 0));
+pin(crank, L.O2A, 0);
+marker(crank, 'O2', 0, 0);
+marker(crank, 'A', L.O2A, 0);
+
+// coupler1: origin A, local X along A->B
+const coupler1 = part('coupler1');
+coupler1.add(plate([[0, 0], [L.AB, 0]], 6, mat.coupler1, 8));
+pin(coupler1, L.AB, 0);
+marker(coupler1, 'A', 0, 0);
+marker(coupler1, 'B', L.AB, 0);
+
+// ternary rocker1: origin O4, local X along O4->B, C at angle -EPS in local frame
+const CX = L.O4C * Math.cos(EPS), CY = -L.O4C * Math.sin(EPS);
+const rocker1 = part('rocker1');
+rocker1.add(plate([[0, 0], [L.O4B, 0], [CX, CY]], 6, mat.rocker1, 0));
+pin(rocker1, CX, CY);
+marker(rocker1, 'O4', 0, 0);
+marker(rocker1, 'B', L.O4B, 0);
+marker(rocker1, 'C', CX, CY);
+
+// coupler2: origin C, local X along C->D
+const coupler2 = part('coupler2');
+coupler2.add(plate([[0, 0], [L.CD, 0]], 6, mat.coupler2, 8));
+marker(coupler2, 'C', 0, 0);
+marker(coupler2, 'D', L.CD, 0);
+
+// output rocker2: origin O6, local X along O6->D
+const rocker2 = part('rocker2');
+rocker2.add(plate([[0, 0], [L.O6D, 0]], 6, mat.rocker2, 0));
+pin(rocker2, L.O6D, 0);
+marker(rocker2, 'O6', 0, 0);
+marker(rocker2, 'D', L.O6D, 0);
+
+function setPose(g, x, y, ang) {
+  g.position.set(x, y, 0);
+  g.rotation.set(0, 0, ang);
+}
+
+const panelQ = name => document.querySelector('[data-q="' + name + '"]');
+const fmtDeg = r => {
+  let d = (r * 180 / Math.PI) % 360;
+  if (d < 0) d += 360;
+  let s = d.toFixed(1);
+  if (s === '360.0') s = '0.0';
+  return s;
+};
+
+function render(t) {
+  const p = solve(t);
+  setPose(frame, 0, 0, 0);
+  setPose(crank, O2[0], O2[1], p.th);
+  setPose(coupler1, p.A[0], p.A[1], Math.atan2(p.B[1] - p.A[1], p.B[0] - p.A[0]));
+  setPose(rocker1, O4[0], O4[1], p.phiB);
+  setPose(coupler2, p.C[0], p.C[1], Math.atan2(p.D[1] - p.C[1], p.D[0] - p.C[0]));
+  setPose(rocker2, O6[0], O6[1], Math.atan2(p.D[1] - O6[1], p.D[0] - O6[0]));
+
+  panelQ('crank_deg').textContent = fmtDeg(p.th);
+  panelQ('rocker1_deg').textContent = fmtDeg(p.phiB);
+  panelQ('output_deg').textContent = fmtDeg(Math.atan2(p.D[1] - O6[1], p.D[0] - O6[0]));
+
+  renderer.render(scene, camera);
+}
+
+function fit() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist = Math.max(170 / (tanH * camera.aspect), 110 / tanH) * 1.05;
+  camera.position.set(12, 20, dist);
+  camera.lookAt(12, 20, 0);
+  camera.updateProjectionMatrix();
+}
+fit();
+window.addEventListener('resize', () => { fit(); });
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: {
+    O2: [O2[0], O2[1]],
+    O4: [O4[0], O4[1]],
+    O6: [O6[0], O6[1]],
+    len: { ...L },
+    omega: OMEGA,
+    theta0: THETA0,
+  },
+  render,
+};
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    const elapsed = (performance.now() - start) / 1000;
+    window.SIM.render(elapsed);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

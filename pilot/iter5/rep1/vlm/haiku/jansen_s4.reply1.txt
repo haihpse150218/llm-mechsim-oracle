@@ -1,0 +1,1 @@
+CHANGED: Set the knee-to-foot link UT from 40.1 to 39.3 mm so every link length matches Jansen's published holy numbers (f = 39.3), as the spec requires.

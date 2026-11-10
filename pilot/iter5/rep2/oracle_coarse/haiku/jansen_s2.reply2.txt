@@ -1,0 +1,1 @@
+CHANGED: Switched the V joint to the other circle intersection (the one 2h away, which the report's 73.2 mm V error matches) and re-derived the U and T branches from that V, since the old V branch drove |VW| toward zero where U has no solution.

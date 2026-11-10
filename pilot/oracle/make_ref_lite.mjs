@@ -62,6 +62,40 @@ function solve(t){const ts=P.theta0+P.omega*t, wc=P.omega*P.Zs/(P.Zs+P.Zr), tc=w
  return out;}
 function panel(t,s){return {sun_deg:wrapDeg((P.theta0+P.omega*t)*180/Math.PI),carrier_deg:wrapDeg(Math.atan2(s.carrier.P0[1],s.carrier.P0[0])*180/Math.PI),ratio:(P.Zs+P.Zr)/P.Zs};}`,
   },
+  cam: {
+    params: {Rb: 50, Rr: 10, e: 10, h: 25, axisAngle: Math.PI / 2, betaRise: (2 * Math.PI) / 3, betaDwellTop: Math.PI / 3, betaReturn: (2 * Math.PI) / 3, betaDwellBottom: Math.PI / 3, omega: Math.PI / 2, theta0: 0},
+    code: `
+const O=[0,0],u=[Math.cos(P.axisAngle),Math.sin(P.axisAngle)],nv=[-u[1],u[0]],sP=Math.sqrt((P.Rb+P.Rr)**2-P.e**2);
+const cyc=(x)=>x-Math.sin(2*Math.PI*x)/(2*Math.PI);
+function law(p){p=((p%(2*Math.PI))+2*Math.PI)%(2*Math.PI);const b1=P.betaRise,b2=P.betaDwellTop,b3=P.betaReturn;
+ return p<b1?P.h*cyc(p/b1):p<b1+b2?P.h:p<b1+b2+b3?P.h*(1-cyc((p-b1-b2)/b3)):0;}
+const G=[O[0]+P.e*nv[0]+(sP+P.h+90)*u[0],O[1]+P.e*nv[1]+(sP+P.h+90)*u[1]];
+function solve(t){const th=P.theta0+P.omega*t,s=law(Math.abs(P.omega)*t);
+ const C=[O[0]+P.e*nv[0]+(sP+s)*u[0],O[1]+P.e*nv[1]+(sP+s)*u[1]],F=[C[0]+70*u[0],C[1]+70*u[1]];
+ return {frame:{O,G},cam:{O,camRef:pol(O,P.Rb*0.6,th)},follower:{C,F}};}
+function panel(t,s){return {cam_deg:wrapDeg((P.theta0+P.omega*t)*180/Math.PI),lift:law(Math.abs(P.omega)*t)};}`,
+    // cam outline = pitch curve (roller centre in cam-fixed frame) offset inward by Rr; roller disc on the follower
+    extra: `
+{const N=720,T=2*Math.PI/Math.abs(P.omega),q=[];
+ for(let i=0;i<N;i++){const t=i*T/N,s=solve(t),th=P.theta0+P.omega*t,d=[s.follower.C[0]-O[0],s.follower.C[1]-O[1]];
+  q.push([Math.cos(-th)*d[0]-Math.sin(-th)*d[1],Math.sin(-th)*d[0]+Math.cos(-th)*d[1]]);}
+ let A=0;for(let i=0;i<N;i++){const a=q[i],b=q[(i+1)%N];A+=a[0]*b[1]-a[1]*b[0];}
+ const sg=Math.sign(A),pts=[];
+ for(let i=0;i<N;i++){const a=q[(i-1+N)%N],b=q[(i+1)%N],tx=b[0]-a[0],ty=b[1]-a[1],L=Math.hypot(tx,ty);
+  pts.push(new THREE.Vector2(q[i][0]-P.Rr*sg*ty/L,q[i][1]+P.Rr*sg*tx/L));}
+ const cm=new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(pts),{depth:8,bevelEnabled:false}),new THREE.MeshStandardMaterial({color:0xd9822b,metalness:0.5,roughness:0.4}));
+ cm.position.z=-4;cm.rotation.z=-P.theta0+Math.atan2(Math.sin(P.theta0),Math.cos(P.theta0));parts.cam.g.add(cm);
+ const rl=new THREE.Mesh(new THREE.CylinderGeometry(P.Rr,P.Rr,8,48),new THREE.MeshStandardMaterial({color:0x4f8fd6,metalness:0.5,roughness:0.4}));
+ rl.rotation.x=Math.PI/2;parts.follower.g.add(rl);}`,
+  },
+  watt6: {
+    params: {O2: [0, 0], O4: [90, 0], O6: [120, -40], len: {O2A: 25, AB: 90, O4B: 60, O4C: 50, BC: 95, CD: 60, O6D: 40}, omega: Math.PI / 2, theta0: 0},
+    code: `
+const {O2,O4,O6}=P,L=P.len;
+function solve(t){const th=P.theta0+P.omega*t,A=pol(O2,L.O2A,th),B=circ(A,L.AB,O4,L.O4B,1),C=circ(O4,L.O4C,B,L.BC,1),D=circ(C,L.CD,O6,L.O6D,-1);
+ return {frame:{O2,O4,O6},crank:{O2,A},coupler1:{A,B},rocker1:{O4,B,C},coupler2:{C,D},rocker2:{O6,D}};}
+function panel(t,s){const a=(p,q)=>wrapDeg(Math.atan2(q[1]-p[1],q[0]-p[0])*180/Math.PI);return {crank_deg:wrapDeg((P.theta0+P.omega*t)*180/Math.PI),rocker1_deg:a(O4,s.rocker1.B),output_deg:a(O6,s.rocker2.D)};}`,
+  },
 };
 
 const page = (id, m) => `<!doctype html>
@@ -111,6 +145,7 @@ for (const [name, pts] of Object.entries(s0)) {
   scene.add(g); parts[name] = {g, keys};
   pi++;
 }
+${m.extra || ''}
 const rows = document.getElementById('rows');
 const pnl0 = panel(0, s0);
 for (const q of Object.keys(pnl0)) { const d = document.createElement('div'); d.innerHTML = q + ': <span data-q="' + q + '"></span>'; rows.appendChild(d); }

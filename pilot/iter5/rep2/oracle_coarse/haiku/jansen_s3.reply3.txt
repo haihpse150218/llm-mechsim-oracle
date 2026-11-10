@@ -1,0 +1,1 @@
+CHANGED: Flipped the knee U to the other circle-intersection branch (circ(W, WU, V, VU) instead of circ(V, VU, W, WU)), mirroring U across the V-W line, which fixes the U error and the downstream foot T and panel errors while Y, V and W were already correct.

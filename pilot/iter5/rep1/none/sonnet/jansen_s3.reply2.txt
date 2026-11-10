@@ -1,0 +1,1 @@
+CHANGED: Lower joint W now takes the lower circle intersection (minY instead of maxY) so the lower rod/linkXW hang below X as in Jansen's leg instead of flipping up beside Y.

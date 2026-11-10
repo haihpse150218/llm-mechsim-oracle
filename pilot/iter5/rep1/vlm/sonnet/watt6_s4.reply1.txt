@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (210,20) to (60,80) so coupler 2 (C-D) and output rocker O6-D circles actually intersect (C stayed >170 mm from O6 before, exceeding CD+O6D=130), closing loop 2, and recentered the camera.

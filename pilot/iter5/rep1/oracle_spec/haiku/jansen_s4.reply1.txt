@@ -1,0 +1,1 @@
+CHANGED: Replaced the link lengths and fixed pivot X with the Jansen holy numbers (uniform 1.02 scale, correctly assigned to the named links; X at (38.76, -7.96) relative to O) in place of the previously permuted values.

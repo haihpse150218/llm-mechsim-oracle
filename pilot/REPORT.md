@@ -254,3 +254,78 @@ geneva_s2 (kiểm tay trên sheet `iter/sheets_check/`): nhánh vlm và nhánh n
 2. Ablation mức cụ thể của feedback ở nhánh oracle: chỉ chỉ ra *cặp nào sai*, không đưa giá trị đúng.
 3. Một model hãng khác (cần API key) cho cả sinh và sửa.
 4. Bắt đầu dàn ý bài báo theo cách đóng khung "acceptance gate".
+
+# Pha 5 — mở rộng: cam + Watt 6 khâu, n=5/ô, sửa lặp lặp lại 2 lần (2026-11-10)
+
+## Thiết kế
+- Thêm 2 cơ cấu ngoài Jansen: **cam** (cycloid rise–dwell–return–dwell, con lăn, cần đẩy lệch tâm; kiểm luật nâng, tiếp xúc con lăn–cam, góc áp lực ≤30°, không cắt lẹm) và **Watt 6 khâu** (lắp ráp 2 vòng trên 720 điểm, góc truyền [30°,150°] cả 2 vòng, giữ nhánh).
+- 7 mutant mới (cam ×4, watt6 ×3): oracle bắt **7/7**.
+- Sinh n=5/ô cho 6 cơ cấu × {sonnet, haiku} = 60 sim (44 mới).
+- Sửa lặp K=3, 4 nhánh: oracle_spec, oracle_coarse, vlm, none. Luật dừng như pha 4. Chạy **2 lần độc lập**:
+  - rep1: 8 file lỗi mới;
+  - rep2: 8 file đó + 7 file lỗi pha 4 → 15 file.
+
+## Kết quả 1 — lỗi tự nhiên (oracle, kiểm tay xác nhận)
+| | four_bar | geneva | jansen | planetary | cam | watt6 |
+|---|---|---|---|---|---|---|
+| haiku | 0/5 | 0/5 | 5/5 | 2/5 | 0/5 | 1/5 |
+| sonnet | 1/5 | 0/5 | 4/5 | 0/5 | 0/5 | 1/5 |
+
+- Tổng có lỗi: 14/60. Ngoài Jansen chỉ 5/50 có lỗi.
+- **Cam 0/10**: một cơ cấu mô tả đầy đủ bằng luật chuyển động thì LLM hầu như làm đúng.
+- Lỗi ngoài Jansen là lỗi lắp ráp / ràng buộc:
+  - watt6 haiku không render;
+  - watt6 sonnet: vòng 2 hở;
+  - planetary_s5: Zs+Zr=100 không thoả Zr=Zs+2Zp.
+
+## Kết quả 2 — VLM một lượt trên 44 sim mới
+- Kết quả: TP 7, FN 1 (planetary_s5: sai số răng, nhìn không ra), **FP 4** (cả 4 là geneva).
+- Probe marker xác nhận các geneva đó đúng (72°/vòng). Tức VLM "thấy" lỗi ở chuyển động gián đoạn vốn đúng.
+- Bất ổn: VLM vòng 0 của rep2 nói "correct" cho geneva_s2, planetary_s1 và planetary_s5. Trong đó geneva_s2 là file mà VLM pha 2 đã bắt.
+
+## Kết quả 3 — sửa lặp K=3 (số file PASS oracle sau vòng r)
+| nhánh | rep1 r0→r3 (n=8) | rep2 r0→r3 (n=15) |
+|---|---|---|
+| oracle_spec | 0 → 6 → **8 → 8** | 1 → 11 → **15 → 15** |
+| oracle_coarse | 0 → 3 → 3 → 3 | 1 → 6 → 8 → 8 |
+| vlm | 0 → 2 → 2 → 2 | 1 → 4 → 4 → 4 |
+| none (self-refine) | 0 → 3 → 3 → 3 | 1 → 4 → 4 → 4 |
+
+Cách đọc bảng:
+- Ở rep2, file đã pass từ r0 là geneva_s2. Lỗi khoá đĩa của nó là lỗi **oracle không thấy được**, như ở pha 4. Phần dưới loại file này, nên còn 22 lượt file có lỗi oracle thấy được: 14 Jansen, 8 ngoài Jansen.
+- oracle_spec: **22/22**, gồm Jansen 14/14 và ngoài Jansen 8/8. Mọi file pass trong ≤ 2 vòng, khớp ở cả 2 lần lặp.
+- oracle_coarse: **10/22** (Jansen 2/14, ngoài Jansen 8/8).
+- vlm: **5/22** (Jansen 0/14, ngoài Jansen 5/8).
+- none (self-refine): **6/22** (Jansen 0/14, ngoài Jansen 6/8).
+- Pha 4 để so sánh: 6/6, 4/6, 2/6, 0/6. Thứ tự giữa các nhánh **lặp lại** ở cả 2 rep và ở pha 4.
+
+## Nhận xét
+1. **Độ khó tách đôi rõ.**
+   - Lỗi lắp ráp/ràng buộc (watt6, planetary, four_bar crash) phần lớn tự sửa được với bất kỳ tín hiệu nào, kể cả không có tín hiệu: none 6/8.
+   - Lỗi **tri thức thiết kế** (bộ "holy numbers" Jansen bị gán lệch thanh) chỉ sửa được khi oracle nói **thanh nào** sai, tức oracle_spec 14/14. Có thông tin "sai bao nhiêu" mà không có "ở đâu" thì oracle_coarse chỉ được 2/14. VLM và self-refine đều 0/14.
+2. **Agent sửa tự tin dựa vào trí nhớ sai.**
+   - Ở nhánh coarse và none, agent lặp lại khẳng định "len khớp holy numbers đã công bố" trong khi chính bộ số bị gán lệch. Nhiều agent còn nói lỗi do "checker map sai" hoặc do "spec", trong khi spec không quy định độ dài.
+   - Ví dụ: rep1 vlm/haiku/jansen_s5 chứng minh đúng rằng hình học không lắp ráp được, nhưng đổ lỗi cho spec.
+   - Hai agent nhánh coarse (sonnet) suy ngược được thanh sai từ chính con số sai số (0.52 ≈ 55.8/36.7−1). Đây là con đường duy nhất để coarse sửa được Jansen.
+3. **VLM làm nhánh vlm dừng sớm sai.**
+   - 12 lần dừng vì "vlm says correct" (rep1 4, rep2 8). Phần lớn là file vẫn trượt oracle.
+   - planetary_s5 (sai số răng) không bao giờ được VLM nhận ra. Vì vậy trên nhóm ngoài Jansen, nhánh vlm (5/8) còn kém self-refine (6/8).
+4. **Có dấu hiệu "lách" oracle.**
+   - rep2 coarse/haiku/jansen_s1 r3 tự thừa nhận đặt marker trực tiếp từ điểm đã giải để "che" sai lệch.
+   - Bản đó vẫn trượt DESIGN nên không thành PASS giả. Tuy vậy, cần thêm kiểm mesh↔marker trước khi viết bài.
+5. **Vi phạm quy tắc**: 1/155 lượt sửa (rep2 vlm/sonnet/jansen_s1 r2) đã chạy lệnh Python, dù prompt cấm. Lượt đó vẫn được giữ trong số liệu, và trượt oracle ở r3 (LOAD).
+
+## Hệ quả cho bài báo
+- RQ3 vững hơn:
+  - n tăng từ 6 lên 22 lượt file;
+  - 2 lần lặp độc lập cho cùng thứ tự: spec > coarse > none ≈ vlm;
+  - phân tích theo loại lỗi cho câu chuyện rõ: **phản hồi định vị (localized) từ oracle là thứ quyết định với lỗi tri thức thiết kế**.
+- Giới hạn cần nói thẳng:
+  - lỗi tự nhiên ngoài Jansen hiếm (5/50);
+  - cam không sinh lỗi tự nhiên nào, nên phần "sửa" trên cam chỉ dựa vào mutant.
+
+## Hạn chế
+- Hai lần lặp có chung file khởi đầu, nên khác biệt giữa rep chỉ đến từ tính ngẫu nhiên của agent sửa.
+- 14/22 lượt là Jansen, nên kết quả nghiêng về một cơ cấu.
+- Chưa có kiểm định thống kê: n nhỏ, mỗi file là một cặp so sánh, nên phù hợp McNemar hoặc Cochran Q khi mở rộng.
+- Agent sửa không được chạy code. Đây là thiết kế có chủ ý để tách nguồn thông tin, nhưng làm self-refine yếu hơn thực tế.

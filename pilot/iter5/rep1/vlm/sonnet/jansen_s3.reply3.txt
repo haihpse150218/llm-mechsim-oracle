@@ -1,0 +1,1 @@
+CHANGED: Switched the knee U and foot T circle-intersection branches from the second to the first solution (giving the open, lifted-return D-shaped foot path instead of the folded/collapsed leg) and re-centered the camera and ground line on the wider machine.

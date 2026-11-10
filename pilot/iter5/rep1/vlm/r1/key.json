@@ -1,0 +1,30 @@
+{
+  "jansen-6ff40be1": {
+    "source": "vlm/haiku/jansen_s3",
+    "mech": "jansen"
+  },
+  "jansen-e23e9251": {
+    "source": "vlm/haiku/jansen_s4",
+    "mech": "jansen"
+  },
+  "jansen-1f85f545": {
+    "source": "vlm/haiku/jansen_s5",
+    "mech": "jansen"
+  },
+  "watt6-13838eac": {
+    "source": "vlm/haiku/watt6_s4",
+    "mech": "watt6"
+  },
+  "jansen-4b768068": {
+    "source": "vlm/sonnet/jansen_s3",
+    "mech": "jansen"
+  },
+  "jansen-bb23493a": {
+    "source": "vlm/sonnet/jansen_s4",
+    "mech": "jansen"
+  },
+  "watt6-075228c0": {
+    "source": "vlm/sonnet/watt6_s4",
+    "mech": "watt6"
+  }
+}

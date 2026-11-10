@@ -1,0 +1,1 @@
+CHANGED: Flipped the branch sign for joint B in solvePose from +1 to -1, because with +1 the C and D solves fail at every crank angle (C ends about 231 mm from O6, beyond the 185 mm reach of CD + O6D), so render() returned early and drew nothing, and with -1 the pose assembles at the sampled crank angles 0, 90, 180 and 270 degrees.

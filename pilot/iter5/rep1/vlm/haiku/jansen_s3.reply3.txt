@@ -1,0 +1,1 @@
+CHANGED: At the start pose the upper-triangle apex V was placed on the first circle intersection, about 7 mm from the crank pin Z (folded/overlapping); the start now takes the other intersection and then continues by continuity, so the foot path changes (path shape not verified by running the page).

@@ -1,0 +1,1 @@
+CHANGED: Changed planet teeth Zp 30 to 25 and ring teeth Zr 80 to 70 (so Zs+Zr = 90 is divisible by 3, meeting the equal-spacing design rule), updating the derived radii, carrier radius, omega_c = 2*omega/9, planet spin, and initial ratio display to 4.50.

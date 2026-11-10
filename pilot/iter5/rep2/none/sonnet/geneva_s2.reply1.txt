@@ -1,0 +1,1 @@
+NO_CHANGE: Kinematics (a = C sin(pi/n), engagement half-angle pi/2 - pi/n, counter-rotating wheel with continuous angle across revolutions), marker placement, part naming, panel values and the output contract all check out against the spec and real Geneva geometry.

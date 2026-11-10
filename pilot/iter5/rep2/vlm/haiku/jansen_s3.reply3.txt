@@ -1,0 +1,1 @@
+NO_CHANGE: I could not verify a fix without running the page (commands are not allowed), and the reviewers' suspected cause (a wrong branch on one joint) would need a full-cycle numeric check before editing; a single-branch flip I considered (knee U) could just as easily move the foot path to the wrong extreme, so I left the simulator unchanged.

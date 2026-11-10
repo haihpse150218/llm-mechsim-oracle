@@ -1,0 +1,5 @@
+Automated kinematic test report (the page was loaded in a browser and render(t) was sampled over one or more input revolutions). Failed checks, with diagnostics:
+- DESIGN (engineering design rule for this machine): "holy numbers (max rel. error)" measured 1, tolerance 0.03
+  diagnosis: best-fit uniform scale = 1.000 x the published Jansen numbers (OZ 15, ZY 50, XY 41.5, ZW 61.9, XW 39.3, XV 40.1, YV 55.8, VU 39.4, WU 36.7, UT 65.7, WT 49; fixed pivot X 38 to the side of O and 7.8 below it). Links that do not match at this scale: len.OZ = 38 mm, expected 15 mm; len.ZY = 41.5 mm, expected 50 mm (looks swapped with len.XY); len.XY = 50 mm, expected 41.5 mm (looks swapped with len.ZY); len.ZW = 39.3 mm, expected 61.9 mm; len.XV = 55.8 mm, expected 40.1 mm; len.YV = 15 mm, expected 55.8 mm; len.UT = 49 mm, expected 65.7 mm; len.WT = 61.9 mm, expected 49 mm; X - O = (28, 0) mm, expected (+/-38, -7.8) mm
+- DESIGN (engineering design rule for this machine): "linkage assembles for all crank angles" measured 1, tolerance 0.5
+  diagnosis: with your SIM.params the loops cannot close at t=0.074 s (crank 4.4 deg): some pair of links is too short to reach

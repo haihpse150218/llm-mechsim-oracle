@@ -1,0 +1,1 @@
+CHANGED: Replaced the Newton solver with closed-form circle-intersection kinematics (nearest-branch continuation from the crank angle 0 assembly) and switched the link lengths and ground pivot X to Jansen's holy-number assignment (crank 15, X at (-38, -7.8)), so all joints coincide, the panel matches the drawn foot, and the lengths match the published numbers.

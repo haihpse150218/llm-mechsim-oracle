@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is a round/elliptical loop (foot_y goes smoothly from about +85 to about -85 and x from about -100 to +75) with no flat-bottomed stance phase. The real Jansen linkage gives a D-shaped path with a nearly straight, flat bottom. This suggests wrong link lengths (not the holy numbers) or a wrong assembly configuration. (frames t=2.33s, t=2.67s, t=3.00s, t=3.33s)

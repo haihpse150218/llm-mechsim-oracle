@@ -1,0 +1,1 @@
+CHANGED: Added the published O-X fixed-pivot length (OX: 15, the Jansen holy number m) to SIM.params.len, since the holy-number check reported a total mismatch (rel. error 1) that is consistent with the missing O-X entry, and the assembly failure was not localized to a specific fix.

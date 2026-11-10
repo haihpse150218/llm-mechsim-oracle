@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- No mechanism is rendered in any frame (no crank, couplers, rockers or ground pivots visible), so the six-bar linkage cannot be seen moving at all. (frames t=0.00s, t=0.50s, t=1.00s, t=1.50s, t=2.00s, t=2.50s, t=3.00s, t=3.50s, t=4.00s, t=4.50s, t=5.00s, t=5.50s)
+- Panel readouts are frozen at Crank 0.0, Ternary rocker 0.0, Output rocker 0.0 over the whole revolution; the crank angle should advance continuously 0-360 deg and the rocker angles should oscillate, so the simulation is not running or the panel is not wired to the model. (frames t=0.00s, t=0.50s, t=1.00s, t=1.50s, t=2.00s, t=2.50s, t=3.00s, t=3.50s, t=4.00s, t=4.50s, t=5.00s, t=5.50s)

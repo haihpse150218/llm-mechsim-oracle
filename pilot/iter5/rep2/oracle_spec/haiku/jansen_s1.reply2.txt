@@ -1,0 +1,1 @@
+CHANGED: Fixed the part-frame placement so markers and bars sit at the solved joint positions: local marker offsets are now plain world offsets at t=0 (no a0 rotation), and bar meshes are rotated by a0 to align with p0->p1 at t=0.

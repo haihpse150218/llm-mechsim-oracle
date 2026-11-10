@@ -1,0 +1,1 @@
+CHANGED: Flipped the circle-intersection branch for the upper joint Y (to the right of Z->X) and the knee U (to the right of V->W) so the linkage assembles in the canonical configuration, while W, V and T keep their left-branch rule.
