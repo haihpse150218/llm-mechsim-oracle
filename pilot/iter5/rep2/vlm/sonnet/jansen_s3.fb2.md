@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- A rod (yellow, crank/upper rod) floats detached from the rest of the linkage, not connected at its joints, and its position jumps between frames; parts come apart at joints (frames t=0.26s, t=0.52s, t=0.79s, t=1.05s, t=1.31s, t=1.57s)
+- Linkage assembly looks wrong and links overlap/cross; the foot path is a small teardrop loop with foot_y only about 2-33 mm and no flat-bottomed walking stroke, and the leg triangle does not stay attached in a proper Jansen configuration (frames t=0.00s, t=1.83s, t=2.09s)

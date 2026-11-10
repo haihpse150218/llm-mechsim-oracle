@@ -1,0 +1,1 @@
+CHANGED: Replaced the fixed assembly branches/mounting with a deterministic load-time search over branch signs and mounting rotation that picks a flat-bottomed D foot path (long flat stance, raised return arch), and refit the camera to the machine's extents.

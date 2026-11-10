@@ -1,0 +1,1 @@
+CHANGED: Switched the V branch from the flipped (far) X/Y circle intersection to the intersection nearest the hand-placed reference guess (BR_V = branchOf(...) instead of -branchOf(...)), since the 73.2 mm V error equals exactly the distance between the two candidate V points and the guess set is internally consistent, so U, T and the panel feet should follow.

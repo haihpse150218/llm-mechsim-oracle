@@ -1,0 +1,1 @@
+CHANGED: Changed sun teeth Zs from 20 to 21 and ring teeth Zr from 80 to 81 so Zs+Zr=102 is divisible by 3 (planets at 120 deg can mesh), keeping Zr=Zs+2Zp and the Willis kinematics, with derived radii and the default ratio label updated to match.

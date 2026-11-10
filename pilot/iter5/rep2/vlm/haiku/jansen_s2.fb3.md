@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Assembly configuration flips between crank 150 and 210 deg: the foot jumps from x=68,y=18 to x=-45,y=101 to x=-129,y=12 (about 110-170 mm in 30 deg), the linkage collapses into an almost vertical stack and the leg triangle is inverted above the frame. This is a branch jump, not continuous motion, so the foot path is not the smooth flat-bottomed Jansen path. (frames t=2.62s, t=3.14s, t=3.67s)

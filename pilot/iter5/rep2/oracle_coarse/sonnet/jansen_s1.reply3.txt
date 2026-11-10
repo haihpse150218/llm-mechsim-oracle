@@ -1,0 +1,1 @@
+CHANGED: Swapped YV and VU to 55.8 and 36.7 so the upper triangle X-Y-V uses b/d/e (41.5, 40.1, 55.8) and the near-rhombus X-W-U-V uses c/f/g/d, matching Jansen's holy-number topology.

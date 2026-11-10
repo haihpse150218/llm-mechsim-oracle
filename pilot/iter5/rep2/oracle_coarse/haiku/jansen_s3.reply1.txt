@@ -1,0 +1,1 @@
+CHANGED: Set crank OZ to 15 and ground OX to 7.8 (both were scaled ~2.5x relative to the other holy-number links), and flipped the branch used for upper joint Y so it matches the canonical solution (W was already correct), which also corrects V, U, T and the foot panel.

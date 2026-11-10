@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watt II six-bar linkage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1f27; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #panel { position: fixed; left: 12px; top: 12px; background: rgba(15,18,24,0.78); color: #e8ecf2;
+           padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.6; min-width: 230px; }
+  #panel b { color: #9fc6ff; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><b>Crank</b> <span data-q="crank_deg">0.0</span>&deg;</div>
+  <div><b>Ternary rocker</b> <span data-q="rocker1_deg">0.0</span>&deg;</div>
+  <div><b>Output rocker</b> <span data-q="output_deg">0.0</span>&deg;</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- Geometry (mm) ----------
+// Ground pivots
+const O2 = [0, 0];
+const O4 = [60, 110];
+const O6 = [230, 40];
+
+// Link lengths. Loop 1: O2-A-B-O4 (crank, coupler1, ternary rocker).
+// Loop 2: B-C-D-O6 (ternary rocker, coupler2, output rocker).
+const len = {
+  O2A: 40,
+  AB: 120,
+  O4B: 90,
+  O4C: 80,
+  BC: 50,
+  CD: 110,
+  O6D: 75
+};
+const omega = 2 * Math.PI / 6;  // one crank revolution every 6 s, counter-clockwise
+const theta0 = 0.0;
+const period = 2 * Math.PI / Math.abs(omega);
+const TWO_PI = 2 * Math.PI;
+
+// ---------- Kinematics ----------
+// Circle-circle intersection. Returns the intersection point selected by `sign`
+// (+1 or -1) relative to the direction from p1 to p2, or null.
+function circleIntersect(p1, r1, p2, r2, sign) {
+  const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+  const d = Math.hypot(dx, dy);
+  if (d < 1e-9 || d > r1 + r2 || d < Math.abs(r1 - r2)) return null;
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h2 = r1 * r1 - a * a;
+  const h = Math.sqrt(Math.max(0, h2));
+  const ux = dx / d, uy = dy / d;
+  const mx = p1[0] + a * ux, my = p1[1] + a * uy;
+  return [mx - sign * h * uy, my + sign * h * ux];
+}
+
+function dist(p, q) { return Math.hypot(q[0] - p[0], q[1] - p[1]); }
+
+// Pose at the start angle theta0 (assembly branch: B on -1, C on -1, D on +1).
+// B on -1 puts the ternary rocker on the side where C stays within the reach
+// of loop 2 (|C-O6| in [35, 185] mm) for the whole crank revolution.
+function initialPose(phi) {
+  const A = [O2[0] + len.O2A * Math.cos(phi), O2[1] + len.O2A * Math.sin(phi)];
+  const B = circleIntersect(A, len.AB, O4, len.O4B, -1);
+  if (!B) return null;
+  const C = circleIntersect(B, len.BC, O4, len.O4C, -1);
+  if (!C) return null;
+  const D = circleIntersect(C, len.CD, O6, len.O6D, +1);
+  if (!D) return null;
+  return { A, B, C, D };
+}
+
+// Choose the candidate closest to a reference point (keeps the branch continuous).
+function nearest(cands, ref) {
+  let best = null, bd = Infinity;
+  for (const c of cands) {
+    if (!c) continue;
+    const d = dist(c, ref);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+
+// One continuation step: from the previous pose to crank angle phi.
+function stepPose(prev, phi) {
+  const A = [O2[0] + len.O2A * Math.cos(phi), O2[1] + len.O2A * Math.sin(phi)];
+  const B = nearest([circleIntersect(A, len.AB, O4, len.O4B, +1),
+                     circleIntersect(A, len.AB, O4, len.O4B, -1)], prev.B);
+  if (!B) return null;
+  const C = nearest([circleIntersect(B, len.BC, O4, len.O4C, +1),
+                     circleIntersect(B, len.BC, O4, len.O4C, -1)], prev.C);
+  if (!C) return null;
+  const D = nearest([circleIntersect(C, len.CD, O6, len.O6D, +1),
+                     circleIntersect(C, len.CD, O6, len.O6D, -1)], prev.D);
+  if (!D) return null;
+  return { A, B, C, D };
+}
+
+// Crank angle for time t (continuous, unbounded).
+function crankAngle(t) { return theta0 + omega * t; }
+
+// Pose for crank angle phi. Pure in phi: the assembly branch is tracked from
+// theta0 in 1-degree steps on every call, so no state is carried between calls.
+function poseAt(phi) {
+  let delta = (phi - theta0) % TWO_PI;
+  if (delta < 0) delta += TWO_PI;
+  const steps = Math.max(1, Math.ceil(delta / (Math.PI / 180)));
+  let pose = initialPose(theta0);
+  if (!pose) return null;
+  for (let i = 1; i <= steps; i++) {
+    const next = stepPose(pose, theta0 + delta * i / steps);
+    if (!next) return null;
+    pose = next;
+  }
+  return pose;
+}
+
+// ---------- Scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.setClearColor(0x1b1f27, 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 5000);
+// Frame whole machine: approx center (115, 60), extent ~ 300 mm wide.
+camera.position.set(115, 40, 520);
+camera.lookAt(115, 50, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 0.9);
+key.position.set(150, -200, 400);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9fb8ff, 0.35);
+fill.position.set(-200, 200, 200);
+scene.add(fill);
+
+// Materials
+const matFrame = new THREE.MeshStandardMaterial({ color: 0x8a8f99, metalness: 0.4, roughness: 0.5 });
+const matCrank = new THREE.MeshStandardMaterial({ color: 0xe0664a, metalness: 0.2, roughness: 0.45 });
+const matCoupler1 = new THREE.MeshStandardMaterial({ color: 0x4aa3e0, metalness: 0.2, roughness: 0.45 });
+const matRocker1 = new THREE.MeshStandardMaterial({ color: 0x6cc26a, metalness: 0.2, roughness: 0.45 });
+const matCoupler2 = new THREE.MeshStandardMaterial({ color: 0xe0c24a, metalness: 0.2, roughness: 0.45 });
+const matRocker2 = new THREE.MeshStandardMaterial({ color: 0xb07ae0, metalness: 0.2, roughness: 0.45 });
+const matPin = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.7, roughness: 0.3 });
+
+const THICK = 8;   // link thickness along Z (mm)
+const PIN_R = 5;   // pin radius
+const PIN_H = 14;  // pin height
+
+// Link bar of fixed length along +X, origin at its first end.
+function barMesh(length, mat, width = 12) {
+  const shape = new THREE.Shape();
+  const r = width / 2;
+  shape.moveTo(0, -r);
+  shape.lineTo(length, -r);
+  shape.absarc(length, 0, r, -Math.PI / 2, Math.PI / 2, false);
+  shape.lineTo(0, r);
+  shape.absarc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: THICK, bevelEnabled: false, curveSegments: 16 });
+  geo.translate(0, 0, -THICK / 2);
+  return new THREE.Mesh(geo, mat);
+}
+
+function pinMesh(mat = matPin) {
+  const g = new THREE.CylinderGeometry(PIN_R, PIN_R, PIN_H, 20);
+  g.rotateX(Math.PI / 2);
+  return new THREE.Mesh(g, mat);
+}
+
+// Every part's Object3D stays at the world origin with identity rotation, and
+// its meshes/markers are posed in world coordinates. So a marker's .position
+// equals its world position, and shared joints coincide exactly.
+function placeBar(mesh, p, q) {
+  mesh.position.set(p[0], p[1], 0);
+  mesh.rotation.set(0, 0, Math.atan2(q[1] - p[1], q[0] - p[0]));
+}
+function placePin(mesh, p) { mesh.position.set(p[0], p[1], 0); }
+
+const parts = {};
+function makePart(name) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  scene.add(o);
+  parts[name] = o;
+  return o;
+}
+
+// Marker child objects "<part>@<point>"
+function addMarker(part, point) {
+  const m = new THREE.Object3D();
+  m.name = `${part.name}@${point}`;
+  part.add(m);
+  return m;
+}
+function setMarker(m, p) { m.position.set(p[0], p[1], 0); }
+
+// Frame: ground plate connecting O2, O4, O6 with pin bosses.
+const frame = makePart('frame');
+{
+  const shape = new THREE.Shape();
+  shape.moveTo(O2[0], O2[1]);
+  shape.lineTo(O4[0], O4[1]);
+  shape.lineTo(O6[0], O6[1]);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: THICK * 0.6, bevelEnabled: false });
+  geo.translate(0, 0, -THICK * 0.3 - 10);
+  frame.add(new THREE.Mesh(geo, matFrame));
+  for (const p of [O2, O4, O6]) {
+    const boss = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 22, 24), matFrame);
+    boss.rotation.x = Math.PI / 2;
+    boss.position.set(p[0], p[1], -10);
+    frame.add(boss);
+  }
+}
+const mFrameO2 = addMarker(frame, 'O2'); setMarker(mFrameO2, O2);
+const mFrameO4 = addMarker(frame, 'O4'); setMarker(mFrameO4, O4);
+const mFrameO6 = addMarker(frame, 'O6'); setMarker(mFrameO6, O6);
+
+// Crank: O2 -> A
+const crank = makePart('crank');
+const crankBar = barMesh(len.O2A, matCrank);
+const crankPinO2 = pinMesh(), crankPinA = pinMesh();
+crank.add(crankBar, crankPinO2, crankPinA);
+const mCrankO2 = addMarker(crank, 'O2');
+const mCrankA = addMarker(crank, 'A');
+
+// Coupler 1: A -> B
+const coupler1 = makePart('coupler1');
+const c1Bar = barMesh(len.AB, matCoupler1);
+const c1PinA = pinMesh(), c1PinB = pinMesh();
+coupler1.add(c1Bar, c1PinA, c1PinB);
+const mC1A = addMarker(coupler1, 'A');
+const mC1B = addMarker(coupler1, 'B');
+
+// Rocker 1 (ternary): O4, B, C. Three arms: O4-B, O4-C, B-C.
+const rocker1 = makePart('rocker1');
+const r1BarB = barMesh(len.O4B, matRocker1);
+const r1BarC = barMesh(len.O4C, matRocker1);
+const r1BarBC = barMesh(len.BC, matRocker1);
+const r1PinO4 = pinMesh(), r1PinB = pinMesh(), r1PinC = pinMesh();
+rocker1.add(r1BarB, r1BarC, r1BarBC, r1PinO4, r1PinB, r1PinC);
+const mR1O4 = addMarker(rocker1, 'O4');
+const mR1B = addMarker(rocker1, 'B');
+const mR1C = addMarker(rocker1, 'C');
+
+// Coupler 2: C -> D
+const coupler2 = makePart('coupler2');
+const c2Bar = barMesh(len.CD, matCoupler2);
+const c2PinC = pinMesh(), c2PinD = pinMesh();
+coupler2.add(c2Bar, c2PinC, c2PinD);
+const mC2C = addMarker(coupler2, 'C');
+const mC2D = addMarker(coupler2, 'D');
+
+// Rocker 2 (output): O6 -> D
+const rocker2 = makePart('rocker2');
+const r2Bar = barMesh(len.O6D, matRocker2);
+const r2PinO6 = pinMesh(), r2PinD = pinMesh();
+rocker2.add(r2Bar, r2PinO6, r2PinD);
+const mR2O6 = addMarker(rocker2, 'O6');
+const mR2D = addMarker(rocker2, 'D');
+
+// ---------- Pose update ----------
+const deg = (r) => ((r * 180 / Math.PI) % 360 + 360) % 360;
+const angDeg = (p, q) => deg(Math.atan2(q[1] - p[1], q[0] - p[0]));
+
+function render(t) {
+  const phi = crankAngle(t);
+  const pose = poseAt(phi);
+  if (!pose) return;
+  const { A, B, C, D } = pose;
+
+  placeBar(crankBar, O2, A);
+  placePin(crankPinO2, O2);
+  placePin(crankPinA, A);
+  setMarker(mCrankO2, O2);
+  setMarker(mCrankA, A);
+
+  placeBar(c1Bar, A, B);
+  placePin(c1PinA, A);
+  placePin(c1PinB, B);
+  setMarker(mC1A, A);
+  setMarker(mC1B, B);
+
+  placeBar(r1BarB, O4, B);
+  placeBar(r1BarC, O4, C);
+  placeBar(r1BarBC, B, C);
+  placePin(r1PinO4, O4);
+  placePin(r1PinB, B);
+  placePin(r1PinC, C);
+  setMarker(mR1O4, O4);
+  setMarker(mR1B, B);
+  setMarker(mR1C, C);
+
+  placeBar(c2Bar, C, D);
+  placePin(c2PinC, C);
+  placePin(c2PinD, D);
+  setMarker(mC2C, C);
+  setMarker(mC2D, D);
+
+  placeBar(r2Bar, O6, D);
+  placePin(r2PinO6, O6);
+  placePin(r2PinD, D);
+  setMarker(mR2O6, O6);
+  setMarker(mR2D, D);
+
+  // Panel
+  const set = (q, v) => {
+    const el = document.querySelector(`[data-q="${q}"]`);
+    if (el) el.textContent = v.toFixed(1);
+  };
+  set('crank_deg', angDeg(O2, A));
+  set('rocker1_deg', angDeg(O4, B));
+  set('output_deg', angDeg(O6, D));
+
+  renderer.render(scene, camera);
+}
+
+// Draw the initial pose so markers and meshes are placed before the first frame.
+render(0);
+
+// Expose SIM
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period,
+  params: {
+    O2, O4, O6,
+    len: { ...len },
+    omega,
+    theta0
+  },
+  render
+};
+window.SIM_READY = true;
+
+// Live loop
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+</script>
+</body>
+</html>

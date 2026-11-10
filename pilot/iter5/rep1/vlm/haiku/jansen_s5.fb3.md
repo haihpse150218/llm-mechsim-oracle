@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path does not match the Jansen walking path: panel foot_x spans only about -25..14 mm while foot_y spans -34..78 mm, a tall narrow loop with a pointed top and no flat-bottomed stance phase. This suggests wrong link lengths or a wrong (mirrored or flipped) assembly configuration of the triangles. (frames t=1.50s, t=2.00s, t=2.50s, t=4.50s, t=5.00s)
+- The leg is folded and overlapping, with the joints bunched near the frame. The foot is not at the leg-triangle tip below the knee, and at several crank angles the apex joint sits far above the frame. This is an implausible configuration for the strandbeest leg. (frames t=0.00s, t=3.00s, t=3.50s, t=4.00s)

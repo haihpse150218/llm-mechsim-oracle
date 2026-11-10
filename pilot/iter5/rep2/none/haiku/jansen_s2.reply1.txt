@@ -1,0 +1,1 @@
+NO_CHANGE: All ten link lengths match the spec's point pairs and the reference pose satisfies every constraint to within about 0.1 mm; the parts, markers, SIM.params, panel quantities, import map, pure render(t) and ?capture loop all follow the output contract, and the reviewer report gives no specific defect.

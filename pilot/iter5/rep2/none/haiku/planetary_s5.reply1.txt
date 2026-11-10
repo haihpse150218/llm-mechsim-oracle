@@ -1,0 +1,1 @@
+CHANGED: Changed tooth counts to Zs=20, Zp=25, Zr=70 (the original Zs+Zr=100 is not divisible by 3, so three equally spaced planets cannot mesh; Zp must be odd) and added per-planet tooth-phase offsets so all sun and ring meshes are tooth-to-gap at assembly, with the ratio display updated to 4.50.

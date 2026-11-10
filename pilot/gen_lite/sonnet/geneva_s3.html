@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>External Geneva drive (n=6)</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:sans-serif}
+canvas{display:block;width:100vw;height:100vh}
+#panel{position:fixed;left:12px;top:12px;background:rgba(0,0,0,.6);color:#eee;padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+</style></head>
+<body>
+<div id="panel">
+<div>Driver angle: <span data-q="driver_deg">0</span> deg</div>
+<div>Wheel angle: <span data-q="wheel_deg">0</span> deg</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const n = 6;
+const a = 30;
+const C = a / Math.sin(Math.PI / n);   // 60 mm
+const omega = 1.5;
+const phi0 = 0;
+const period = 2 * Math.PI / omega;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(C / 2, -110, 230);
+camera.lookAt(C / 2, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(80, -60, 200);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x99aacc, 0.4);
+dl2.position.set(-100, 100, 80);
+scene.add(dl2);
+
+function mat(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.4, roughness: 0.5 }); }
+function cyl(r, h, z, m) {
+  const g = new THREE.CylinderGeometry(r, r, h, 40);
+  g.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.z = z;
+  return mesh;
+}
+function marker(parent, name, x, y, z) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, z);
+  parent.add(o);
+  return o;
+}
+
+// frame
+const frame = new THREE.Group();
+frame.name = 'frame';
+scene.add(frame);
+const base = new THREE.Mesh(new THREE.BoxGeometry(C + 120, 150, 6), mat(0x44505e));
+base.position.set(C / 2, 0, -13);
+frame.add(base);
+frame.add(cyl(5, 20, -6, mat(0x889099)).translateX(0));
+const postW = cyl(5, 20, -6, mat(0x889099));
+postW.position.x = C;
+frame.add(postW);
+marker(frame, 'frame@O', 0, 0, 0);
+marker(frame, 'frame@W', C, 0, 0);
+
+// driver
+const driver = new THREE.Group();
+driver.name = 'driver';
+driver.position.set(0, 0, 0);
+scene.add(driver);
+const rl = 27;
+driver.add(cyl(rl, 8, -4, mat(0x3a7bd5)));            // locking disc
+const arm = new THREE.Mesh(new THREE.BoxGeometry(a + 8, 8, 4), mat(0x2f6bc0));
+arm.position.set(a / 2, 0, 10);
+driver.add(arm);
+driver.add(cyl(8, 6, 9, mat(0x2f6bc0)));
+driver.add(cyl(3.2, 14, 5, mat(0xe8c040)).translateX(a));
+driver.children[driver.children.length - 1].position.set(a, 0, 5);
+marker(driver, 'driver@O', 0, 0, 5);
+marker(driver, 'driver@pin', a, 0, 5);
+
+// wheel
+const wheel = new THREE.Group();
+wheel.name = 'wheel';
+wheel.position.set(C, 0, 0);
+scene.add(wheel);
+{
+  const R = 58, rIn = C - a, g = 4;
+  const rr = rl + 0.5;
+  const sh = new THREE.Shape();
+  const pts = [];
+  const dir = (ang, r) => [r * Math.cos(ang), r * Math.sin(ang)];
+  const side = (phi, r, s) => {
+    const p = dir(phi, r), q = dir(phi + Math.PI / 2, g * s);
+    return [p[0] + q[0], p[1] + q[1]];
+  };
+  const cosb = (C * C + rr * rr - R * R) / (2 * C * rr);
+  const b = Math.acos(Math.max(-1, Math.min(1, cosb)));
+  for (let k = 0; k < n; k++) {
+    const phi = 2 * Math.PI * k / n;
+    pts.push(side(phi, R, -1), side(phi, rIn, -1), side(phi, rIn, 1), side(phi, R, 1));
+    const mu = phi + Math.PI / n;
+    const cc = dir(mu, C);
+    const N = 14;
+    for (let i = 0; i <= N; i++) {
+      const beta = b - 2 * b * i / N;
+      const ang = mu + Math.PI + beta;
+      pts.push([cc[0] + rr * Math.cos(ang), cc[1] + rr * Math.sin(ang)]);
+    }
+  }
+  sh.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) sh.lineTo(pts[i][0], pts[i][1]);
+  sh.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 5, 0, Math.PI * 2, true);
+  sh.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 8, bevelEnabled: false });
+  const wm = new THREE.Mesh(geo, mat(0xc0504d));
+  wm.position.z = 0;
+  wheel.add(wm);
+  wheel.add(cyl(9, 12, 4, mat(0x9a3b38)));
+  marker(wheel, 'wheel@W', 0, 0, 4);
+  for (let k = 0; k < n; k++) {
+    const phi = 2 * Math.PI * k / n;
+    marker(wheel, 'wheel@s' + k, 50 * Math.cos(phi), 50 * Math.sin(phi), 4);
+  }
+}
+
+const elDrv = document.querySelector('[data-q="driver_deg"]');
+const elWhl = document.querySelector('[data-q="wheel_deg"]');
+const mod360 = d => ((d % 360) + 360) % 360;
+
+function wheelAngle(theta) {
+  const m = Math.floor((theta + Math.PI) / (2 * Math.PI));
+  const tp = theta - 2 * Math.PI * m;
+  const lim = Math.PI / 2 - Math.PI / n;
+  let d;
+  if (Math.abs(tp) < lim) d = Math.atan2(-a * Math.sin(tp), C - a * Math.cos(tp));
+  else d = tp > 0 ? -Math.PI / n : Math.PI / n;
+  return Math.PI - m * 2 * Math.PI / n + d;
+}
+
+function render(t) {
+  const theta = phi0 + omega * t;
+  const w = wheelAngle(theta);
+  driver.rotation.z = theta;
+  wheel.rotation.z = w;
+  elDrv.textContent = mod360(theta * 180 / Math.PI).toFixed(1);
+  elWhl.textContent = mod360(w * 180 / Math.PI).toFixed(1);
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period, params: { n, C, a, omega, phi0 }, render };
+window.SIM_READY = true;
+render(0);
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { SIM.render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

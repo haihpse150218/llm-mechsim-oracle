@@ -1,0 +1,1 @@
+CHANGED: Switched the assembly branches for joint W (now the upper circle intersection) and knee U (now the lower one), because with the old picks V and W were up to ~95 mm apart at crank angle 0 (more than VU+WU = 76 mm), so the solver clamped and the links stretched.

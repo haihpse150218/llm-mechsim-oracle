@@ -1,0 +1,1 @@
+CHANGED: Swapped the upper-triangle side lengths to XV=36.7 and YV=55.8 (Jansen's g and e), which puts the knee and foot on the lower left of the leg, where the old values left the foot above the lower joint W.

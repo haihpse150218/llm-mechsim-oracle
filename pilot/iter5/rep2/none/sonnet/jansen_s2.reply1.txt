@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths match Jansen's holy numbers (X at [-38,-7.8]), the hand-computed assembly branches at theta=0 give a sensible pose (Y above, W below, V left, foot below), and the contract (names, markers, pure render, panel, SIM) is satisfied.

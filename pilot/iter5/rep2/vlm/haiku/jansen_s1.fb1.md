@@ -1,0 +1,4 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot (tip of the yellow leg triangle) sweeps a near-full circle around the frame, going far above and then below the pivots, instead of the flat-bottomed D-shaped Jansen path with a small vertical range. This suggests wrong link lengths or wrong assembly configuration (mirrored or flipped branch). (frames t=0.67s, t=1.00s, t=1.33s, t=3.33s, t=3.67s)
+- Leg triangle (yellow) is nearly equilateral and much larger than the crank and the other links. Jansen's leg triangle is elongated, so the proportions of the holy numbers look wrong. (frames t=0.00s, t=0.33s, t=2.67s)
+- At t=0 the linkage is almost fully collinear and flattened. The upper triangle (purple) and the leg triangle sit on opposite sides of the pivots in a way that does not match the standard assembly. (frames t=0.00s)

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jansen Strandbeest Leg</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#101820;font-family:sans-serif}
+  canvas{display:block;width:100vw;height:100vh}
+  #panel{position:fixed;left:12px;top:12px;color:#e8eef4;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+  #panel b{display:inline-block;width:80px;font-weight:normal;color:#9fb3c8}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><b>crank angle</b><span data-q="crank_deg">0</span> deg</div>
+  <div><b>foot x</b><span data-q="foot_x">0</span> mm</div>
+  <div><b>foot y</b><span data-q="foot_y">0</span> mm</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0],
+  X: [-38, -7.8],
+  len: { OZ: 15, ZY: 50, XY: 41.5, ZW: 61.9, XW: 40.1, XV: 39.3, YV: 55.8, VU: 39.4, WU: 36.7, UT: 65.7, WT: 49.0 },
+  omega: 2,
+  theta0: 0
+};
+const L = params.len;
+const O = { x: params.O[0], y: params.O[1] };
+const X = { x: params.X[0], y: params.X[1] };
+
+// circle-circle intersection: point at distance ra from A and rb from B, side s (+1 = left of A->B)
+function circ(A, ra, B, rb, s) {
+  const dx = B.x - A.x, dy = B.y - A.y;
+  const d = Math.hypot(dx, dy);
+  const a = (ra * ra - rb * rb + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, ra * ra - a * a));
+  const ux = dx / d, uy = dy / d;
+  return { x: A.x + a * ux + s * h * (-uy), y: A.y + a * uy + s * h * ux };
+}
+
+function solve(theta) {
+  const Z = { x: O.x + L.OZ * Math.cos(theta), y: O.y + L.OZ * Math.sin(theta) };
+  const Y = circ(X, L.XY, Z, L.ZY, +1);
+  const W = circ(X, L.XW, Z, L.ZW, -1);
+  const V = circ(X, L.XV, Y, L.YV, +1);
+  const U = circ(V, L.VU, W, L.WU, -1);
+  const T = circ(W, L.WT, U, L.UT, +1);
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+// part definitions: points in order, with pair lengths
+const defs = {
+  frame:         { pts: ['O', 'X'], z: -10, color: 0x56606b },
+  crank:         { pts: ['O', 'Z'], z: 0,   color: 0xd9534f },
+  rodUpper:      { pts: ['Z', 'Y'], z: 8,   color: 0x5cb85c },
+  rodLower:      { pts: ['Z', 'W'], z: -8,  color: 0x5bc0de },
+  upperTriangle: { pts: ['X', 'Y', 'V'], z: 16, color: 0xf0ad4e },
+  linkXW:        { pts: ['X', 'W'], z: -16, color: 0x9b6fd1 },
+  linkVU:        { pts: ['V', 'U'], z: 24,  color: 0xe377c2 },
+  legTriangle:   { pts: ['W', 'U', 'T'], z: 32, color: 0xf5e663 }
+};
+const dist = {
+  'OX': Math.hypot(X.x - O.x, X.y - O.y),
+  'OZ': L.OZ, 'ZY': L.ZY, 'ZW': L.ZW, 'XW': L.XW,
+  'XY': L.XY, 'XV': L.XV, 'YV': L.YV, 'VU': L.VU,
+  'WU': L.WU, 'UT': L.UT, 'WT': L.WT
+};
+function dd(a, b) { return dist[a + b] ?? dist[b + a]; }
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x101820);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(-100, 200, 300);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35);
+dl2.position.set(150, -100, -200);
+scene.add(dl2);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 3000);
+function fitCamera() {
+  const aspect = window.innerWidth / window.innerHeight;
+  camera.aspect = aspect;
+  const cx = -35, cy = -30;
+  const halfH = 85, halfW = 70;
+  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist_ = Math.max(halfH / t, halfW / (t * aspect)) * 1.15 + 20;
+  camera.position.set(cx, cy, dist_);
+  camera.lookAt(cx, cy, 0);
+  camera.updateProjectionMatrix();
+}
+fitCamera();
+
+const rest = solve(params.theta0);
+const parts = {};
+
+function barMesh(ax, ay, bx, by, color) {
+  const len = Math.hypot(bx - ax, by - ay);
+  const geo = new THREE.BoxGeometry(len, 5, 4);
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.5 }));
+  m.position.set((ax + bx) / 2, (ay + by) / 2, 0);
+  m.rotation.z = Math.atan2(by - ay, bx - ax);
+  return m;
+}
+function pinMesh(x, y, color) {
+  const g = new THREE.CylinderGeometry(4, 4, 7, 24);
+  g.rotateX(Math.PI / 2);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.7), metalness: 0.6, roughness: 0.35 }));
+  m.position.set(x, y, 0);
+  return m;
+}
+
+for (const name of Object.keys(defs)) {
+  const def = defs[name];
+  const g = new THREE.Object3D();
+  g.name = name;
+  // local coordinates: pts[0] at origin, pts[1] along +x
+  const n = def.pts.length;
+  const loc = {};
+  loc[def.pts[0]] = { x: 0, y: 0 };
+  const d01 = dd(def.pts[0], def.pts[1]);
+  loc[def.pts[1]] = { x: d01, y: 0 };
+  if (n === 3) {
+    const d02 = dd(def.pts[0], def.pts[2]);
+    const d12 = dd(def.pts[1], def.pts[2]);
+    const px = (d01 * d01 + d02 * d02 - d12 * d12) / (2 * d01);
+    const py0 = Math.sqrt(Math.max(0, d02 * d02 - px * px));
+    const p0 = rest[def.pts[0]], p1 = rest[def.pts[1]], p2 = rest[def.pts[2]];
+    const cross = (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x);
+    loc[def.pts[2]] = { x: px, y: cross >= 0 ? py0 : -py0 };
+  }
+  // meshes
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = loc[def.pts[i]], b = loc[def.pts[j]];
+      g.add(barMesh(a.x, a.y, b.x, b.y, def.color));
+    }
+  }
+  for (const p of def.pts) g.add(pinMesh(loc[p].x, loc[p].y, def.color));
+  // markers
+  for (const p of def.pts) {
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + p;
+    mk.position.set(loc[p].x, loc[p].y, 0);
+    g.add(mk);
+  }
+  g.position.z = def.z;
+  scene.add(g);
+  parts[name] = { obj: g, def };
+}
+
+// ground reference line and foot path (decorative, not part of named objects)
+function footPath() {
+  const pts = [];
+  for (let i = 0; i <= 180; i++) {
+    const s = solve(params.theta0 + (i / 180) * Math.PI * 2);
+    pts.push(new THREE.Vector3(s.T.x, s.T.y, 0));
+  }
+  return pts;
+}
+const fp = footPath();
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(fp), new THREE.LineBasicMaterial({ color: 0xffffff })));
+let minY = Infinity;
+for (const p of fp) minY = Math.min(minY, p.y);
+const gnd = new THREE.Mesh(new THREE.BoxGeometry(200, 1.5, 3), new THREE.MeshStandardMaterial({ color: 0x3a4a5a }));
+gnd.position.set(-35, minY - 2, -20);
+scene.add(gnd);
+const foot = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 12), new THREE.MeshStandardMaterial({ color: 0xff3030 }));
+foot.position.z = 36;
+scene.add(foot);
+
+const elCrank = document.querySelector('[data-q="crank_deg"]');
+const elFx = document.querySelector('[data-q="foot_x"]');
+const elFy = document.querySelector('[data-q="foot_y"]');
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const P = solve(theta);
+  for (const name of Object.keys(parts)) {
+    const { obj, def } = parts[name];
+    const p0 = P[def.pts[0]], p1 = P[def.pts[1]];
+    obj.position.x = p0.x;
+    obj.position.y = p0.y;
+    obj.rotation.z = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+  }
+  foot.position.x = P.T.x;
+  foot.position.y = P.T.y;
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  elCrank.textContent = deg.toFixed(1);
+  elFx.textContent = P.T.x.toFixed(1);
+  elFy.textContent = P.T.y.toFixed(1);
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: 2 * Math.PI / Math.abs(params.omega), params, render };
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  fitCamera();
+  render(window.__lastT || 0);
+});
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    const t = (performance.now() - start) / 1000;
+    window.__lastT = t;
+    SIM.render(t);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

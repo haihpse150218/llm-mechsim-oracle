@@ -1,0 +1,1 @@
+CHANGED: Moved output ground pivot O6 from (230, 40) to (110, 30) because with the original position the output coupler joint D was unreachable at the initial crank pose (C-O6 distance about 231 mm exceeds CD+O6D = 185 mm), so initialPose() returned null, render() returned early every frame, and the panel and parts never updated.

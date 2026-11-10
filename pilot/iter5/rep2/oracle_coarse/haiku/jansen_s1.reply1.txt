@@ -1,0 +1,1 @@
+CHANGED: Fixed the part-local frame transform so bars and markers/pins use offsets at t=0 with rotation (angle_now - a0) and bars are pre-rotated by a0, so joint markers coincide with the solved joint positions.

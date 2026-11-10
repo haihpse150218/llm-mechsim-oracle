@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths match Jansen's holy numbers, X=(-38,-7.8), the circle-intersection branches give a consistent upper/lower/knee/foot configuration (hand-checked at theta=0), the parts and markers are rigid and correctly named, and the SIM contract is met.

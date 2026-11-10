@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is a small, nearly round or tall tilted oval (about 37 mm wide by 41 mm tall) rather than the wide, flat-bottomed Jansen walking curve. The stance part is not straight and horizontal, and the stroke is too short compared with the height. This suggests wrong link lengths or ratios, or a wrong assembly configuration. (frames t=0.00s, t=0.79s, t=1.31s, t=1.83s, t=2.36s)

@@ -1,0 +1,1 @@
+CHANGED: Replaced the single-shot pose solver (which returned null at some crank angles, so render() skipped its pose and panel updates and left stale values) with a deterministic continuation solver from theta0 that keeps each joint on the branch nearest its previous position.

@@ -1,0 +1,1 @@
+CHANGED: Y now uses the right-hand circle-intersection branch (so Y sits above XZ as in the canonical assembly), V is placed at phiXY - alpha instead of + alpha (with the local V offset mirrored to match), which fixes the Y/V/U/T/foot mismatches the report flagged.

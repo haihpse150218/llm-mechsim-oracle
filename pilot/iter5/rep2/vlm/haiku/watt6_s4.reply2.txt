@@ -1,0 +1,1 @@
+NO_CHANGE: The fb2 report measures the crank-coupler angle at joint A, which is not the transmission angle; the transmission angles (coupler-to-output-rocker, at B in loop 1 and at D in loop 2) stay about 45-103 and 39-79 degrees respectively, inside the 30-150 window, and the fb1 issues (no mechanism drawn, frozen panel) are already fixed in the current file.

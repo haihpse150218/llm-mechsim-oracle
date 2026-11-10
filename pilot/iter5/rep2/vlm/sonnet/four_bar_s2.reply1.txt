@@ -1,0 +1,1 @@
+CHANGED: Replaced Object.assign(mesh, {position: new Vector3}) in the frame setup, which throws because THREE's position property is read-only and aborted the module before any frame rendered, with position.set().

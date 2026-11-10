@@ -1,0 +1,1 @@
+CHANGED: Switched the assembly branch for joint W from the lower to the upper circle intersection (maxY), because with W below X the V-W distance (about 96 mm at theta=0) exceeds VU+WU (76.1 mm), so the linkage could not close and the knee/foot solution was degenerate.

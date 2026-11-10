@@ -1,0 +1,1 @@
+CHANGED: Swapped the Y-V and V-U link lengths (YV 55.8->36.7, VU 36.7->55.8) so the upper triangle and knee link match Jansen's published holy-number assignment.

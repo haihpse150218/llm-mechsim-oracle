@@ -1,0 +1,1 @@
+CHANGED: swapped the YV and WU link lengths (YV=65.7, WU=36.7) so the link lengths match Jansen's holy-number assignment.

@@ -1,0 +1,1 @@
+NO_CHANGE: Link lengths are exactly Jansen's holy numbers, the assembly branches checked by hand at crank 0/90/180/270 deg are consistent and continuous, and the resulting foot path (about 57 mm wide, y from -62 to -95 with a near-flat bottom between 90 and 180 deg) matches the expected Jansen shape, so the reported problems look like normal geometry rather than a bug.

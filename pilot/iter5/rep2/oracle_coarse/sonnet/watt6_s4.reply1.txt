@@ -1,0 +1,1 @@
+CHANGED: Loop 2 could not assemble (O6 was ~180 mm from C, beyond CD+O6D=130), so I moved O6 to [200,0] and put C on the other side of O4B (PHI=-60 deg) so C stays 65-113 mm from O6 and both loops close with transmission angles of about 55-120 deg.

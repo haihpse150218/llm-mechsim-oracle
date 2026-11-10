@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from (28,0) to (7.8,0) so the ground link O-X equals Jansen's holy number l = 7.8 mm, since the 28 mm ground was not a holy number and the failing holy-number and assembly checks pointed to the ground geometry.

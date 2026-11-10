@@ -89,6 +89,46 @@ Points: C = central axis, P0, P1, P2 = planet axles (on the carrier), sunRef / r
       {q: 'ratio', desc: 'speed ratio |omega_sun / omega_carrier| (dimensionless)'},
     ],
   },
+  // ---- phase 5 additions ----
+  cam: {
+    title: 'disk cam with a translating roller follower (rise-dwell-return-dwell)',
+    prose: `A plate (disk) cam turning at constant speed drives a translating roller follower; the follower's line of motion may be offset from the cam axis. During each cam revolution the follower rises by h with cycloidal motion, dwells at the top, returns with cycloidal motion, and dwells at the bottom. The cam outline must be the exact profile that produces this motion, so the roller touches the cam surface at every instant (no gap, no penetration). Design it so that the pressure angle never exceeds 30 degrees and the profile is not undercut. At t = 0 the follower is at the start of its rise.
+Points: O = cam axis, G = a fixed point on the follower's line of motion, camRef = a point fixed on the cam, C = roller centre, F = top end of the follower stem.`,
+    parts: () => ({frame: ['O', 'G'], cam: ['O', 'camRef'], follower: ['C', 'F']}),
+    partsDoc: `- frame: O, G
+- cam: O, camRef
+- follower: C, F (the roller is part of the follower; its spin is not checked)`,
+    params: `{ Rb: base-circle radius of the cam surface, Rr: roller radius, e: follower offset = distance from O to the follower's line of motion, h: total lift (all mm),
+  axisAngle: direction in which the follower rises, measured from world +X (rad),
+  betaRise, betaDwellTop, betaReturn, betaDwellBottom: cam rotation angle spent in each of the four phases (rad, they sum to 2*pi),
+  omega: cam angular velocity in rad/s (counter-clockwise positive),
+  theta0: cam angle (direction O->camRef from world +X, rad) at t = 0 }`,
+    panel: [
+      {q: 'cam_deg', desc: 'cam angle, direction O->camRef from world +X, degrees in [0, 360)'},
+      {q: 'lift', desc: 'follower displacement above its lowest position, mm'},
+    ],
+  },
+  watt6: {
+    title: 'Watt II six-bar linkage (two four-bar loops in series)',
+    prose: `A Watt II six-bar linkage made of two four-bar loops in series. The input crank O2-A turns continuously at constant speed; coupler 1 (A-B) drives a ternary rocker (ground pivot O4, joints B and C) that oscillates; coupler 2 (C-D) drives the output rocker O6-D, which oscillates. Both loops must assemble and move smoothly over the whole crank revolution, with transmission angles staying between 30 and 150 degrees in both loops.
+Points: O2, O4, O6 = ground pivots, A = crank-coupler 1 joint, B = coupler 1-ternary rocker joint, C = ternary rocker-coupler 2 joint, D = coupler 2-output rocker joint.`,
+    parts: () => ({frame: ['O2', 'O4', 'O6'], crank: ['O2', 'A'], coupler1: ['A', 'B'], rocker1: ['O4', 'B', 'C'], coupler2: ['C', 'D'], rocker2: ['O6', 'D']}),
+    partsDoc: `- frame: O2, O4, O6
+- crank: O2, A
+- coupler1: A, B
+- rocker1: O4, B, C
+- coupler2: C, D
+- rocker2: O6, D`,
+    params: `{ O2: [x, y], O4: [x, y], O6: [x, y] (mm),
+  len: { O2A, AB, O4B, O4C, BC, CD, O6D } (mm, the distance between the two named points),
+  omega: crank angular velocity in rad/s (counter-clockwise positive),
+  theta0: crank angle (direction O2->A from world +X, rad) at t = 0 }`,
+    panel: [
+      {q: 'crank_deg', desc: 'crank angle, direction O2->A from world +X, degrees in [0, 360)'},
+      {q: 'rocker1_deg', desc: 'ternary rocker angle, direction O4->B from world +X, degrees in [0, 360)'},
+      {q: 'output_deg', desc: 'output rocker angle, direction O6->D from world +X, degrees in [0, 360)'},
+    ],
+  },
 };
 
 export const LITE_CONTRACT = `## Output contract (follow exactly — the page is checked automatically)

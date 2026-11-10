@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from (28, 0) to (65.7, 0) mm, the Jansen holy-number ground distance h, because at 28 mm the crank pin sat only 10 mm from X at t=0, causing the collapsed/folded configuration and the small round foot loop.

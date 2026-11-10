@@ -1,0 +1,1 @@
+NO_CHANGE: I checked the output contract (import map, part and marker names, SIM fields, SIM_READY, pure render, live loop) and hand-solved the kinematics at 0, 90, 180 and 270 degrees; the joint solve, rigid-triangle orientation, pose transforms and foot position all agree with the stated link lengths, so I found no error.

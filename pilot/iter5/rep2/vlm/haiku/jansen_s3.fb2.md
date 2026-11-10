@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is not the characteristic Jansen flat-bottomed D shape: the bottom is strongly curved (foot y goes -91, -74, -45, -14 across crank 240-330 deg) while the flattest straight section is on the left/rear side (x about -117 near crank 180 deg). The path looks rotated or mirrored, suggesting a wrong assembly configuration (wrong branch of a joint) or wrong link lengths. (frames t=2.00s, t=2.67s, t=3.00s, t=3.33s)

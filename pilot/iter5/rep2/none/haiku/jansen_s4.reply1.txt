@@ -1,0 +1,1 @@
+CHANGED: Set the second fixed pivot X to (7.8, 0) mm instead of (62.7, 0) mm, since the frame link O-X must equal Jansen's holy number l = 7.8 mm (all other link lengths already matched the holy numbers).

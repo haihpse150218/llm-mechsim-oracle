@@ -1,0 +1,1 @@
+CHANGED: The assembly-config search now first tries the published, unrotated frame orientation (and its mirror images) with all branch combinations, and only falls back to rotating the pivot X if none gives a flat-bottomed foot path, so the leg no longer gets a tilted, folded configuration.

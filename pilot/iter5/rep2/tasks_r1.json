@@ -1,0 +1,552 @@
+[
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/haiku/jansen_s3.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/haiku/jansen_s4.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/haiku/jansen_s5.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/jansen_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/jansen_s5.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/rep2/oracle_spec/haiku/planetary_s5.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/planetary_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/planetary_s5.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "watt6",
+    "file": "iter5/rep2/oracle_spec/haiku/watt6_s4.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/sonnet/jansen_s3.html",
+    "history": [
+      "iter5/rep2/oracle_spec/sonnet/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/sonnet/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/sonnet/jansen_s4.html",
+    "history": [
+      "iter5/rep2/oracle_spec/sonnet/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/sonnet/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "sonnet",
+    "mech": "watt6",
+    "file": "iter5/rep2/oracle_spec/sonnet/watt6_s4.html",
+    "history": [
+      "iter5/rep2/oracle_spec/sonnet/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/sonnet/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "sonnet",
+    "mech": "four_bar",
+    "file": "iter5/rep2/oracle_spec/sonnet/four_bar_s2.html",
+    "history": [
+      "iter5/rep2/oracle_spec/sonnet/four_bar_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/sonnet/four_bar_s2.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/sonnet/jansen_s1.html",
+    "history": [
+      "iter5/rep2/oracle_spec/sonnet/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/sonnet/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/sonnet/jansen_s2.html",
+    "history": [
+      "iter5/rep2/oracle_spec/sonnet/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/sonnet/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/haiku/jansen_s1.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_spec/haiku/jansen_s2.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/rep2/oracle_spec/haiku/planetary_s1.html",
+    "history": [
+      "iter5/rep2/oracle_spec/haiku/planetary_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_spec/haiku/planetary_s1.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/haiku/jansen_s3.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/haiku/jansen_s4.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/haiku/jansen_s5.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/jansen_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/jansen_s5.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/rep2/oracle_coarse/haiku/planetary_s5.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/planetary_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/planetary_s5.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "watt6",
+    "file": "iter5/rep2/oracle_coarse/haiku/watt6_s4.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/sonnet/jansen_s3.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/sonnet/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/sonnet/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/sonnet/jansen_s4.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/sonnet/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/sonnet/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "watt6",
+    "file": "iter5/rep2/oracle_coarse/sonnet/watt6_s4.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/sonnet/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/sonnet/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "four_bar",
+    "file": "iter5/rep2/oracle_coarse/sonnet/four_bar_s2.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/sonnet/four_bar_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/sonnet/four_bar_s2.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/sonnet/jansen_s1.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/sonnet/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/sonnet/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/sonnet/jansen_s2.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/sonnet/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/sonnet/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/haiku/jansen_s1.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/oracle_coarse/haiku/jansen_s2.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/rep2/oracle_coarse/haiku/planetary_s1.html",
+    "history": [
+      "iter5/rep2/oracle_coarse/haiku/planetary_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/oracle_coarse/haiku/planetary_s1.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/haiku/jansen_s3.html",
+    "history": [
+      "iter5/rep2/vlm/haiku/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/haiku/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/haiku/jansen_s4.html",
+    "history": [
+      "iter5/rep2/vlm/haiku/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/haiku/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/haiku/jansen_s5.html",
+    "history": [
+      "iter5/rep2/vlm/haiku/jansen_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/haiku/jansen_s5.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "watt6",
+    "file": "iter5/rep2/vlm/haiku/watt6_s4.html",
+    "history": [
+      "iter5/rep2/vlm/haiku/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/haiku/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/sonnet/jansen_s3.html",
+    "history": [
+      "iter5/rep2/vlm/sonnet/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/sonnet/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/sonnet/jansen_s4.html",
+    "history": [
+      "iter5/rep2/vlm/sonnet/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/sonnet/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "watt6",
+    "file": "iter5/rep2/vlm/sonnet/watt6_s4.html",
+    "history": [
+      "iter5/rep2/vlm/sonnet/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/sonnet/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "four_bar",
+    "file": "iter5/rep2/vlm/sonnet/four_bar_s2.html",
+    "history": [
+      "iter5/rep2/vlm/sonnet/four_bar_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/sonnet/four_bar_s2.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/sonnet/jansen_s1.html",
+    "history": [
+      "iter5/rep2/vlm/sonnet/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/sonnet/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/sonnet/jansen_s2.html",
+    "history": [
+      "iter5/rep2/vlm/sonnet/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/sonnet/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/haiku/jansen_s1.html",
+    "history": [
+      "iter5/rep2/vlm/haiku/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/haiku/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/vlm/haiku/jansen_s2.html",
+    "history": [
+      "iter5/rep2/vlm/haiku/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/vlm/haiku/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/haiku/jansen_s3.html",
+    "history": [
+      "iter5/rep2/none/haiku/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/haiku/jansen_s4.html",
+    "history": [
+      "iter5/rep2/none/haiku/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/haiku/jansen_s5.html",
+    "history": [
+      "iter5/rep2/none/haiku/jansen_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/jansen_s5.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/rep2/none/haiku/planetary_s5.html",
+    "history": [
+      "iter5/rep2/none/haiku/planetary_s5.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/planetary_s5.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "watt6",
+    "file": "iter5/rep2/none/haiku/watt6_s4.html",
+    "history": [
+      "iter5/rep2/none/haiku/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/sonnet/jansen_s3.html",
+    "history": [
+      "iter5/rep2/none/sonnet/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/sonnet/jansen_s4.html",
+    "history": [
+      "iter5/rep2/none/sonnet/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "watt6",
+    "file": "iter5/rep2/none/sonnet/watt6_s4.html",
+    "history": [
+      "iter5/rep2/none/sonnet/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "four_bar",
+    "file": "iter5/rep2/none/sonnet/four_bar_s2.html",
+    "history": [
+      "iter5/rep2/none/sonnet/four_bar_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/four_bar_s2.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/sonnet/jansen_s1.html",
+    "history": [
+      "iter5/rep2/none/sonnet/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/sonnet/jansen_s2.html",
+    "history": [
+      "iter5/rep2/none/sonnet/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/haiku/jansen_s1.html",
+    "history": [
+      "iter5/rep2/none/haiku/jansen_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/jansen_s1.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/rep2/none/haiku/jansen_s2.html",
+    "history": [
+      "iter5/rep2/none/haiku/jansen_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/jansen_s2.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/rep2/none/haiku/planetary_s1.html",
+    "history": [
+      "iter5/rep2/none/haiku/planetary_s1.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/haiku/planetary_s1.reply1.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "geneva",
+    "file": "iter5/rep2/none/sonnet/geneva_s2.html",
+    "history": [
+      "iter5/rep2/none/sonnet/geneva_s2.fb1.md"
+    ],
+    "reply": "iter5/rep2/none/sonnet/geneva_s2.reply1.txt"
+  }
+]

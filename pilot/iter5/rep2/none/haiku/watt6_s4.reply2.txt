@@ -1,0 +1,1 @@
+NO_CHANGE: Hand-checked the solver and contract: link lengths and loop 1 (B transmission angle about 45-103 deg) and loop 2 (D transmission about 38-51 deg) fall in range, circle intersections never go tangent, all named markers sit on their points, panel and SIM exports match the spec, and the file was not edited.

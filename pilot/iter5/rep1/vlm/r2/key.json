@@ -1,0 +1,22 @@
+{
+  "jansen-076888b7": {
+    "source": "vlm/haiku/jansen_s3",
+    "mech": "jansen"
+  },
+  "jansen-b0ac295d": {
+    "source": "vlm/haiku/jansen_s4",
+    "mech": "jansen"
+  },
+  "jansen-e76450bc": {
+    "source": "vlm/haiku/jansen_s5",
+    "mech": "jansen"
+  },
+  "watt6-8a88c663": {
+    "source": "vlm/haiku/watt6_s4",
+    "mech": "watt6"
+  },
+  "jansen-10a6b72b": {
+    "source": "vlm/sonnet/jansen_s3",
+    "mech": "jansen"
+  }
+}

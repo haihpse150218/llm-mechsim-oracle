@@ -1,0 +1,1 @@
+CHANGED: Changed tooth counts from Zs=20, Zr=80 to Zs=21, Zr=81 (Zp=30 kept, Zr=Zs+2Zp preserved) so Zs+Zr=102 is divisible by 3 for three equally spaced planets, updating the derived radii comments and the initial ratio text to 4.86.

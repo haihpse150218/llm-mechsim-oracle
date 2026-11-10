@@ -1,0 +1,1 @@
+CHANGED: Switched the initial assembly branch of coupler-1/rocker-1 joint B from +1 to -1 in initialPose, so C sits within reach of loop 2 (|C-O6| about 104-120 mm, inside the 35-185 mm limit) and loop 2 closes at every crank angle.

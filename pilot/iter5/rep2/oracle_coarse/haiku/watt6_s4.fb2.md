@@ -1,0 +1,14 @@
+Automated kinematic test report (the page was loaded in a browser and render(t) was sampled over one or more input revolutions). Failed checks:
+- META (structural invariant (no ground truth needed)): "joint A coincident" measured 40, tolerance 3.08
+- META (structural invariant (no ground truth needed)): "joint B coincident" measured 114, tolerance 3.08
+- META (structural invariant (no ground truth needed)): "joint C coincident" measured 125, tolerance 3.08
+- META (structural invariant (no ground truth needed)): "joint D coincident" measured 199, tolerance 3.08
+- PARAM (drawing vs the SIM.params you declared): "len O4C" measured 80, tolerance 3.08
+- PARAM (drawing vs the SIM.params you declared): "len BC" measured 40, tolerance 3.08
+- PARAM (drawing vs the SIM.params you declared): "input angle (deg)" measured 179, tolerance 1
+- GT (position vs the kinematic solution computed from your SIM.params): "B vs solution" measured 115, tolerance 3.08
+- GT (position vs the kinematic solution computed from your SIM.params): "C vs solution" measured 80, tolerance 3.08
+- GT (position vs the kinematic solution computed from your SIM.params): "D vs solution" measured 120, tolerance 3.08
+- PANEL (panel number vs the kinematic solution): "crank_deg" measured 179, tolerance 1
+- PANEL (panel number vs the kinematic solution): "rocker1_deg" measured 79.1, tolerance 1
+- PANEL (panel number vs the kinematic solution): "output_deg" measured 106, tolerance 1

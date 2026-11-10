@@ -1,0 +1,4 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- A yellow bar floats at the upper left, disconnected from the linkage at every frame. No joint touches it, and it may be a link whose endpoint is wrong. (frames t=0.00s, t=0.52s, t=1.05s, t=1.83s, t=2.62s)
+- The legTriangle drifts away from the rest of the linkage, so joints come apart. At t=180 and t=210 the grey triangle sits left of the linkage and its vertices do not meet the purple and blue links. The assembly looks inconsistent or flipped from the other frames. (frames t=1.57s, t=1.83s, t=2.09s)
+- The foot trace does not match the panel numbers. The pink trace is a heart or teardrop loop, not the flat-bottomed D shape, and it sits far from the leg. The panel foot_y runs from about -135 mm at t=210 to +4 mm at t=240, and foot x jumps between frames, so the foot motion is not smooth. (frames t=1.57s, t=1.83s, t=2.09s)

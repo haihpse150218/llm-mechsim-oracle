@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Watt II six-bar linkage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1f27; font-family: sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #panel { position: fixed; left: 12px; top: 12px; background: rgba(20,24,32,0.8); color: #e8ecf2; padding: 10px 14px; border-radius: 6px; font-size: 14px; line-height: 1.6; }
+  #panel b { color: #8fd0ff; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>Watt II six-bar linkage</div>
+  <div>Crank angle: <b data-q="crank_deg">0</b> deg</div>
+  <div>Ternary rocker angle: <b data-q="rocker1_deg">0</b> deg</div>
+  <div>Output rocker angle: <b data-q="output_deg">0</b> deg</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O2: [0, 0], O4: [100, 0], O6: [240, 10],
+  len: { O2A: 30, AB: 95, O4B: 70, O4C: 60, BC: 80, CD: 85, O6D: 60 },
+  omega: 1.5,
+  theta0: 0.3
+};
+const L = params.len;
+const period = 2 * Math.PI / params.omega;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(120, -90, 460);
+camera.lookAt(120, 5, 10);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(150, 250, 400);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-200, -100, 200);
+scene.add(dl2);
+
+function mat(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.3, roughness: 0.5 }); }
+
+function bar(group, p, q, w, th, color) {
+  const dx = q[0] - p[0], dy = q[1] - p[1];
+  const len = Math.hypot(dx, dy);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, w, th), mat(color));
+  m.position.set((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, 0);
+  m.rotation.z = Math.atan2(dy, dx);
+  group.add(m);
+  for (const e of [p, q]) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, th, 24), mat(color));
+    c.rotation.x = Math.PI / 2;
+    c.position.set(e[0], e[1], 0);
+    group.add(c);
+  }
+}
+function pin(group, p, th, color) {
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, th + 4, 20), mat(color || 0xdddddd));
+  c.rotation.x = Math.PI / 2;
+  c.position.set(p[0], p[1], 0);
+  group.add(c);
+}
+function marker(group, name, p) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(p[0], p[1], 0);
+  group.add(o);
+}
+
+// geometry constants for the ternary rocker
+const phi = Math.acos((L.O4B * L.O4B + L.O4C * L.O4C - L.BC * L.BC) / (2 * L.O4B * L.O4C));
+const Cloc = [L.O4C * Math.cos(-phi), L.O4C * Math.sin(-phi)];
+
+// frame
+const frame = new THREE.Object3D(); frame.name = 'frame';
+scene.add(frame);
+{
+  const base = new THREE.Mesh(new THREE.BoxGeometry(330, 130, 4), mat(0x3a4150));
+  base.position.set(120, 10, -14);
+  frame.add(base);
+  for (const [nm, p] of [['O2', params.O2], ['O4', params.O4], ['O6', params.O6]]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 40, 24), mat(0x8a93a6));
+    post.rotation.x = Math.PI / 2;
+    post.position.set(p[0], p[1], 4);
+    frame.add(post);
+    marker(frame, 'frame@' + nm, p);
+  }
+}
+
+// crank
+const crank = new THREE.Object3D(); crank.name = 'crank';
+bar(crank, [0, 0], [L.O2A, 0], 12, 6, 0xe0594a);
+pin(crank, [0, 0], 6); pin(crank, [L.O2A, 0], 6);
+marker(crank, 'crank@O2', [0, 0]);
+marker(crank, 'crank@A', [L.O2A, 0]);
+crank.position.z = 0;
+scene.add(crank);
+
+// coupler1
+const coupler1 = new THREE.Object3D(); coupler1.name = 'coupler1';
+bar(coupler1, [0, 0], [L.AB, 0], 10, 6, 0xf0b63c);
+pin(coupler1, [0, 0], 6); pin(coupler1, [L.AB, 0], 6);
+marker(coupler1, 'coupler1@A', [0, 0]);
+marker(coupler1, 'coupler1@B', [L.AB, 0]);
+scene.add(coupler1);
+
+// rocker1 (ternary)
+const rocker1 = new THREE.Object3D(); rocker1.name = 'rocker1';
+const Bloc = [L.O4B, 0];
+bar(rocker1, [0, 0], Bloc, 12, 6, 0x4fb286);
+bar(rocker1, [0, 0], Cloc, 12, 6, 0x4fb286);
+bar(rocker1, Bloc, Cloc, 8, 6, 0x4fb286);
+pin(rocker1, [0, 0], 6); pin(rocker1, Bloc, 6); pin(rocker1, Cloc, 6);
+marker(rocker1, 'rocker1@O4', [0, 0]);
+marker(rocker1, 'rocker1@B', Bloc);
+marker(rocker1, 'rocker1@C', Cloc);
+scene.add(rocker1);
+
+// coupler2
+const coupler2 = new THREE.Object3D(); coupler2.name = 'coupler2';
+bar(coupler2, [0, 0], [L.CD, 0], 10, 6, 0x5a9bd8);
+pin(coupler2, [0, 0], 6); pin(coupler2, [L.CD, 0], 6);
+marker(coupler2, 'coupler2@C', [0, 0]);
+marker(coupler2, 'coupler2@D', [L.CD, 0]);
+scene.add(coupler2);
+
+// rocker2
+const rocker2 = new THREE.Object3D(); rocker2.name = 'rocker2';
+bar(rocker2, [0, 0], [L.O6D, 0], 12, 6, 0xa874d6);
+pin(rocker2, [0, 0], 6); pin(rocker2, [L.O6D, 0], 6);
+marker(rocker2, 'rocker2@O6', [0, 0]);
+marker(rocker2, 'rocker2@D', [L.O6D, 0]);
+scene.add(rocker2);
+
+const Z = { crank: 0, coupler1: 8, rocker1: 16, coupler2: 24, rocker2: 16 };
+
+function norm(a) { const t = 2 * Math.PI; return ((a % t) + t) % t; }
+function deg(a) { return norm(a) * 180 / Math.PI; }
+
+const qCrank = document.querySelector('[data-q="crank_deg"]');
+const qR1 = document.querySelector('[data-q="rocker1_deg"]');
+const qOut = document.querySelector('[data-q="output_deg"]');
+
+function solve(t) {
+  const th = params.theta0 + params.omega * t;
+  const O2 = params.O2, O4 = params.O4, O6 = params.O6;
+  const A = [O2[0] + L.O2A * Math.cos(th), O2[1] + L.O2A * Math.sin(th)];
+  // loop 1
+  let dx = A[0] - O4[0], dy = A[1] - O4[1];
+  let d = Math.hypot(dx, dy);
+  let g = Math.acos(Math.max(-1, Math.min(1, (L.O4B * L.O4B + d * d - L.AB * L.AB) / (2 * L.O4B * d))));
+  const psi = Math.atan2(dy, dx) - g;
+  const B = [O4[0] + L.O4B * Math.cos(psi), O4[1] + L.O4B * Math.sin(psi)];
+  const cAng = psi - phi;
+  const C = [O4[0] + L.O4C * Math.cos(cAng), O4[1] + L.O4C * Math.sin(cAng)];
+  // loop 2
+  dx = C[0] - O6[0]; dy = C[1] - O6[1];
+  d = Math.hypot(dx, dy);
+  g = Math.acos(Math.max(-1, Math.min(1, (L.O6D * L.O6D + d * d - L.CD * L.CD) / (2 * L.O6D * d))));
+  const chi = Math.atan2(dy, dx) + g;
+  const D = [O6[0] + L.O6D * Math.cos(chi), O6[1] + L.O6D * Math.sin(chi)];
+  return { th, A, B, C, D, psi, chi };
+}
+
+function render(t) {
+  const s = solve(t);
+  crank.position.set(params.O2[0], params.O2[1], Z.crank);
+  crank.rotation.z = s.th;
+  coupler1.position.set(s.A[0], s.A[1], Z.coupler1);
+  coupler1.rotation.z = Math.atan2(s.B[1] - s.A[1], s.B[0] - s.A[0]);
+  rocker1.position.set(params.O4[0], params.O4[1], Z.rocker1);
+  rocker1.rotation.z = s.psi;
+  coupler2.position.set(s.C[0], s.C[1], Z.coupler2);
+  coupler2.rotation.z = Math.atan2(s.D[1] - s.C[1], s.D[0] - s.C[0]);
+  rocker2.position.set(params.O6[0], params.O6[1], Z.rocker2);
+  rocker2.rotation.z = s.chi;
+  qCrank.textContent = deg(s.th).toFixed(1) + ' deg';
+  qR1.textContent = deg(s.psi).toFixed(1) + ' deg';
+  qOut.textContent = deg(s.chi).toFixed(1) + ' deg';
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  render(window.__lastT || 0);
+});
+
+window.SIM = { scene, camera, renderer, period, params, render: (t) => { window.__lastT = t; render(t); } };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    window.SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

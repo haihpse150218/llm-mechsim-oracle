@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (210,20) to (50,-85) and set CD=75, O6D=65 so loop 2 can assemble for the whole crank revolution (C was previously out of reach of O6, so D never coincided), and recentred the camera.

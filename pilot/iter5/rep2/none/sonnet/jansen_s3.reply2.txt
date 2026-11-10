@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths and X offset match Jansen's holy numbers, all points/parts/markers and the output contract are satisfied, and the chosen circle-intersection branches stay assemblable (the alternative lower-W branch makes V-W exceed VU+WU).

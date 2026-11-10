@@ -1,0 +1,1 @@
+CHANGED: Y now uses the branch above X-Z (circleInt(Z,ZY,X,XY)) and V is placed at angle phiXY minus alphaXY (in both solve() and locV), so the linkage assembles with Y above, W below, V/U outer and T lowest, matching the canonical assembly.

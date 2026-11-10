@@ -1,0 +1,1 @@
+CHANGED: Flipped the branch used for the upper-triangle apex V so it lies on the far side of X-Y from the crank (the spec's "outer apex"), by computing V = circ(Y, YV, X, XV) instead of circ(X, XV, Y, YV), since the old choice put V on the same side as the crank.

@@ -1,0 +1,1 @@
+CHANGED: Reassigned the assembly branch of each joint in pose() (Y above the Z-X line, V outer apex, W below, U left, T hanging below the knee) by giving circ() an explicit side sign, since the GT failures for Y, V, U and T indicate the wrong intersection branch was chosen; link lengths were left unchanged because I could not verify the holy-number check's failing pair.

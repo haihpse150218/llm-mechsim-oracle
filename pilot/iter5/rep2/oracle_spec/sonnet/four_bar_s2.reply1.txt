@@ -1,0 +1,1 @@
+CHANGED: Replaced the Object.assign(mesh, {position: Vector3}) call (which threw on read-only Mesh.position and prevented load) with boss.position.set(x, 0, -6).

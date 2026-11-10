@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jansen leg linkage</title>
+<style>
+html,body{margin:0;height:100%;background:#0d1117;color:#e6edf3;font-family:system-ui,sans-serif;overflow:hidden}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;background:rgba(13,17,23,.78);padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.7;z-index:2}
+#panel b{display:inline-block;width:110px;font-weight:500;color:#8b949e}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><b>crank angle</b><span data-q="crank_deg">0.0</span> deg</div>
+  <div><b>foot x</b><span data-q="foot_x">0.0</span> mm</div>
+  <div><b>foot y</b><span data-q="foot_y">0.0</span> mm</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const TAU = Math.PI * 2;
+
+// ---- parameters (mm, rad/s) ----
+const O  = { x: 0, y: 0 };
+const XP = { x: 62.7, y: 0 };
+const LEN = { OZ: 38, ZY: 39.3, XY: 61.9, ZW: 41.5, XW: 65.7,
+              XV: 36.7, YV: 39.4, VU: 49, WU: 55.8, UT: 39.3, WT: 50 };
+const OMEGA = 0.8;          // CCW, constant
+const THETA0 = Math.PI / 2; // crank angle at t = 0
+
+// ---- kinematics: each point is a circle-circle intersection ----
+function circInt(A, rA, B, rB) {
+  const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy);
+  if (d < 1e-9) return [{ x: A.x + rA, y: A.y }, { x: A.x - rA, y: A.y }];
+  const a = (rA * rA - rB * rB + d * d) / (2 * d);
+  const h2 = rA * rA - a * a;
+  const h = h2 > 0 ? Math.sqrt(h2) : 0;
+  const ux = dx / d, uy = dy / d;
+  const bx = A.x + a * ux, by = A.y + a * uy;
+  return [{ x: bx - h * uy, y: by + h * ux }, { x: bx + h * uy, y: by - h * ux }];
+}
+
+// reference-pose branch rules (used only at theta0); afterwards the candidate
+// nearest to the previous continuation step is taken, so the assembly is followed
+function pick(c, prev, rule) {
+  if (prev) {
+    const d0 = Math.hypot(c[0].x - prev.x, c[0].y - prev.y);
+    const d1 = Math.hypot(c[1].x - prev.x, c[1].y - prev.y);
+    return d0 <= d1 ? c[0] : c[1];
+  }
+  if (rule === 'maxY') return c[0].y >= c[1].y ? c[0] : c[1];
+  if (rule === 'minY') return c[0].y <= c[1].y ? c[0] : c[1];
+  return c[0].x >= c[1].x ? c[0] : c[1]; // maxX
+}
+
+function pose(Z, prev) {
+  const Y = pick(circInt(XP, LEN.XY, Z, LEN.ZY), prev && prev.Y, 'maxY');
+  const W = pick(circInt(XP, LEN.XW, Z, LEN.ZW), prev && prev.W, 'minY');
+  const V = pick(circInt(XP, LEN.XV, Y, LEN.YV), prev && prev.V, 'maxX');
+  const U = pick(circInt(V, LEN.VU, W, LEN.WU), prev && prev.U, 'minY');
+  const T = pick(circInt(W, LEN.WT, U, LEN.UT), prev && prev.T, 'minY');
+  return { Z, Y, W, V, U, T };
+}
+
+// Pose for crank rotation dth in [0, 2pi), continued from the reference pose at THETA0.
+// Pure function of dth: recomputed from scratch on every call.
+function solve(dth) {
+  const M = Math.max(1, Math.ceil(dth / TAU * 720));
+  let prev = null;
+  for (let i = 0; i <= M; i++) {
+    const th = THETA0 + dth * i / M;
+    const Z = { x: O.x + LEN.OZ * Math.cos(th), y: O.y + LEN.OZ * Math.sin(th) };
+    prev = pose(Z, prev);
+  }
+  return prev;
+}
+
+function allPoints(dth) {
+  const c = solve(dth);
+  return { O, X: XP, Z: c.Z, Y: c.Y, W: c.W, V: c.V, U: c.U, T: c.T };
+}
+
+// ---- parts ----
+const PARTS = {
+  frame:         { pts: ['O', 'X'],      edges: [['O', 'X']],                       color: 0x6b7480 },
+  crank:         { pts: ['O', 'Z'],      edges: [['O', 'Z']],                       color: 0xe8553d },
+  rodUpper:      { pts: ['Z', 'Y'],      edges: [['Z', 'Y']],                       color: 0x3ba7d6 },
+  rodLower:      { pts: ['Z', 'W'],      edges: [['Z', 'W']],                       color: 0x4fbf7a },
+  upperTriangle: { pts: ['X', 'Y', 'V'], edges: [['X', 'Y'], ['Y', 'V'], ['V', 'X']], color: 0xd6b13a },
+  linkXW:        { pts: ['X', 'W'],      edges: [['X', 'W']],                       color: 0xb07ad9 },
+  linkVU:        { pts: ['V', 'U'],      edges: [['V', 'U']],                       color: 0xe27ab0 },
+  legTriangle:   { pts: ['W', 'U', 'T'], edges: [['W', 'U'], ['U', 'T'], ['T', 'W']], color: 0x2fc3c0 },
+};
+
+// reference pose (t = 0)
+const REF = Object.assign({ O, X: XP }, solve(0));
+const refAng = {};
+for (const [name, p] of Object.entries(PARTS)) {
+  const a = REF[p.pts[0]], b = REF[p.pts[1]];
+  refAng[name] = Math.atan2(b.y - a.y, b.x - a.x);
+}
+
+// ---- three.js scene ----
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x0d1117, 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(31, 12, 380);
+camera.lookAt(31, 12, 0);
+
+scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x1a1a22, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(120, 200, 300);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x88aaff, 0.5);
+fill.position.set(-150, -100, 200);
+scene.add(fill);
+
+const BAR_W = 9, BAR_T = 6;
+function loc(part, p) {
+  const o = REF[PARTS[part].pts[0]];
+  const q = REF[p];
+  return { x: q.x - o.x, y: q.y - o.y };
+}
+function addBar(g, a, b, mat) {
+  const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(L + BAR_W, BAR_W, BAR_T), mat);
+  m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0);
+  m.rotation.z = Math.atan2(dy, dx);
+  g.add(m);
+}
+function addPin(g, p, mat) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 12, 20), mat);
+  m.rotation.x = Math.PI / 2;
+  m.position.set(p.x, p.y, 0);
+  g.add(m);
+}
+
+const groups = {};
+for (const [name, def] of Object.entries(PARTS)) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  const mat = new THREE.MeshStandardMaterial({ color: def.color, metalness: 0.35, roughness: 0.42 });
+  for (const [a, b] of def.edges) addBar(g, loc(name, a), loc(name, b), mat);
+  for (const p of def.pts) addPin(g, loc(name, p), new THREE.MeshStandardMaterial({ color: 0xc9d1d9, metalness: 0.7, roughness: 0.3 }));
+  if (name === 'frame') {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(XP.x + 30, 8, 4), new THREE.MeshStandardMaterial({ color: 0x3a414b }));
+    base.position.set(XP.x / 2, -2, -6);
+    g.add(base);
+  }
+  if (name === 'legTriangle') {
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(6, 20, 14), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }));
+    foot.position.set(loc(name, 'T').x, loc(name, 'T').y, 0);
+    g.add(foot);
+  }
+  for (const p of def.pts) {
+    const mk = new THREE.Object3D();
+    mk.name = `${name}@${p}`;
+    const l = loc(name, p);
+    mk.position.set(l.x, l.y, 0);
+    g.add(mk);
+  }
+  scene.add(g);
+  groups[name] = g;
+}
+
+// static foot trace (pure: computed from solve)
+{
+  const pts = [];
+  for (let k = 0; k <= 240; k++) {
+    const c = solve(TAU * k / 240);
+    pts.push(new THREE.Vector3(c.T.x, c.T.y, 0));
+  }
+  const trace = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xffb020 }));
+  trace.name = 'foot_trace';
+  scene.add(trace);
+}
+
+// ---- pose and panel ----
+const qEls = {};
+for (const el of document.querySelectorAll('[data-q]')) qEls[el.dataset.q] = el;
+
+function render(t) {
+  const dth = (((OMEGA * t) % TAU) + TAU) % TAU;
+  const P = allPoints(dth);
+  for (const [name, def] of Object.entries(PARTS)) {
+    const g = groups[name];
+    const o = P[def.pts[0]], s = P[def.pts[1]];
+    const ang = Math.atan2(s.y - o.y, s.x - o.x);
+    g.position.set(o.x, o.y, 0);
+    g.rotation.z = ang - refAng[name];
+  }
+  let deg = Math.atan2(P.Z.y - O.y, P.Z.x - O.x) * 180 / Math.PI;
+  deg = ((deg % 360) + 360) % 360;
+  let degTxt = deg.toFixed(1);
+  if (degTxt === '360.0') degTxt = '0.0';
+  if (qEls.crank_deg) qEls.crank_deg.textContent = degTxt;
+  if (qEls.foot_x) qEls.foot_x.textContent = P.T.x.toFixed(2);
+  if (qEls.foot_y) qEls.foot_y.textContent = P.T.y.toFixed(2);
+  renderer.render(scene, camera);
+}
+
+const SIM = {
+  scene,
+  camera,
+  renderer,
+  period: TAU / OMEGA,
+  params: {
+    O: [O.x, O.y],
+    X: [XP.x, XP.y],
+    len: LEN,
+    omega: OMEGA,
+    theta0: THETA0
+  },
+  render
+};
+window.SIM = SIM;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

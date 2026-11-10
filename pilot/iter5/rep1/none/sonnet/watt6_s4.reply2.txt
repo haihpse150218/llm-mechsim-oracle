@@ -1,0 +1,1 @@
+NO_CHANGE: Both loops assemble over the full crank turn (O4-A distance 70-130, O6-C distance about 42-73), the transmission angles stay roughly 37-100 degrees, the branch choice is consistent, the markers and parts match the spec, and render(t) is pure.

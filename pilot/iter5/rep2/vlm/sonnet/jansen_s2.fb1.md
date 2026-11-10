@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is a tilted teardrop loop with no flat-bottomed stance phase, which does not match the characteristic Jansen foot trajectory. This suggests wrong link lengths or ratios, or a wrong assembly branch. (frames t=1.00s, t=1.33s, t=1.67s, t=2.00s)
+- Around crank angles 180-240 deg the linkage appears to fold or flip configuration. Links VU, WU and XW nearly overlap and lie almost collinear, and the leg triangle looks collapsed. The mechanism seems to switch assembly branch, with a discontinuous change in shape. (frames t=2.00s, t=2.33s, t=2.67s)

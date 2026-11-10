@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from 20 mm to 7.8 mm from the crank axle O (the ground offset of Jansen's published holy numbers), since the link lengths and branch-tracking solver were already consistent with the spec and the foot-path shape mismatch points to the ground geometry; this is an unverified change because the page could not be run.

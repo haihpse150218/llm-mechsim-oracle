@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is not the characteristic flat-bottomed Jansen path: foot y rises steadily from -79 to -29 mm over 0-120 deg, then swings up to +100 mm and jumps about 115 mm in x between 150 and 180 deg and again between 180 and 210 deg, so the stride is too large and discontinuous. (frames t=0.00s, t=1.57s, t=2.09s, t=2.62s, t=3.14s, t=3.67s)
+- Assembly configuration flips around 150-210 deg: the leg triangle and linkage go to a near-vertical, mirrored branch (leg triangle above the pivots) instead of a continuous walking cycle, suggesting wrong assembly branch or wrong link lengths. (frames t=2.62s, t=3.14s, t=3.67s)

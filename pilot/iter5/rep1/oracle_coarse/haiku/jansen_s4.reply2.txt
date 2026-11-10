@@ -1,0 +1,1 @@
+CHANGED: Set the crank length OZ from 38 mm to 15 mm (Jansen's published crank value, 'M'), since the other link lengths already matched the holy numbers and the 38 mm value was the only mismatch against the holy-number check.
