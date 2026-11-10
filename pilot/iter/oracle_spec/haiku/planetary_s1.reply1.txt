@@ -1,0 +1,1 @@
+CHANGED: Changed tooth counts to Zs=21, Zp=30, Zr=81 so that Zs+Zr=102 is divisible by 3 (three equally spaced planets can mesh), keeping Zr = Zs + 2Zp and the derived radii, arm length and speed ratio (now 4.86) consistent.

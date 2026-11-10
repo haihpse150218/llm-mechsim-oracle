@@ -1,0 +1,1 @@
+CHANGED: Swapped link lengths to Jansen's published values (VU 39.4, WU 36.7, UT 65.7, WT 49.0); a hand check at crank angle 0 shows the same circle-intersection branches still give a sensible pose with the foot below the machine.

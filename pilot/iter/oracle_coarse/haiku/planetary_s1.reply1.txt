@@ -1,0 +1,1 @@
+CHANGED: Changed the tooth counts to Zs=21 and Zr=81 (planet Zp=30 unchanged) so that Zs+Zr=102 is divisible by 3 and the three planets can be equally spaced, with the dependent dimensions (sun/ring radii, carrier arm length, speed-ratio comments and panel default) updated to match.

@@ -1,0 +1,101 @@
+[
+  {
+    "arm": "oracle_spec",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/oracle_spec/haiku/jansen_s2.html",
+    "history": [
+      "iter/oracle_spec/haiku/jansen_s2.fb1.md",
+      "iter/oracle_spec/haiku/jansen_s2.fb2.md"
+    ],
+    "reply": "iter/oracle_spec/haiku/jansen_s2.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter/oracle_coarse/sonnet/jansen_s1.html",
+    "history": [
+      "iter/oracle_coarse/sonnet/jansen_s1.fb1.md",
+      "iter/oracle_coarse/sonnet/jansen_s1.fb2.md"
+    ],
+    "reply": "iter/oracle_coarse/sonnet/jansen_s1.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/oracle_coarse/haiku/jansen_s1.html",
+    "history": [
+      "iter/oracle_coarse/haiku/jansen_s1.fb1.md",
+      "iter/oracle_coarse/haiku/jansen_s1.fb2.md"
+    ],
+    "reply": "iter/oracle_coarse/haiku/jansen_s1.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/oracle_coarse/haiku/jansen_s2.html",
+    "history": [
+      "iter/oracle_coarse/haiku/jansen_s2.fb1.md",
+      "iter/oracle_coarse/haiku/jansen_s2.fb2.md"
+    ],
+    "reply": "iter/oracle_coarse/haiku/jansen_s2.reply2.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter/vlm/sonnet/jansen_s1.html",
+    "history": [
+      "iter/vlm/sonnet/jansen_s1.fb1.md",
+      "iter/vlm/sonnet/jansen_s1.fb2.md"
+    ],
+    "reply": "iter/vlm/sonnet/jansen_s1.reply2.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/vlm/haiku/jansen_s1.html",
+    "history": [
+      "iter/vlm/haiku/jansen_s1.fb1.md",
+      "iter/vlm/haiku/jansen_s1.fb2.md"
+    ],
+    "reply": "iter/vlm/haiku/jansen_s1.reply2.txt"
+  },
+  {
+    "arm": "vlm",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/vlm/haiku/jansen_s2.html",
+    "history": [
+      "iter/vlm/haiku/jansen_s2.fb1.md",
+      "iter/vlm/haiku/jansen_s2.fb2.md"
+    ],
+    "reply": "iter/vlm/haiku/jansen_s2.reply2.txt"
+  },
+  {
+    "arm": "none",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter/none/haiku/jansen_s1.html",
+    "history": [
+      "iter/none/haiku/jansen_s1.fb1.md",
+      "iter/none/haiku/jansen_s1.fb2.md"
+    ],
+    "reply": "iter/none/haiku/jansen_s1.reply2.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "geneva",
+    "file": "iter/none/sonnet/geneva_s2.html",
+    "history": [
+      "iter/none/sonnet/geneva_s2.fb1.md",
+      "iter/none/sonnet/geneva_s2.fb2.md"
+    ],
+    "reply": "iter/none/sonnet/geneva_s2.reply2.txt"
+  }
+]

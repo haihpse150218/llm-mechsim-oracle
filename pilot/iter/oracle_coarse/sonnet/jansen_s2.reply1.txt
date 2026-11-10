@@ -1,0 +1,1 @@
+CHANGED: Swapped the leg-triangle lengths so UT=65.7 and WT=49.0 (the rel. error 0.341 equals 65.7/49-1), keeping the other holy numbers.

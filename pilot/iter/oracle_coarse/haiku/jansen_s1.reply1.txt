@@ -1,0 +1,1 @@
+CHANGED: Removed the erroneous "- g.a0" offset from each part's rotation.z in render(t), because the mesh and marker coordinates are already stored in the t=0 local frame (loc = R(-a0)·v), so the world rotation must be the absolute direction atan2(p1-p0) to place the markers at their joints.

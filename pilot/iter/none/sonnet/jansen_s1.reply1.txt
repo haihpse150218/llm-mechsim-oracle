@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths and X offset match Jansen's holy numbers, branch choices give the correct configuration (Y up, W down, V left, U left, foot below), markers/parts/panel/SIM contract are all satisfied.

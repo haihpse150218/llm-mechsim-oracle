@@ -1,0 +1,1 @@
+CHANGED: Removed the arbitrary 20-degree rotation of pivot X and restored Jansen's published offset X = (-38, -7.8) so the link geometry matches the holy-number linkage and its flat-bottomed foot path.

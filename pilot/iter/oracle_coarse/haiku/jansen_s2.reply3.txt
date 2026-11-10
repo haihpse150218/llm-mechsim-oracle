@@ -1,0 +1,1 @@
+CHANGED: Moved the reference apex V to the outer side of line XY (away from the crank axle O, as the spec requires) and re-solved U and T on their lower branches in REF_GUESS, which fixes the reference assembly that the grader's canonical V (a mirror of the old V across XY, 2x distance = 73.2) disagreed with and the mis-branched Newton continuation.
