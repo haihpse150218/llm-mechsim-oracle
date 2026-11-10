@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is not the characteristic flat-bottomed Jansen path. The lowest part of the trace is tilted and peaked (foot y goes -120, -125, -116, -109 across 150-240 deg) rather than a flat ground stroke. The loop looks like a skewed teardrop, which suggests wrong link ratios or a wrong assembly branch. (frames t=1.75s, t=2.09s, t=2.44s, t=2.79s)
+- The mechanism looks like it is in the wrong assembly configuration. At 210-240 deg the leg triangle and the W-U link swing out to the lower-left and the links cross or overlap the upper triangle. Parts bunch up near the knee and the upper rod/triangle region. (frames t=2.44s, t=2.79s)

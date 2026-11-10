@@ -1,0 +1,1 @@
+NO_CHANGE: I re-derived the kinematics (a = C sin(pi/n), engagement half-angle pi/2 - pi/n, wheel angle = pi - atan2(a sin th, C - a cos th) - m*step, which is continuous and reverses sense as an external Geneva should), the markers, the lock-disc and concave-arc geometry, and the output contract, and found nothing wrong.

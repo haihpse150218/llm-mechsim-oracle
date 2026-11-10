@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths and X offset match Jansen's holy numbers, the circle-intersection branches stay consistent over a full revolution (foot path about 58 mm wide, flat-bottomed near y of -96 to -100), and the output contract is satisfied.

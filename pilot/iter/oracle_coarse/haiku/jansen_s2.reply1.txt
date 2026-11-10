@@ -1,0 +1,1 @@
+CHANGED: Replaced the 1-degree continuation in poseAt and the foot trace with a precomputed 0.1-degree continuation table (each step seeded from the previous solution) and made poseAt Newton-correct from the nearest tabulated solution, so the solver no longer jumps branches or diverges near singular configurations.

@@ -42,3 +42,18 @@ Tiêu chí: lỗi tự nhiên ≥20% ở (a) HOẶC VLM bỏ sót ≥30% ở (b)
 - [x] 21 agent sửa (model = model đã sinh file), 1 vòng, sửa tại chỗ
 - [x] Chấm: oracle-lite trên `repair/*/*/*.html`; VLM ẩn danh trên bản đã sửa; kiểm tay geneva_s2 (đĩa khoá)
 - [x] Cập nhật REPORT.md mục RQ3 (3/7 mỗi nhánh; đề xuất sửa lặp có cổng oracle + feedback cụ thể)
+
+## Pha 4 — RQ3b: sửa lặp có cổng oracle (2026-11-10)
+Thiết kế: 7 file lỗi gốc (gen_lite) × 4 nhánh × tối đa K=3 vòng, người sửa = model đã sinh file, mỗi vòng là agent mới đọc spec + file + toàn bộ lịch sử feedback.
+- oracle_spec: oracle gate + feedback cụ thể (oracle thêm trường `detail`: cặp khâu nào sai/đổi chỗ, khớp nào hở ở t nào, toạ độ vẽ vs lời giải). Tiêu chí pass/fail KHÔNG đổi (ref 4/4 PASS, gen_lite y hệt pha 2).
+- oracle_coarse: oracle gate + feedback kiểu pha 3 (tên kiểm, số đo, dung sai) → tách hiệu ứng "lặp" khỏi "cụ thể".
+- vlm: VLM ẩn danh review mỗi vòng (vòng 0 dùng review pha 2), dừng khi VLM nói "correct".
+- none: self-refine, dừng khi người sửa trả NO_CHANGE.
+Mọi vòng đều chấm bằng oracle cho mọi nhánh (`iter/results/r<k>.jsonl`), chỉ nhánh oracle được thấy.
+Chạy: `node oracle/iter_repair.mjs prep | grade <r> | plan <r> | vlm-prep <r> | summary`; prompt: `iter/PROMPT.md`, `node iter/prompts.mjs <r>`.
+- [x] prep, grade 0, plan 0 → 25 tác vụ vòng 1
+- [x] vòng 1 sửa (25 agent) → grade 1: oracle_spec 5/6, coarse 3/6, vlm 2/6, none 0/6 (chưa tính geneva_s2)
+- [x] vlm review r1 (correct: four_bar, sonnet jansen_s2, geneva_s2 [nhưng đĩa khoá giờ không còn khuyết → đè bánh khi ăn khớp, kiểm tay: ~]) → plan 1: 9 tác vụ vòng 2
+- [x] vòng 2 (9 agent) → grade 2: oracle_spec 6/6, coarse 4/6, vlm 2/6, none 0/6 (none dừng hết)
+- [x] vlm review r2 (2/3 nói correct nhưng oracle fail) → vòng 3 (3 agent) → grade 3, plan 3 (dừng hết)
+- [x] kiểm tay geneva_s2 (vlm = none, sửa một phần); REPORT.md pha 4. Kết quả cuối: oracle_spec 6/6 (7 lượt), coarse 4/6 (11), vlm 2/6 (10+9), none 0/6 (9)

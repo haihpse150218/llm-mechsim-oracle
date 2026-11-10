@@ -1,0 +1,1 @@
+NO_CHANGE: Ring-fixed kinematics check out (carrier = 0.2*omega, planet world spin = -omega/3, ratio 5.00), rolling-without-slip holds at the sun-planet and ring-planet contacts, gear diameters and centre distances match the common module, all named parts and "<part>@<point>" markers match the spec, and render(t) is pure with the required SIM/SIM_READY exposure and import map.

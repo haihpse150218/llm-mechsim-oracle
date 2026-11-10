@@ -1,0 +1,1 @@
+CHANGED: Replaced the fixed 360-step Newton continuation (which returned unconverged garbage poses when a step failed, causing the foot spikes) with an adaptive, convergence-checked branch tracker used for both the per-frame pose and the foot trace, and made the crank-angle readout wrap correctly below 360.

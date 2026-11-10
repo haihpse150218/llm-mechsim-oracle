@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jansen Leg Simulator</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14161c; font-family: system-ui, sans-serif; color: #e5e7eb; }
+  canvas { display: block; }
+  #panel { position: fixed; left: 12px; top: 12px; background: rgba(0, 0, 0, 0.55); padding: 10px 14px; border-radius: 6px; font-size: 14px; line-height: 1.6; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>crank angle: <span data-q="crank_deg">0.00 deg</span></div>
+  <div>foot x: <span data-q="foot_x">0.00 mm</span></div>
+  <div>foot y: <span data-q="foot_y">0.00 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------------------------------------------------------------------------
+// Geometry. Lengths (mm) from Jansen's published "holy numbers" (crank a = 38):
+// a=38 OZ, b=41.5 ZY, c=39.3 ZW, d=40.1 XW, f=39.4 XY, g=36.7 XV, e=55.8 YV,
+// h=65.7 VU, i=49 WU, j=50 UT, k=61.9 WT. The ground distance OX (35 mm) is
+// a free choice that keeps both four-bar loops double-crank (no toggles).
+// ---------------------------------------------------------------------------
+const TWO_PI = Math.PI * 2;
+const L = { OZ: 38, ZY: 41.5, XY: 39.4, ZW: 39.3, XW: 40.1, XV: 36.7, YV: 55.8, VU: 65.7, WU: 49, UT: 50, WT: 61.9 };
+const O = [0, 0];
+const X = [-35, 0];
+const OMEGA = 1.0;      // rad/s, counter-clockwise
+const THETA0 = 0;       // reference pose is the crank at angle 0
+
+const mod2pi = (v) => ((v % TWO_PI) + TWO_PI) % TWO_PI;
+
+// Closed-form linkage solution. The linkage is a chain of dyads: each joint is
+// one of the two intersections of two circles centred on points already placed
+// (Z from the crank; Y and W from Z and X; V from X and Y; U from V and W;
+// T from U and W). SIDE picks the intersection (assembly branch) so that the
+// reference pose is the standard one: Y above, W below, V and U on the outer
+// side, T lowest. At crank 0 this gives V=(-53.6,31.6), U=(-43.7,-33.3),
+// T=(-15.9,-74.9).
+const SIDE = { Y: -1, W: 1, V: 1, U: -1, T: -1 };
+
+// Point Q with |Q-P1| = r1 and |Q-P2| = r2. side = +1 or -1 picks one of the
+// two intersections, measured to the left (+1) or right (-1) of P1->P2.
+function dyad(P1, r1, P2, r2, side) {
+  const ex = P2[0] - P1[0], ey = P2[1] - P1[1];
+  const d = Math.hypot(ex, ey);
+  const ux = ex / d, uy = ey / d;
+  const a = (d * d + r1 * r1 - r2 * r2) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  return [P1[0] + a * ux - side * h * uy, P1[1] + a * uy + side * h * ux];
+}
+
+// All mechanism points at crank angle th (rad). Pure function of th: no state,
+// no iteration, so it can be evaluated at any time in any order.
+function pointsOf(th) {
+  const Z = [L.OZ * Math.cos(th), L.OZ * Math.sin(th)];
+  const Y = dyad(Z, L.ZY, X, L.XY, SIDE.Y);
+  const W = dyad(Z, L.ZW, X, L.XW, SIDE.W);
+  const V = dyad(X, L.XV, Y, L.YV, SIDE.V);
+  const U = dyad(V, L.VU, W, L.WU, SIDE.U);
+  const T = dyad(U, L.UT, W, L.WT, SIDE.T);
+  return { O, X, Z, Y, V, W, U, T };
+}
+
+// Reference pose (crank angle 0).
+const REF = pointsOf(0);
+
+// Foot trace over one revolution (constant, computed once at load).
+const TRACE = [];
+for (let k = 0; k <= 360; k++) {
+  const Tk = pointsOf(TWO_PI * k / 360).T;
+  TRACE.push(new THREE.Vector3(Tk[0], Tk[1], -1));
+}
+
+// ---------------------------------------------------------------------------
+// Scene
+// ---------------------------------------------------------------------------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14161c);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(0, -15, 300);
+camera.lookAt(-5, -20, 0);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.0);
+key.position.set(120, 160, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x8899ff, 0.35);
+fill.position.set(-200, -100, 150);
+scene.add(fill);
+
+const WB = 6;   // bar width (mm)
+const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, metalness: 0.15 });
+
+const objs = {};
+// Create a part Object3D. Its local frame is anchored at `anchor` and
+// oriented so that the reference direction anchor->dir is along +X.
+function makePart(name, anchor, dir, pts) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  const a = anchor ? REF[anchor] : [0, 0];
+  const L2 = (p) => [REF[p][0] - a[0], REF[p][1] - a[1]];
+  for (const p of pts) {
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + p;
+    const q = L2(p);
+    mk.position.set(q[0], q[1], 0);
+    g.add(mk);
+  }
+  scene.add(g);
+  objs[name] = { g, anchor, dir, L2 };
+  return objs[name];
+}
+
+function bar(g, p, q, z, depth, color) {
+  const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, WB, depth), mat(color));
+  m.position.set((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, z);
+  m.rotation.z = Math.atan2(q[1] - p[1], q[0] - p[0]);
+  g.add(m);
+}
+
+function plate(g, pts, z, depth, color) {
+  const shape = new THREE.Shape(pts.map((p) => new THREE.Vector2(p[0], p[1])));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
+  geo.translate(0, 0, -depth / 2);
+  const m = new THREE.Mesh(geo, mat(color));
+  m.position.z = z;
+  g.add(m);
+}
+
+function pin(g, p, color) {
+  const geo = new THREE.CylinderGeometry(3.4, 3.4, 30, 20);
+  geo.rotateX(Math.PI / 2);
+  const m = new THREE.Mesh(geo, mat(color));
+  m.position.set(p[0], p[1], 0);
+  g.add(m);
+}
+
+// frame (fixed, world coordinates)
+{
+  const P = makePart('frame', null, null, ['O', 'X']);
+  const L2 = P.L2;
+  bar(P.g, L2('O'), L2('X'), 0, 8, 0x6b7280);
+  pin(P.g, L2('O'), 0x9ca3af);
+  pin(P.g, L2('X'), 0x9ca3af);
+}
+// crank
+{
+  const P = makePart('crank', 'O', 'Z', ['O', 'Z']);
+  bar(P.g, P.L2('O'), P.L2('Z'), 0, 6, 0xf59e0b);
+  pin(P.g, P.L2('O'), 0xfde68a);
+  pin(P.g, P.L2('Z'), 0xfde68a);
+}
+// rodUpper (Z -> Y)
+{
+  const P = makePart('rodUpper', 'Z', 'Y', ['Z', 'Y']);
+  bar(P.g, P.L2('Z'), P.L2('Y'), 8, 5, 0x60a5fa);
+  pin(P.g, P.L2('Z'), 0xbfdbfe);
+  pin(P.g, P.L2('Y'), 0xbfdbfe);
+}
+// rodLower (Z -> W)
+{
+  const P = makePart('rodLower', 'Z', 'W', ['Z', 'W']);
+  bar(P.g, P.L2('Z'), P.L2('W'), -8, 5, 0x34d399);
+  pin(P.g, P.L2('Z'), 0xa7f3d0);
+  pin(P.g, P.L2('W'), 0xa7f3d0);
+}
+// upperTriangle (X, Y, V)
+{
+  const P = makePart('upperTriangle', 'X', 'Y', ['X', 'Y', 'V']);
+  plate(P.g, [P.L2('X'), P.L2('Y'), P.L2('V')], 8, 5, 0xa78bfa);
+  pin(P.g, P.L2('X'), 0xddd6fe);
+  pin(P.g, P.L2('Y'), 0xddd6fe);
+  pin(P.g, P.L2('V'), 0xddd6fe);
+}
+// linkXW (X -> W)
+{
+  const P = makePart('linkXW', 'X', 'W', ['X', 'W']);
+  bar(P.g, P.L2('X'), P.L2('W'), -8, 5, 0xf472b6);
+  pin(P.g, P.L2('X'), 0xfbcfe8);
+  pin(P.g, P.L2('W'), 0xfbcfe8);
+}
+// linkVU (V -> U)
+{
+  const P = makePart('linkVU', 'V', 'U', ['V', 'U']);
+  bar(P.g, P.L2('V'), P.L2('U'), 0, 5, 0xfb7185);
+  pin(P.g, P.L2('V'), 0xfecdd3);
+  pin(P.g, P.L2('U'), 0xfecdd3);
+}
+// legTriangle (W, U, T)
+{
+  const P = makePart('legTriangle', 'W', 'U', ['W', 'U', 'T']);
+  plate(P.g, [P.L2('W'), P.L2('U'), P.L2('T')], -8, 5, 0xfacc15);
+  pin(P.g, P.L2('W'), 0xfef08a);
+  pin(P.g, P.L2('U'), 0xfef08a);
+  pin(P.g, P.L2('T'), 0xfef08a);
+}
+
+// Foot trace (not a part; visual aid only)
+{
+  const tg = new THREE.BufferGeometry().setFromPoints(TRACE);
+  const trace = new THREE.Line(tg, new THREE.LineBasicMaterial({ color: 0xfbbf24 }));
+  trace.name = 'footPath';
+  scene.add(trace);
+}
+
+// Rigid placement of every moving part from the current points.
+function applyPose(P) {
+  for (const name in objs) {
+    const s = objs[name];
+    if (!s.anchor) continue;
+    const A = P[s.anchor], Q = P[s.dir];
+    const ra = REF[s.anchor], rq = REF[s.dir];
+    const ang = Math.atan2(Q[1] - A[1], Q[0] - A[0]) - Math.atan2(rq[1] - ra[1], rq[0] - ra[0]);
+    s.g.position.set(A[0], A[1], 0);
+    s.g.rotation.set(0, 0, ang);
+  }
+}
+
+const panelEls = {};
+document.querySelectorAll('[data-q]').forEach((el) => { panelEls[el.dataset.q] = el; });
+
+function render(t) {
+  const th = mod2pi(THETA0 + OMEGA * t);
+  const P = pointsOf(th);
+  applyPose(P);
+  panelEls.crank_deg.textContent = ((th * 180 / Math.PI) % 360).toFixed(2) + ' deg';
+  panelEls.foot_x.textContent = P.T[0].toFixed(2) + ' mm';
+  panelEls.foot_y.textContent = P.T[1].toFixed(2) + ' mm';
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: TWO_PI / OMEGA,
+  params: { O, X, len: { ...L }, omega: OMEGA, theta0: THETA0 },
+  render
+};
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+if (window.location.search.indexOf('capture') < 0) {
+  const t0 = performance.now();
+  const frame = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "four_bar-ed364dc1": {
+    "source": "vlm/sonnet/four_bar_s2",
+    "mech": "four_bar"
+  },
+  "jansen-2eca1487": {
+    "source": "vlm/sonnet/jansen_s1",
+    "mech": "jansen"
+  },
+  "jansen-da2fa32f": {
+    "source": "vlm/sonnet/jansen_s2",
+    "mech": "jansen"
+  },
+  "jansen-150304e9": {
+    "source": "vlm/haiku/jansen_s1",
+    "mech": "jansen"
+  },
+  "jansen-c8decd3f": {
+    "source": "vlm/haiku/jansen_s2",
+    "mech": "jansen"
+  },
+  "geneva-0025ef39": {
+    "source": "vlm/sonnet/geneva_s2",
+    "mech": "geneva"
+  }
+}

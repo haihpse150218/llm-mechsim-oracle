@@ -1,0 +1,1 @@
+CHANGED: Reduced the knee link VU from 65.7 to 50 (Jansen's j value) and re-seeded the reference pose's U and T, so the U-joint circles never reach the toggle at |VW| = |VU - WU| and the crank-driven stall/freeze is removed.

@@ -1,0 +1,1 @@
+CHANGED: Replaced the Object.assign(..., {position: new Vector3}) on a Mesh (read-only property, threw at load) with a plain boss.position.x assignment.
