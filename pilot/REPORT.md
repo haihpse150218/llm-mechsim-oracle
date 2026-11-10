@@ -329,3 +329,13 @@ Cách đọc bảng:
 - 14/22 lượt là Jansen, nên kết quả nghiêng về một cơ cấu.
 - Chưa có kiểm định thống kê: n nhỏ, mỗi file là một cặp so sánh, nên phù hợp McNemar hoặc Cochran Q khi mở rộng.
 - Agent sửa không được chạy code. Đây là thiết kế có chủ ý để tách nguồn thông tin, nhưng làm self-refine yếu hơn thực tế.
+
+## Bổ sung: kiểm mesh ↔ marker (audit sau, 2026-11-10)
+- Script `oracle/audit_mesh.mjs` lấy 60 mẫu trên một vòng quay. Với mỗi marker `<part>@<point>`, nó đo:
+  - **drift**: vị trí marker trong hệ toạ độ cục bộ của mesh thuộc part đó có đổi theo thời gian không (0 nghĩa là marker gắn cứng với hình vẽ);
+  - **gap**: khoảng cách XY từ marker tới đỉnh mesh gần nhất của part.
+- **Oracle hiện tại có lỗ hổng thật.** Mutant `mutants/audit/four_bar_gamed.html` vẽ thanh truyền lệch tới 0.3 rad, nhưng mỗi frame lại đặt lại `coupler@B` về đúng vị trí đã giải. Bản này **PASS oracle-lite**, còn audit bắt được (drift 41 mm, gap 34 mm).
+- Đã chạy audit trên **toàn bộ 109 file PASS** (gen_lite5, cùng bản cuối của pha 4, rep1 và rep2): **drift = 0 ở cả 109 file**, không file nào lỗi tải.
+  - Gap lớn chỉ xuất hiện ở các điểm tâm không có hình học: `ring@C`, tâm cam và trục `@O`, và điểm rãnh của geneva.
+  - Như vậy **không có PASS giả do lách marker** trong mọi số liệu đã báo cáo. Agent ở rep2 coarse/haiku/jansen_s1 r3 có thử, nhưng bản đó vẫn trượt DESIGN.
+- Đề xuất cho bài báo: đưa "drift ≤ 0.5 mm" vào oracle thành một kiểm tra META ("markers rigidly attached to the part's geometry"). Thêm kiểm tra này không đổi kết quả nào đã có, vì cả 109 file đều đạt.
