@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Planetary gear set</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#14181f;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;background:rgba(0,0,0,.6);color:#eee;padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.6}
+#panel b{color:#8cf}
+</style></head><body>
+<div id="panel">
+<div>Sun angle: <b data-q="sun_deg">0</b> deg</div>
+<div>Carrier angle: <b data-q="carrier_deg">0</b> deg</div>
+<div>Speed ratio: <b data-q="ratio">0</b></div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const params = { module: 2, Zs: 24, Zp: 18, Zr: 60, omega: 1.2, theta0: 0.4 };
+const { module: m, Zs, Zp, Zr, omega, theta0 } = params;
+const rs = m*Zs/2, rp = m*Zp/2, rr = m*Zr/2, rc = rs + rp;
+const phi0 = 0.9;                       // carrier angle (C->P0) at t=0
+const ratio = 1 + Zr/Zs;                // sun/carrier speed ratio, ring fixed
+const TAU = Math.PI*2;
+const T = 10;                           // gear thickness
+
+// ring angle chosen so planet 0 meshes with ring at t=0 (constant thereafter)
+function planetAngle(i, th){
+  const phiC = phi0 + (th-theta0)/ratio;
+  const d = i*TAU/3;
+  const c = d + Math.PI + d*Zs/Zp - Math.PI/Zp;
+  return phiC*(1+Zs/Zp) - th*Zs/Zp + c;
+}
+const w0 = ((phi0 - planetAngle(0, theta0))*Zp/TAU);
+const rho = phi0 - (w0 - 0.5)*TAU/Zr;
+
+function toothPts(Z, rTip, rRoot){
+  const tau = TAU/Z, pts = [];
+  for(let k=0;k<Z;k++){
+    const a = k*tau;
+    for(const [da, r] of [[-0.29,rRoot],[-0.15,rTip],[0.15,rTip],[0.29,rRoot]]){
+      const ang = a + da*tau;
+      pts.push(new THREE.Vector2(r*Math.cos(ang), r*Math.sin(ang)));
+    }
+  }
+  return pts;
+}
+function extrude(shape){
+  const g = new THREE.ExtrudeGeometry(shape, { depth: T, bevelEnabled: false });
+  g.translate(0,0,-T/2);
+  return g;
+}
+function externalGear(Z, r, hole, color){
+  const s = new THREE.Shape(toothPts(Z, r+m, r-1.25*m));
+  const h = new THREE.Path(); h.absarc(0,0,hole,0,TAU,true); s.holes.push(h);
+  return new THREE.Mesh(extrude(s), new THREE.MeshStandardMaterial({color, metalness:.4, roughness:.5}));
+}
+function ringGear(color){
+  const s = new THREE.Shape(); s.absarc(0,0,rr+4.5*m,0,TAU,false);
+  const h = new THREE.Path(); h.setFromPoints(toothPts(Zr, rr-m, rr+1.25*m).reverse());
+  s.holes.push(h);
+  return new THREE.Mesh(extrude(s), new THREE.MeshStandardMaterial({color, metalness:.4, roughness:.5}));
+}
+function marker(parent, name, x, y, z=0){
+  const o = new THREE.Object3D(); o.name = name; o.position.set(x,y,z); parent.add(o); return o;
+}
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14181f);
+const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 1, 3000);
+camera.position.set(0, -60, 330);
+camera.lookAt(0,0,0);
+scene.add(new THREE.AmbientLight(0xffffff, .55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.3); dl.position.set(120,150,300); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, .5); dl2.position.set(-200,-100,150); scene.add(dl2);
+
+// frame
+const frame = new THREE.Object3D(); frame.name = 'frame'; scene.add(frame);
+marker(frame, 'frame@C', 0, 0);
+const base = new THREE.Mesh(new THREE.BoxGeometry(2*(rr+25), 6, 20), new THREE.MeshStandardMaterial({color:0x555a66}));
+base.position.set(0, -(rr+4.5*m+3), -20); frame.add(base);
+const post = new THREE.Mesh(new THREE.CylinderGeometry(6,6,40,24), new THREE.MeshStandardMaterial({color:0x777d8a}));
+post.rotation.x = Math.PI/2; post.position.z = -25; frame.add(post);
+
+// ring (fixed)
+const ring = new THREE.Object3D(); ring.name = 'ring'; scene.add(ring);
+ring.add(ringGear(0x4a90c8));
+marker(ring, 'ring@C', 0, 0);
+marker(ring, 'ring@ringRef', rr, 0);
+ring.rotation.z = rho;
+
+// sun
+const sun = new THREE.Object3D(); sun.name = 'sun'; scene.add(sun);
+sun.add(externalGear(Zs, rs, 5, 0xe0b040));
+marker(sun, 'sun@C', 0, 0);
+marker(sun, 'sun@sunRef', rs, 0);
+
+// carrier
+const carrier = new THREE.Object3D(); carrier.name = 'carrier'; scene.add(carrier);
+const cm = new THREE.MeshStandardMaterial({color:0x8a8f9c, metalness:.5, roughness:.4});
+const hub = new THREE.Mesh(new THREE.CylinderGeometry(9,9,6,32), cm);
+hub.rotation.x = Math.PI/2; hub.position.z = -T/2-5; carrier.add(hub);
+marker(carrier, 'carrier@C', 0, 0);
+for(let i=0;i<3;i++){
+  const d = i*TAU/3, px = rc*Math.cos(d), py = rc*Math.sin(d);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(rc, 7, 5), cm);
+  arm.position.set(px/2, py/2, -T/2-5); arm.rotation.z = d; carrier.add(arm);
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(3,3,T+8,16), cm);
+  pin.rotation.x = Math.PI/2; pin.position.set(px,py,-1); carrier.add(pin);
+  marker(carrier, 'carrier@P'+i, px, py);
+}
+
+// planets
+const planets = [];
+for(let i=0;i<3;i++){
+  const p = new THREE.Object3D(); p.name = 'planet'+i; scene.add(p);
+  p.add(externalGear(Zp, rp, 3.5, [0xd9534f,0x5cb85c,0xb070d0][i]));
+  marker(p, 'planet'+i+'@P'+i, 0, 0);
+  marker(p, 'planet'+i+'@planet'+i+'Ref', rp, 0);
+  planets.push(p);
+}
+
+const qSun = document.querySelector('[data-q="sun_deg"]');
+const qCar = document.querySelector('[data-q="carrier_deg"]');
+const qRat = document.querySelector('[data-q="ratio"]');
+const mod360 = a => { let d = a*180/Math.PI % 360; if(d<0) d+=360; return d; };
+
+function render(t){
+  const th = theta0 + omega*t;
+  const phiC = phi0 + (th-theta0)/ratio;
+  sun.rotation.z = th;
+  carrier.rotation.z = phiC;
+  ring.rotation.z = rho;
+  for(let i=0;i<3;i++){
+    const a = phiC + i*TAU/3;
+    planets[i].position.set(rc*Math.cos(a), rc*Math.sin(a), 0);
+    planets[i].rotation.z = planetAngle(i, th);
+  }
+  qSun.textContent = mod360(th).toFixed(1);
+  qCar.textContent = mod360(phiC).toFixed(1);
+  qRat.textContent = ratio.toFixed(3);
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: TAU/omega, params, render };
+render(0);
+window.SIM_READY = true;
+
+if(!location.search.includes('capture')){
+  const start = performance.now();
+  const loop = () => { SIM.render((performance.now()-start)/1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

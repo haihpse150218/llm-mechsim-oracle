@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disk cam with roller follower</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1f27; font-family: monospace; }
+  canvas { display: block; }
+  #panel { position: fixed; top: 12px; left: 12px; padding: 8px 12px; background: rgba(0,0,0,0.55);
+           color: #e8ecf2; font-size: 14px; line-height: 1.6; border-radius: 6px; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><span data-q="cam_deg"></span> cam angle</div>
+  <div><span data-q="lift"></span> follower lift</div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const TAU = Math.PI * 2;
+
+// ---------- parameters (mm, rad, rad/s) ----------
+const P = {
+  Rb: 40,                       // base-circle radius of the cam surface
+  Rr: 8,                        // roller radius
+  e: 6,                         // offset of follower line from O
+  h: 25,                        // total lift
+  axisAngle: Math.PI / 2,       // follower rises along +Y
+  betaRise: 5 * Math.PI / 6,    // 150 deg
+  betaDwellTop: Math.PI / 6,    // 30 deg
+  betaReturn: 5 * Math.PI / 6,  // 150 deg
+  betaDwellBottom: Math.PI / 6, // 30 deg (remainder of the revolution)
+  omega: 1.0,                   // cam angular velocity, CCW positive
+  theta0: 0.4                   // cam angle (O->camRef) at t = 0
+};
+
+const period = TAU / P.omega;
+const Rp = P.Rb + P.Rr;                       // pitch radius at lowest position
+const s0 = Math.sqrt(Rp * Rp - P.e * P.e);    // along-axis distance O->C at lowest position
+const A = P.axisAngle;
+const U = [Math.cos(A), Math.sin(A)];         // rise direction
+const N = [-Math.sin(A), Math.cos(A)];        // normal to rise direction
+const STEM_L = 90;                            // follower stem length from C to F
+const G_S = s0 + 46;                          // fixed guide point, along-axis coordinate
+
+function wrap(x) { x %= TAU; return x < 0 ? x + TAU : x; }
+
+// follower displacement vs cam rotation psi (since start of rise)
+function lift(psi) {
+  psi = wrap(psi);
+  const bR = P.betaRise, bT = P.betaDwellTop, bE = P.betaReturn;
+  if (psi < bR) { const x = psi / bR; return P.h * (x - Math.sin(TAU * x) / TAU); }
+  let p = psi - bR;
+  if (p < bT) return P.h;
+  p -= bT;
+  if (p < bE) { const x = p / bE; return P.h * (1 - (x - Math.sin(TAU * x) / TAU)); }
+  return 0;
+}
+
+// ds/dpsi
+function velocity(psi) {
+  psi = wrap(psi);
+  const bR = P.betaRise, bT = P.betaDwellTop, bE = P.betaReturn;
+  if (psi < bR) { const x = psi / bR; return (P.h / bR) * (1 - Math.cos(TAU * x)); }
+  let p = psi - bR;
+  if (p < bT) return 0;
+  p -= bT;
+  if (p < bE) { const x = p / bE; return -(P.h / bE) * (1 - Math.cos(TAU * x)); }
+  return 0;
+}
+
+// roller centre C in world (O at origin)
+function centre(psi) {
+  const d = s0 + lift(psi);
+  return [P.e * N[0] + d * U[0], P.e * N[1] + d * U[1]];
+}
+
+// cam profile point in the cam body frame (body frame = world when cam angle is 0)
+// envelope of the roller circles: X = C + Rr*m, with m perpendicular to the
+// roller centre's velocity relative to the cam, w = s'*u - J*r (world-aligned).
+function profilePoint(psi) {
+  const sp = velocity(psi);
+  const r = centre(psi);
+  const wx = sp * U[0] + r[1];
+  const wy = sp * U[1] - r[0];
+  let mx = -wy, my = wx;
+  const L = Math.hypot(mx, my);
+  mx /= L; my /= L;
+  if (mx * r[0] + my * r[1] > 0) { mx = -mx; my = -my; }   // contact on the cam side (toward O)
+  const xw = r[0] + P.Rr * mx, yw = r[1] + P.Rr * my;
+  const phi = P.theta0 + psi, c = Math.cos(phi), sn = Math.sin(phi);
+  return [c * xw + sn * yw, -sn * xw + c * yw];           // rotate by -phi into body frame
+}
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+
+const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(-30, 20, 420);
+camera.lookAt(-30, 10, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.0);
+key.position.set(120, 200, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9db8ff, 0.35);
+fill.position.set(-200, -80, 150);
+scene.add(fill);
+
+const matFrame = new THREE.MeshStandardMaterial({ color: 0x7a8699, metalness: 0.4, roughness: 0.5 });
+const matCam = new THREE.MeshStandardMaterial({ color: 0xc0872f, metalness: 0.3, roughness: 0.45 });
+const matFollower = new THREE.MeshStandardMaterial({ color: 0x3f8fd2, metalness: 0.2, roughness: 0.4 });
+
+function mesh(geom, mat, pos, rotZ = 0) {
+  const m = new THREE.Mesh(geom, mat);
+  m.position.set(pos[0], pos[1], pos[2]);
+  m.rotation.z = rotZ;
+  return m;
+}
+
+function marker(name, x, y, z) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, z);
+  return o;
+}
+
+// ---------- frame (fixed) ----------
+const G = [P.e * N[0] + G_S * U[0], P.e * N[1] + G_S * U[1]];
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+frame.add(mesh(new THREE.BoxGeometry(200, 10, 60), matFrame, [-30, -80, 0]));                    // base plate
+frame.add(mesh(new THREE.BoxGeometry(14, G[1] + 75, 14), matFrame, [-110, (G[1] - 75) / 2, 0])); // column
+frame.add(mesh(new THREE.BoxGeometry(G[0] + 110, 10, 14), matFrame, [(G[0] - 110) / 2, G[1], 0])); // arm
+frame.add(mesh(new THREE.BoxGeometry(14, 12, 14), matFrame, [G[0], G[1], 0], A - Math.PI / 2));  // follower guide
+const shaftGeom = new THREE.CylinderGeometry(6, 6, 50, 32).rotateX(Math.PI / 2);
+frame.add(mesh(shaftGeom, matFrame, [0, 0, 0]));                                                 // cam shaft
+frame.add(marker('frame@O', 0, 0, 0));
+frame.add(marker('frame@G', G[0], G[1], 0));
+scene.add(frame);
+
+// ---------- cam (rotates about O) ----------
+const NS = 720;
+const pts = [];
+for (let i = 0; i < NS; i++) {
+  const q = profilePoint(TAU * i / NS);
+  pts.push(new THREE.Vector2(q[0], q[1]));
+}
+const camShape = new THREE.Shape(pts);
+const bore = new THREE.Path();
+bore.absarc(0, 0, 6, 0, TAU, true);
+camShape.holes.push(bore);
+const camGeom = new THREE.ExtrudeGeometry(camShape, { depth: 10, bevelEnabled: false, curveSegments: 1 });
+camGeom.translate(0, 0, -5);
+
+const cam = new THREE.Object3D();
+cam.name = 'cam';
+cam.add(new THREE.Mesh(camGeom, matCam));
+cam.add(mesh(new THREE.CylinderGeometry(14, 14, 18, 48).rotateX(Math.PI / 2), matCam, [0, 0, 0]));  // hub
+cam.add(marker('cam@O', 0, 0, 0));
+cam.add(marker('cam@camRef', 0.7 * P.Rb, 0, 0));
+scene.add(cam);
+
+// ---------- follower (translates) ----------
+const follower = new THREE.Object3D();
+follower.name = 'follower';
+const rollerGeom = new THREE.CylinderGeometry(P.Rr, P.Rr, 8, 48).rotateX(Math.PI / 2);
+follower.add(mesh(rollerGeom, matFollower, [0, 0, 0]));
+follower.add(mesh(new THREE.BoxGeometry(10, STEM_L, 10), matFollower,
+  [U[0] * STEM_L / 2, U[1] * STEM_L / 2, 0], A - Math.PI / 2));                                     // stem
+follower.add(marker('follower@C', 0, 0, 0));
+follower.add(marker('follower@F', U[0] * STEM_L, U[1] * STEM_L, 0));
+scene.add(follower);
+
+// ---------- panel ----------
+const elDeg = document.querySelector('[data-q="cam_deg"]');
+const elLift = document.querySelector('[data-q="lift"]');
+
+// ---------- render(t): pure function of t ----------
+function render(t) {
+  const psi = P.omega * t;                  // cam rotation since start of rise
+  const phi = P.theta0 + psi;               // absolute cam angle
+  cam.rotation.z = phi;
+  const c = centre(psi);
+  follower.position.set(c[0], c[1], 0);
+  const s = lift(psi);
+  elDeg.textContent = (wrap(phi) * 180 / Math.PI).toFixed(1) + ' deg';
+  elLift.textContent = s.toFixed(2) + ' mm';
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period, params: { ...P }, render };
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+if (!location.search.includes('capture')) {
+  let t0 = null;
+  const loop = (now) => {
+    if (t0 === null) t0 = now;
+    window.SIM.render((now - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

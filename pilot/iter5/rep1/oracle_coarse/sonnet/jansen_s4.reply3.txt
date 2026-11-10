@@ -1,0 +1,1 @@
+CHANGED: Reassigned the published holy numbers so XV=39.4, VU=55.8, WU=36.7 (previously XV=36.7, VU=39.4, WU=55.8), keeping the same circle-intersection branches so the drawing follows the new params.

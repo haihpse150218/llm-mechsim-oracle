@@ -1,0 +1,1 @@
+NO_CHANGE: Both loops assemble over the whole crank revolution with transmission angles of roughly 48-100 degrees (loop 1) and 90-130 degrees (loop 2); part transforms, markers, link lengths, panel angles and the pure render(t) all match the spec.

@@ -1,0 +1,1 @@
+CHANGED: Replaced the world-coordinate branch picks in solve() (V and U were unreachable, so V-U and the leg triangle detached) with consistent side-of-line picks giving a reachable, continuous assembly.

@@ -1,0 +1,1 @@
+CHANGED: Replaced the plain Newton closed-loop solver with a backtracking damped Gauss-Newton (accepting only residual-decreasing steps) and doubled the continuation/trace resolution to 0.5 degree steps, so the joint solution no longer blows up (foot panel values) or leaves U markers unconnected near singular poses.

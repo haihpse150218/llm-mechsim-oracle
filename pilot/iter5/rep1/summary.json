@@ -1,0 +1,430 @@
+{
+ "rows": [
+  {
+   "round": 0,
+   "arm": "oracle_spec",
+   "pass": 0,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "META,PARAM,GT,PANEL",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "META,DESIGN"
+   }
+  },
+  {
+   "round": 0,
+   "arm": "oracle_coarse",
+   "pass": 0,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "META,PARAM,GT,PANEL",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "META,DESIGN"
+   }
+  },
+  {
+   "round": 0,
+   "arm": "vlm",
+   "pass": 0,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "META,PARAM,GT,PANEL",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "META,DESIGN"
+   }
+  },
+  {
+   "round": 0,
+   "arm": "none",
+   "pass": 0,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "META,PARAM,GT,PANEL",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "META,DESIGN"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "oracle_spec",
+   "pass": 6,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "PASS",
+    "haiku/jansen_s4": "PASS",
+    "haiku/jansen_s5": "GT,PANEL",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "META,PARAM,DESIGN",
+    "sonnet/jansen_s3": "PASS",
+    "sonnet/jansen_s4": "PASS",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "oracle_coarse",
+   "pass": 3,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,DESIGN",
+    "sonnet/jansen_s4": "META,PARAM,DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "vlm",
+   "pass": 2,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "META,DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "META,DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "none",
+   "pass": 3,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "oracle_spec",
+   "pass": 8,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "PASS",
+    "haiku/jansen_s4": "PASS",
+    "haiku/jansen_s5": "PASS",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "PASS",
+    "sonnet/jansen_s4": "PASS",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "oracle_coarse",
+   "pass": 3,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "vlm",
+   "pass": 2,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "META,DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "none",
+   "pass": 3,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "oracle_spec",
+   "pass": 8,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "PASS",
+    "haiku/jansen_s4": "PASS",
+    "haiku/jansen_s5": "PASS",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "PASS",
+    "sonnet/jansen_s4": "PASS",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "oracle_coarse",
+   "pass": 3,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "vlm",
+   "pass": 2,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "META,DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "none",
+   "pass": 3,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  }
+ ],
+ "state": {
+  "oracle_spec": {
+   "haiku/jansen_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/jansen_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/jansen_s5": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "oracle pass"
+   },
+   "haiku/planetary_s5": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/watt6_s4": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/jansen_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/jansen_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/watt6_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   }
+  },
+  "oracle_coarse": {
+   "haiku/jansen_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/jansen_s4": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/jansen_s5": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/planetary_s5": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/watt6_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/jansen_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "sonnet/jansen_s4": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "sonnet/watt6_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   }
+  },
+  "vlm": {
+   "haiku/jansen_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/jansen_s4": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/jansen_s5": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/planetary_s5": {
+    "active": false,
+    "stopRound": 0,
+    "stopReason": "vlm says correct"
+   },
+   "haiku/watt6_s4": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "vlm says correct"
+   },
+   "sonnet/jansen_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "sonnet/jansen_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "vlm says correct"
+   },
+   "sonnet/watt6_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "vlm says correct"
+   }
+  },
+  "none": {
+   "haiku/jansen_s3": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/jansen_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/jansen_s5": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/planetary_s5": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/watt6_s4": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "repairer: no change"
+   },
+   "sonnet/jansen_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "sonnet/jansen_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "sonnet/watt6_s4": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "repairer: no change"
+   }
+  }
+ }
+}

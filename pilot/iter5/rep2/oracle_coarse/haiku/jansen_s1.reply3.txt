@@ -1,0 +1,1 @@
+CHANGED: Replaced the stale-joint fallback in the linkage solver with a clamped centre-line solve when the two circles do not meet, and placed every part marker from the solved joint points each frame so shared joints coincide by construction.

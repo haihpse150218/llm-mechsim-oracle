@@ -1,0 +1,1 @@
+CHANGED: Replaced the per-frame 360-step Newton continuation (coarse ~1 deg steps at large angles) with a load-time continuation table over one revolution at 0.05 deg steps, with adaptive subdivision when a joint jumps more than 2 mm, and poseAt now interpolates the table and polishes with Newton, so the foot path stays on one assembly branch.

@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot trace is a narrow tilted ellipse/loop (about 67 mm wide by 47 mm tall) rather than the characteristic flat-bottomed D-shaped Jansen path with a long straight stance phase; suggests wrong link lengths or ratios, or a wrong assembly branch. (frames t=0.00s, t=1.75s, t=3.14s)
+- Around crank angles 180-210 deg the upper and lower rods, link XW and the upper triangle collapse into a nearly collinear, overlapping cluster near the apex. This is consistent with a flipped or incorrect assembly configuration. (frames t=2.09s, t=2.44s)

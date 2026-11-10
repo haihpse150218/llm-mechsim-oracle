@@ -1,0 +1,1 @@
+CHANGED: Swapped the upper-triangle link lengths (XV=36.7, YV=55.8 instead of XV=55.8, YV=36.7) so the apex V and knee U sit lower-left and the foot traces a wide, flat-bottomed path (hand-checked: foot about 57 mm wide by 25 mm tall at 4 crank angles).

@@ -1,0 +1,193 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Jansen Strandbeest Leg</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#161a22;font-family:monospace}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;color:#dfe6f0;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel">
+Jansen leg<br>
+crank angle: <span data-q="crank_deg">0</span> deg<br>
+foot x: <span data-q="foot_x">0</span> mm<br>
+foot y: <span data-q="foot_y">0</span> mm
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0], X: [-38, -7.8],
+  len: { OZ: 15, ZY: 50, XY: 41.5, ZW: 61.9, XW: 39.3, XV: 40.1, YV: 55.8, VU: 39.4, WU: 36.7, UT: 65.7, WT: 49 },
+  omega: 2, theta0: 0
+};
+const L = params.len;
+const period = 2 * Math.PI / params.omega;
+
+function inter(A, ra, B, rb, pick) {
+  const dx = B[0] - A[0], dy = B[1] - A[1];
+  let d = Math.hypot(dx, dy);
+  d = Math.max(d, 1e-9);
+  let a = (ra * ra - rb * rb + d * d) / (2 * d);
+  let h2 = ra * ra - a * a;
+  const h = Math.sqrt(Math.max(h2, 0));
+  const mx = A[0] + a * dx / d, my = A[1] + a * dy / d;
+  const p1 = [mx - h * dy / d, my + h * dx / d];
+  const p2 = [mx + h * dy / d, my - h * dx / d];
+  return pick(p1, p2);
+}
+const maxY = (p, q) => (p[1] >= q[1] ? p : q);
+const minY = (p, q) => (p[1] <= q[1] ? p : q);
+const minX = (p, q) => (p[0] <= q[0] ? p : q);
+
+function solve(theta) {
+  const O = params.O, X = params.X;
+  const Z = [O[0] + L.OZ * Math.cos(theta), O[1] + L.OZ * Math.sin(theta)];
+  const Y = inter(Z, L.ZY, X, L.XY, maxY);
+  const W = inter(Z, L.ZW, X, L.XW, minY);
+  const V = inter(X, L.XV, Y, L.YV, minX);
+  const U = inter(V, L.VU, W, L.WU, minX);
+  const T = inter(W, L.WT, U, L.UT, minY);
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161a22);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 3000);
+camera.position.set(-35, -30, 330);
+camera.lookAt(-35, -30, 0);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(80, 150, 250); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.35);
+dl2.position.set(-150, -100, 100); scene.add(dl2);
+
+const rest = solve(params.theta0);
+
+// part definition: points (names), bars (pairs), color, z offset
+const defs = {
+  frame: { pts: ['O', 'X'], bars: [['O', 'X']], color: 0x667080, z: -6 },
+  crank: { pts: ['O', 'Z'], bars: [['O', 'Z']], color: 0xe0a030, z: 0 },
+  rodUpper: { pts: ['Z', 'Y'], bars: [['Z', 'Y']], color: 0x4aa3df, z: 5 },
+  rodLower: { pts: ['Z', 'W'], bars: [['Z', 'W']], color: 0x3fbf8f, z: -5 },
+  upperTriangle: { pts: ['X', 'Y', 'V'], bars: [['X', 'Y'], ['Y', 'V'], ['V', 'X']], color: 0xd05a5a, z: 10 },
+  linkXW: { pts: ['X', 'W'], bars: [['X', 'W']], color: 0x9a7bd6, z: -10 },
+  linkVU: { pts: ['V', 'U'], bars: [['V', 'U']], color: 0xd6c34a, z: 15 },
+  legTriangle: { pts: ['W', 'U', 'T'], bars: [['W', 'U'], ['U', 'T'], ['T', 'W']], color: 0xe8e8ee, z: -15 }
+};
+
+function barMesh(a, b, color, z) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  const g = new THREE.BoxGeometry(len, 5, 3);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.5 }));
+  m.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, z);
+  m.rotation.z = Math.atan2(dy, dx);
+  return m;
+}
+function pinMesh(p, color, z) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 5, 20),
+    new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.4 }));
+  m.rotation.x = Math.PI / 2;
+  m.position.set(p[0], p[1], z);
+  return m;
+}
+
+const parts = {};
+for (const name in defs) {
+  const d = defs[name];
+  const obj = new THREE.Object3D();
+  obj.name = name;
+  const p0 = rest[d.pts[0]], p1 = rest[d.pts[1]];
+  const a0 = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+  const c = Math.cos(-a0), s = Math.sin(-a0);
+  const loc = {};
+  for (const pn of d.pts) {
+    const q = rest[pn];
+    const rx = q[0] - p0[0], ry = q[1] - p0[1];
+    loc[pn] = [rx * c - ry * s, rx * s + ry * c];
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + pn;
+    mk.position.set(loc[pn][0], loc[pn][1], 0);
+    obj.add(mk);
+    obj.add(pinMesh(loc[pn], 0x2b2f38, d.z));
+  }
+  for (const [a, b] of d.bars) obj.add(barMesh(loc[a], loc[b], d.color, d.z));
+  scene.add(obj);
+  parts[name] = { obj, d, a0, p0name: d.pts[0], p1name: d.pts[1] };
+}
+// frame is fixed: pose once
+function pose(P) {
+  for (const name in parts) {
+    const pr = parts[name];
+    const p0 = P[pr.p0name], p1 = P[pr.p1name];
+    pr.obj.position.set(p0[0], p0[1], 0);
+    pr.obj.rotation.z = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) ;
+  }
+}
+
+// foot path trail (static, pure)
+{
+  const pts = [];
+  for (let i = 0; i <= 120; i++) {
+    const T = solve(params.theta0 + i / 120 * 2 * Math.PI).T;
+    pts.push(new THREE.Vector3(T[0], T[1], 0));
+  }
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xff6688 }));
+  scene.add(line);
+}
+// ground reference line
+{
+  const gy = solve(0).T[1];
+  let minFy = 1e9;
+  for (let i = 0; i < 120; i++) minFy = Math.min(minFy, solve(i / 120 * 2 * Math.PI).T[1]);
+  const gl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-120, minFy - 4, -20), new THREE.Vector3(60, minFy - 4, -20)]),
+    new THREE.LineBasicMaterial({ color: 0x445566 }));
+  scene.add(gl);
+}
+
+const elDeg = document.querySelector('[data-q="crank_deg"]');
+const elFx = document.querySelector('[data-q="foot_x"]');
+const elFy = document.querySelector('[data-q="foot_y"]');
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const P = solve(theta);
+  pose(P);
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  elDeg.textContent = deg.toFixed(1) + ' deg';
+  elFx.textContent = P.T[0].toFixed(2) + ' mm';
+  elFy.textContent = P.T[1].toFixed(2) + ' mm';
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period, params, render };
+render(0);
+window.SIM_READY = true;
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  render(window.__lastT || 0);
+});
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  function loop() {
+    const t = (performance.now() - start) / 1000;
+    window.__lastT = t;
+    window.SIM.render(t);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

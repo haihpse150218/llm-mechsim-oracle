@@ -1,0 +1,1 @@
+CHANGED: Fixed the part pose rotation (local coords were already rotated by -a0, so rotation must be the absolute link angle) and switched V/U/T to consistent-side assembly branches so the V-U-W chain assembles (V was on the far side, out of reach of U).

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Disk cam with translating roller follower</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#161a22;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;background:rgba(0,0,0,.55);color:#e8eef8;padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel">
+ Cam angle: <span data-q="cam_deg">0</span> deg<br>
+ Lift: <span data-q="lift">0</span> mm
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const P = {
+  Rb: 40, Rr: 8, e: 8, h: 20,
+  axisAngle: Math.PI/2,
+  betaRise: 2*Math.PI/3, betaDwellTop: Math.PI/3,
+  betaReturn: 2*Math.PI/3, betaDwellBottom: Math.PI/3,
+  omega: 1.2, theta0: 0.6
+};
+const TWO_PI = 2*Math.PI;
+const period = TWO_PI / P.omega;
+const a = P.axisAngle;
+const u = new THREE.Vector2(Math.cos(a), Math.sin(a));
+const nrm = new THREE.Vector2(Math.cos(a - Math.PI/2), Math.sin(a - Math.PI/2));
+const s0 = Math.sqrt((P.Rb + P.Rr)**2 - P.e**2);
+const STEM = 50;
+
+function cyc(x){ return x - Math.sin(TWO_PI*x)/TWO_PI; }
+// follower displacement as function of cam rotation d since start of rise
+function lift(d){
+  d = ((d % TWO_PI) + TWO_PI) % TWO_PI;
+  const b1 = P.betaRise, b2 = b1 + P.betaDwellTop, b3 = b2 + P.betaReturn;
+  if (d < b1) return P.h * cyc(d / b1);
+  if (d < b2) return P.h;
+  if (d < b3) return P.h * (1 - cyc((d - b2) / P.betaReturn));
+  return 0;
+}
+function centerWorld(d){
+  const s = s0 + lift(d);
+  return new THREE.Vector2(nrm.x*P.e + u.x*s, nrm.y*P.e + u.y*s);
+}
+// pitch point in cam body frame
+function pitchBody(d){
+  const c = centerWorld(d), th = -(P.theta0 + d);
+  const cs = Math.cos(th), sn = Math.sin(th);
+  return new THREE.Vector2(cs*c.x - sn*c.y, sn*c.x + cs*c.y);
+}
+function profilePoints(N){
+  const pts = [], eps = 1e-4;
+  for (let i = 0; i < N; i++){
+    const d = TWO_PI * i / N;
+    const p = pitchBody(d);
+    const p1 = pitchBody(d + eps), p0 = pitchBody(d - eps);
+    const t = new THREE.Vector2(p1.x - p0.x, p1.y - p0.y).normalize();
+    let o = new THREE.Vector2(-t.y, t.x);
+    if (o.dot(p) < 0) o.negate();
+    pts.push(new THREE.Vector2(p.x - P.Rr*o.x, p.y - P.Rr*o.y));
+  }
+  return pts;
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x161a22);
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth/window.innerHeight, 1, 3000);
+camera.position.set(40, 30, 330);
+camera.lookAt(0, 45, 0);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(120, 200, 300); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-150, -50, 100); scene.add(dl2);
+
+const mat = c => new THREE.MeshStandardMaterial({ color: c, metalness: 0.4, roughness: 0.5 });
+
+// frame
+const frame = new THREE.Object3D(); frame.name = 'frame'; scene.add(frame);
+{
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(200, 200, 8), mat(0x3a4150));
+  plate.position.set(0, 60, -22); frame.add(plate);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 30, 24), mat(0x8890a0));
+  shaft.rotation.x = Math.PI/2; shaft.position.z = -6; frame.add(shaft);
+  const gc = new THREE.Vector2(nrm.x*P.e + u.x*(s0 + P.h + 30), nrm.y*P.e + u.y*(s0 + P.h + 30));
+  const gc2 = new THREE.Vector2(nrm.x*P.e + u.x*(s0 + 10), nrm.y*P.e + u.y*(s0 + 10));
+  for (const g of [gc, gc2]){
+    const guide = new THREE.Mesh(new THREE.BoxGeometry(18, 14, 8), mat(0x566074));
+    guide.position.set(g.x, g.y, -14); guide.rotation.z = a - Math.PI/2; frame.add(guide);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(18, 14, 2), mat(0x566074));
+  }
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(2, s0 + P.h + 40, 4), mat(0x566074));
+  rail.position.set(nrm.x*P.e + u.x*(s0+P.h+40)/2*1, nrm.y*P.e + u.y*(s0+P.h+40)/2, -17);
+  rail.rotation.z = a - Math.PI/2; frame.add(rail);
+  const mO = new THREE.Object3D(); mO.name = 'frame@O'; frame.add(mO);
+  const mG = new THREE.Object3D(); mG.name = 'frame@G';
+  mG.position.set(nrm.x*P.e, nrm.y*P.e, 0); frame.add(mG);
+}
+
+// cam
+const cam = new THREE.Object3D(); cam.name = 'cam'; scene.add(cam);
+{
+  const pts = profilePoints(1440);
+  const shape = new THREE.Shape(pts);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 12, bevelEnabled: false, curveSegments: 1, steps: 1 });
+  geo.translate(0, 0, -6);
+  cam.add(new THREE.Mesh(geo, mat(0xd9a441)));
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 18, 32), mat(0x9aa3b5));
+  hub.rotation.x = Math.PI/2; cam.add(hub);
+  const mark = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 13), mat(0xc0392b));
+  mark.position.set(P.Rb - 6, 0, 0); cam.add(mark);
+  const mO = new THREE.Object3D(); mO.name = 'cam@O'; cam.add(mO);
+  const mR = new THREE.Object3D(); mR.name = 'cam@camRef'; mR.position.set(P.Rb, 0, 0); cam.add(mR);
+}
+
+// follower
+const follower = new THREE.Object3D(); follower.name = 'follower'; scene.add(follower);
+{
+  const roller = new THREE.Mesh(new THREE.CylinderGeometry(P.Rr, P.Rr, 12, 40), mat(0x4aa3df));
+  roller.rotation.x = Math.PI/2; follower.add(roller);
+  const pin = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 16, 16), mat(0xdddddd));
+  pin.rotation.x = Math.PI/2; follower.add(pin);
+  // stem along local +Y (rotated by axisAngle - pi/2 below via the group's rotation)
+  const stem = new THREE.Mesh(new THREE.BoxGeometry(6, STEM, 5), mat(0x7fb069));
+  stem.position.set(0, STEM/2, -2); follower.add(stem);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 8), mat(0x7fb069));
+  top.position.set(0, STEM + 2, -2); follower.add(top);
+  const mC = new THREE.Object3D(); mC.name = 'follower@C'; follower.add(mC);
+  const mF = new THREE.Object3D(); mF.name = 'follower@F'; mF.position.set(0, STEM, 0); follower.add(mF);
+  follower.rotation.z = a - Math.PI/2;
+}
+
+const qCam = document.querySelector('[data-q="cam_deg"]');
+const qLift = document.querySelector('[data-q="lift"]');
+
+function render(t){
+  const d = P.omega * t;
+  const th = P.theta0 + d;
+  cam.rotation.z = th;
+  const c = centerWorld(d);
+  follower.position.set(c.x, c.y, 0);
+  let deg = (th * 180/Math.PI) % 360; if (deg < 0) deg += 360;
+  qCam.textContent = deg.toFixed(1) + ' deg';
+  qLift.textContent = lift(d).toFixed(2) + ' mm';
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  render(window.__lastT || 0);
+});
+
+window.SIM = { scene, camera, renderer, period, params: { ...P }, render: t => { window.__lastT = t; render(t); } };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')){
+  const t0 = performance.now();
+  const loop = () => { window.SIM.render((performance.now() - t0)/1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

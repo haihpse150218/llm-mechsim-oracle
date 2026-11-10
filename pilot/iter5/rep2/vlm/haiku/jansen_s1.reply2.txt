@@ -1,0 +1,1 @@
+NO_CHANGE: The link lengths match the spec's Jansen holy numbers, the solver tracks branches continuously from a t=0 assembly where I hand-checked the foot at about (4, -66) below the axle, and the rendering transforms are consistent, so I found no concrete defect; the reported large foot loop could not be verified without running the page.

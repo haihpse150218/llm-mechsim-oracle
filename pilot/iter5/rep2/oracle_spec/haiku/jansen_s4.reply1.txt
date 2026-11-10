@@ -1,0 +1,1 @@
+CHANGED: Replaced the link lengths and fixed pivot X with Jansen's published holy numbers scaled by 1.02 (OZ 15.3, ZY 51, XY 42.33, ZW 63.14, XW 40.09, XV 40.90, YV 56.92, VU 40.19, WU 37.43, UT 67.01, WT 49.98; X at (38.76, -7.96)), which the design-rule report said were mislabelled or swapped.

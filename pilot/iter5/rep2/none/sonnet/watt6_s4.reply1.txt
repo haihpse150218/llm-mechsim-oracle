@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (210,20) to (120,-60) (the old position was unreachable from C, so loop 2 could not assemble) and recentred the camera.

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watt II six-bar linkage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #12171d; font-family: system-ui, sans-serif; }
+  canvas { position: fixed; left: 0; top: 0; display: block; width: 100vw; height: 100vh; }
+  #panel { position: fixed; left: 16px; top: 16px; z-index: 2; background: rgba(10, 14, 18, 0.72); color: #e8eef4;
+           padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.6; min-width: 220px; }
+  #panel b { font-size: 15px; }
+  #panel .v { font-variant-numeric: tabular-nums; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><b>Watt II six-bar linkage</b></div>
+  <div>Crank O2-A: <span class="v" data-q="crank_deg">0.0</span>&deg;</div>
+  <div>Ternary rocker O4-B: <span class="v" data-q="rocker1_deg">0.0</span>&deg;</div>
+  <div>Output rocker O6-D: <span class="v" data-q="output_deg">0.0</span>&deg;</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------------- parameters (mm, rad/s) ----------------
+// Frame: O2, O4, O6 on one ground line. Loop 1 is the crank-rocker O2-A-B-O4
+// (Grashof: crank 20 < others). Ternary rocker O4-B-C is a rigid triangle.
+// Loop 2 is a parallelogram O4-C-D-O6 (CD = O4O6 = 70, O6D = O4C = 50), so
+// D = C + (O6 - O4) and the output rocker mirrors the ternary rocker.
+const PT = { O2: [-60, 0], O4: [0, 0], O6: [70, 0] };
+const LEN = { O2A: 20, AB: 70, O4B: 55, O4C: 50, BC: 36.2, CD: 70, O6D: 50 };
+const OMEGA = Math.PI / 2;      // counter-clockwise, 4 s per input revolution
+const THETA0 = 0;               // crank angle at t = 0
+const PERIOD = 2 * Math.PI / OMEGA;
+// angle O4->B to O4->C inside the rigid ternary triangle (law of cosines), about 40 deg
+const GAMMA = Math.acos((LEN.O4B * LEN.O4B + LEN.O4C * LEN.O4C - LEN.BC * LEN.BC) / (2 * LEN.O4B * LEN.O4C));
+
+// ---------------- kinematics: pure function of t ----------------
+function pose(t) {
+  const th = THETA0 + OMEGA * t;
+  const O2 = { x: PT.O2[0], y: PT.O2[1] };
+  const O4 = { x: PT.O4[0], y: PT.O4[1] };
+  const O6 = { x: PT.O6[0], y: PT.O6[1] };
+  const A = { x: O2.x + LEN.O2A * Math.cos(th), y: O2.y + LEN.O2A * Math.sin(th) };
+
+  // loop 1: B at distance AB from A and O4B from O4 (circle intersection)
+  const dx = A.x - O4.x, dy = A.y - O4.y, L = Math.hypot(dx, dy);
+  const ux = dx / L, uy = dy / L;
+  const b = LEN.AB, c = LEN.O4B;
+  const p = (c * c - b * b + L * L) / (2 * L);
+  const h = Math.sqrt(Math.max(0, c * c - p * p));
+  // branch with the larger y; it is the same branch over the whole revolution
+  const B = { x: O4.x + p * ux + h * uy, y: O4.y + p * uy - h * ux };
+
+  // ternary rocker: rigid triangle O4-B-C
+  const phiB = Math.atan2(B.y - O4.y, B.x - O4.x);
+  const phiC = phiB - GAMMA;
+  const C = { x: O4.x + LEN.O4C * Math.cos(phiC), y: O4.y + LEN.O4C * Math.sin(phiC) };
+
+  // loop 2: parallelogram closure
+  const D = { x: C.x + (O6.x - O4.x), y: C.y + (O6.y - O4.y) };
+  return { th, O2, O4, O6, A, B, C, D };
+}
+
+// Part definitions: origin point, direction used for the part's angle, and marker points.
+const PARTS = [
+  { name: 'frame',    origin: null, dir: null,       pts: ['O2', 'O4', 'O6'], color: 0x59616d, z: -14 },
+  { name: 'crank',    origin: 'O2', dir: ['O2', 'A'], pts: ['O2', 'A'],        color: 0xe4572e, z: -8 },
+  { name: 'coupler1', origin: 'A',  dir: ['A', 'B'],  pts: ['A', 'B'],         color: 0xf3a712, z: -2 },
+  { name: 'rocker1',  origin: 'O4', dir: ['O4', 'B'], pts: ['O4', 'B', 'C'],   color: 0x29a19c, z: 4 },
+  { name: 'coupler2', origin: 'C',  dir: ['C', 'D'],  pts: ['C', 'D'],         color: 0x4f7cac, z: 10 },
+  { name: 'rocker2',  origin: 'O6', dir: ['O6', 'D'], pts: ['O6', 'D'],        color: 0x9b5de5, z: 16 },
+];
+
+function partPose(part, pp) {
+  if (!part.origin) return { x: 0, y: 0, ang: 0 };
+  const o = pp[part.origin];
+  const a = pp[part.dir[0]], bq = pp[part.dir[1]];
+  return { x: o.x, y: o.y, ang: Math.atan2(bq.y - a.y, bq.x - a.x) };
+}
+
+// ---------------- scene ----------------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x12171d);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(30, -60, 340);
+camera.lookAt(20, 8, 0);
+
+scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x1b1f26, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(120, -160, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9fc4ff, 0.6);
+fill.position.set(-200, 120, 120);
+scene.add(fill);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ---------------- geometry built once, in each part's reference frame ----------------
+const pp0 = pose(0);
+const ang0 = {};
+const lp = {};   // local coordinates of each part's points, relative to the part origin
+const parts = {};
+const pinMat = new THREE.MeshStandardMaterial({ color: 0xc9d1d9, roughness: 0.25, metalness: 0.85 });
+
+function mat(color) {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.25 });
+}
+function addBar(group, a, bb, z, material) {
+  const dx = bb.x - a.x, dy = bb.y - a.y, len = Math.hypot(dx, dy);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, 7, 5), material);
+  m.position.set((a.x + bb.x) / 2, (a.y + bb.y) / 2, z);
+  m.rotation.z = Math.atan2(dy, dx);
+  group.add(m);
+}
+function addBushing(group, p, z, material) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 5, 28), material);
+  m.rotation.x = Math.PI / 2;
+  m.position.set(p.x, p.y, z);
+  group.add(m);
+}
+function addPin(group, p, z) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 44, 14), pinMat);
+  m.rotation.x = Math.PI / 2;
+  m.position.set(p.x, p.y, z + 2);
+  group.add(m);
+}
+
+for (const def of PARTS) {
+  const pRef = partPose(def, pp0);
+  ang0[def.name] = pRef.ang;
+  const o = def.origin ? pp0[def.origin] : { x: 0, y: 0 };
+  const local = {};
+  for (const k of def.pts) local[k] = { x: pp0[k].x - o.x, y: pp0[k].y - o.y };
+  for (const k of def.pts) lp[def.name + '@' + k] = local[k];
+
+  const g = new THREE.Object3D();
+  g.name = def.name;
+  const m = mat(def.color);
+  const z = def.z;
+
+  if (def.name === 'frame') {
+    addBar(g, local.O2, local.O4, z, m);
+    addBar(g, local.O4, local.O6, z, m);
+    // ground posts and base
+    for (const k of ['O2', 'O4', 'O6']) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(6, 38, 6), mat(0x3a414b));
+      post.position.set(local[k].x, -19, z);
+      g.add(post);
+    }
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(200, 6, 36), mat(0x3a414b));
+    slab.position.set(5, -38, z);
+    g.add(slab);
+  } else if (def.name === 'rocker1') {
+    const shape = new THREE.Shape();
+    shape.moveTo(local.O4.x, local.O4.y);
+    shape.lineTo(local.B.x, local.B.y);
+    shape.lineTo(local.C.x, local.C.y);
+    shape.closePath();
+    const tri = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 5, bevelEnabled: false }), m);
+    tri.position.z = z - 2.5;
+    g.add(tri);
+  } else {
+    addBar(g, local[def.pts[0]], local[def.pts[1]], z, m);
+  }
+
+  for (const k of def.pts) {
+    addBushing(g, local[k], z, m);
+    addPin(g, local[k], z);
+  }
+  // point markers, placed exactly at each named point
+  for (const k of def.pts) {
+    const mk = new THREE.Object3D();
+    mk.name = def.name + '@' + k;
+    mk.position.set(local[k].x, local[k].y, 0);
+    g.add(mk);
+  }
+  scene.add(g);
+  parts[def.name] = g;
+}
+
+// ---------------- panel helpers ----------------
+function norm360(rad) {
+  let d = (rad * 180 / Math.PI) % 360;
+  if (d < 0) d += 360;
+  return d;
+}
+function setText(q, v) {
+  document.querySelectorAll('[data-q="' + q + '"]').forEach((el) => { el.textContent = v.toFixed(1); });
+}
+
+// ---------------- render(t): pure function of t ----------------
+function render(t) {
+  const pp = pose(t);
+  for (const def of PARTS) {
+    const q = partPose(def, pp);
+    const g = parts[def.name];
+    g.position.set(q.x, q.y, 0);
+    g.rotation.set(0, 0, q.ang - ang0[def.name]);
+  }
+  setText('crank_deg', norm360(pp.th));
+  setText('rocker1_deg', norm360(Math.atan2(pp.B.y - pp.O4.y, pp.B.x - pp.O4.x)));
+  setText('output_deg', norm360(Math.atan2(pp.D.y - pp.O6.y, pp.D.x - pp.O6.x)));
+  renderer.render(scene, camera);
+}
+
+// ---------------- expose ----------------
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: {
+    O2: PT.O2.slice(),
+    O4: PT.O4.slice(),
+    O6: PT.O6.slice(),
+    len: { O2A: LEN.O2A, AB: LEN.AB, O4B: LEN.O4B, O4C: LEN.O4C, BC: LEN.BC, CD: LEN.CD, O6D: LEN.O6D },
+    omega: OMEGA,
+    theta0: THETA0,
+  },
+  render,
+};
+render(0);
+window.SIM_READY = true;
+
+// ---------------- live loop (skipped for ?capture) ----------------
+if (!window.location.href.includes('?capture')) {
+  let start = null;
+  const frame = (ts) => {
+    if (start === null) start = ts;
+    render((ts - start) / 1000);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

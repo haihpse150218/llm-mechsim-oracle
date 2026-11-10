@@ -1,0 +1,1 @@
+CHANGED: Switched the lower joint W to the circle-intersection branch on the same side as Y (maxY instead of minY), because with the old branch V and W were ~95 mm apart (> VU+WU = 76.1 mm) so the linkage could not close at theta=0.

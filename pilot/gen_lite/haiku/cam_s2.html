@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Disk cam, roller follower</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:system-ui,sans-serif;}
+canvas{display:block;}
+#panel{position:fixed;left:12px;top:12px;background:rgba(20,24,30,.8);color:#e8ecf2;padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.7;pointer-events:none;}
+#panel span.v{font-variant-numeric:tabular-nums;color:#9fc6ff;font-weight:600;}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>Cam angle: <span class="v" data-q="cam_deg">0.0</span> deg</div>
+  <div>Follower lift: <span class="v" data-q="lift">0.00</span> mm</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- parameters (mm, rad, rad/s) ----------
+const TAU = 2 * Math.PI;
+const DEG = 180 / Math.PI;
+const P = {
+  Rb: 70,                       // base-circle radius of the cam surface
+  Rr: 10,                       // roller radius
+  e: 10,                        // offset of follower line from cam axis O
+  h: 40,                        // total lift
+  axisAngle: Math.PI / 2,       // follower rises along +Y
+  betaRise: 5 * Math.PI / 6,    // 150 deg
+  betaDwellTop: Math.PI / 6,    // 30 deg
+  betaReturn: 5 * Math.PI / 6,  // 150 deg
+  betaDwellBottom: Math.PI / 6, // 30 deg
+  omega: Math.PI / 2,           // 1 rev per 4 s, counter-clockwise
+  theta0: Math.PI / 6           // cam angle at t = 0
+};
+const R0 = P.Rb + P.Rr;                         // pitch-curve base radius
+const U0 = Math.sqrt(R0 * R0 - P.e * P.e);      // roller-centre position along rise axis at lowest point
+const a = P.axisAngle;
+const B1 = P.betaRise;
+const B2 = B1 + P.betaDwellTop;
+const B3 = B2 + P.betaReturn;
+
+const mod = (x, m) => ((x % m) + m) % m;
+
+// cycloidal displacement vs cam rotation phi in [0, 2pi)
+function lift(phi) {
+  phi = mod(phi, TAU);
+  if (phi < B1) { const x = phi / B1; return P.h * (x - Math.sin(TAU * x) / TAU); }
+  if (phi < B2) return P.h;
+  if (phi < B3) { const x = (phi - B2) / P.betaReturn; return P.h * (1 - (x - Math.sin(TAU * x) / TAU)); }
+  return 0;
+}
+
+// world point on the follower line at along-axis coordinate u (offset e from O)
+function ptAt(u) {
+  return { x: -P.e * Math.sin(a) + u * Math.cos(a), y: P.e * Math.cos(a) + u * Math.sin(a) };
+}
+
+function rot(p, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang);
+  return { x: c * p.x - s * p.y, y: s * p.x + c * p.y };
+}
+
+// pitch (roller-centre) point in the cam's own frame when cam has turned phi
+function pitchCam(phi) {
+  return rot(ptAt(U0 + lift(phi)), -(P.theta0 + phi));
+}
+
+// ---------- cam profile = envelope of roller circles (inversion) ----------
+const N = 1440;
+const dphi = 1e-5;
+const prof = [];
+for (let k = 0; k < N; k++) {
+  const phi = k * TAU / N;
+  const Q = pitchCam(phi);
+  const Qp = pitchCam(phi + dphi), Qm = pitchCam(phi - dphi);
+  const tx = Qp.x - Qm.x, ty = Qp.y - Qm.y;
+  const L = Math.hypot(tx, ty);
+  let nx = ty / L, ny = -tx / L;
+  if (nx * Q.x + ny * Q.y < 0) { nx = -nx; ny = -ny; }   // normal points away from O
+  prof.push({ x: Q.x - P.Rr * nx, y: Q.y - P.Rr * ny });
+}
+
+// ---------- scene ----------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 1, 3000);
+camera.position.set(60, -300, 420);
+camera.lookAt(0, 25, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x202430, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(150, -120, 320);
+scene.add(key);
+
+const marker = (name, x, y, z = 0) => {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, z);
+  return o;
+};
+
+// ---------- frame (fixed) ----------
+const frame = new THREE.Group();
+frame.name = 'frame';
+const mFrame = new THREE.MeshStandardMaterial({ color: 0x6b7786, metalness: 0.35, roughness: 0.55 });
+const base = new THREE.Mesh(new THREE.BoxGeometry(280, 280, 8), mFrame);
+base.position.set(0, 0, -22);
+frame.add(base);
+const shaftGeo = new THREE.CylinderGeometry(7, 7, 34, 32);
+shaftGeo.rotateX(Math.PI / 2);
+const shaft = new THREE.Mesh(shaftGeo, mFrame);
+shaft.position.set(0, 0, -1);
+frame.add(shaft);
+const railGeo = new THREE.CylinderGeometry(3, 3, P.h + 70, 16);
+const railMid = ptAt(U0 + 25);
+for (const z of [-12, 12]) {
+  const r = new THREE.Mesh(railGeo, mFrame);
+  r.rotation.z = a - Math.PI / 2;
+  r.position.set(railMid.x, railMid.y, z);
+  frame.add(r);
+}
+const G = ptAt(U0 - 20);
+frame.add(marker('frame@O', 0, 0));
+frame.add(marker('frame@G', G.x, G.y));
+scene.add(frame);
+
+// ---------- cam (rotates) ----------
+const cam = new THREE.Group();
+cam.name = 'cam';
+const shape = new THREE.Shape();
+prof.forEach((p, i) => (i ? shape.lineTo(p.x, p.y) : shape.moveTo(p.x, p.y)));
+const bore = new THREE.Path();
+bore.absarc(0, 0, 8, 0, TAU, false);
+shape.holes.push(bore);
+const camGeo = new THREE.ExtrudeGeometry(shape, { depth: 12, bevelEnabled: false, curveSegments: 1, steps: 1 });
+camGeo.translate(0, 0, -6);
+const mCam = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.4, roughness: 0.45 });
+cam.add(new THREE.Mesh(camGeo, mCam));
+const bossGeo = new THREE.CylinderGeometry(20, 20, 8, 40);
+bossGeo.rotateX(Math.PI / 2);
+const boss = new THREE.Mesh(bossGeo, mCam);
+boss.position.set(0, 0, 10);
+cam.add(boss);
+cam.add(marker('cam@O', 0, 0));
+cam.add(marker('cam@camRef', 30, 0));
+scene.add(cam);
+
+// ---------- follower (translates along rise axis) ----------
+const follower = new THREE.Group();
+follower.name = 'follower';
+follower.rotation.z = a - Math.PI / 2;   // local +Y = rise direction
+const rollerGeo = new THREE.CylinderGeometry(P.Rr, P.Rr, 8, 48);
+rollerGeo.rotateX(Math.PI / 2);
+const mRoller = new THREE.MeshStandardMaterial({ color: 0x3fb6c9, metalness: 0.2, roughness: 0.4 });
+follower.add(new THREE.Mesh(rollerGeo, mRoller));
+const mStem = new THREE.MeshStandardMaterial({ color: 0xe05c5c, metalness: 0.3, roughness: 0.5 });
+const stem = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 30, 20), mStem);
+stem.position.set(0, 15, 0);
+follower.add(stem);
+const head = new THREE.Mesh(new THREE.BoxGeometry(22, 6, 10), mStem);
+head.position.set(0, 30, 0);
+follower.add(head);
+follower.add(marker('follower@C', 0, 0));
+follower.add(marker('follower@F', 0, 30));
+scene.add(follower);
+
+// ---------- panel ----------
+const pCam = document.querySelector('[data-q="cam_deg"]');
+const pLift = document.querySelector('[data-q="lift"]');
+
+// ---------- pure pose function ----------
+function render(t) {
+  const phi = mod(P.omega * t, TAU);
+  cam.rotation.z = P.theta0 + phi;
+  const C = ptAt(U0 + lift(phi));
+  follower.position.set(C.x, C.y, 0);
+  const degRaw = Math.round(mod(P.theta0 + phi, TAU) * DEG * 10) / 10 % 360;
+  pCam.textContent = degRaw.toFixed(1);
+  pLift.textContent = lift(phi).toFixed(2);
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: TAU / P.omega,
+  params: { ...P, R0, U0 },
+  render
+};
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

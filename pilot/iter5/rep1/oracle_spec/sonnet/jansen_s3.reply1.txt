@@ -1,0 +1,1 @@
+CHANGED: Fixed part rotation (local frame already removes the rest angle, so rotation is now the current p0->p1 angle) and corrected the Jansen link lengths (XW 39.3, XV 40.1, YV 55.8, UT 65.7, WT 49).

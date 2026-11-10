@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (230, 40) to (-26, -13) and re-centred the camera, because with the old O6 the distance from the ternary-rocker joint C to O6 always exceeded the 185 mm reach of coupler 2 plus output rocker, so solvePose returned null and render() drew nothing and froze the panel at 0.0.

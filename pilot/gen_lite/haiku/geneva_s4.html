@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geneva drive simulator</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#0f172a;font-family:system-ui,sans-serif;color:#e2e8f0}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;background:rgba(15,23,42,.8);padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.6;font-variant-numeric:tabular-nums}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div>Driver angle: <span data-q="driver_deg">0.00</span> deg</div>
+  <div>Wheel angle: <span data-q="wheel_deg">0.00</span> deg</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- parameters (mm, rad/s) ----
+const n = 4;                 // slots
+const C = 100;               // centre distance O-W
+const a = C * Math.sin(Math.PI / n);   // pin radius: tangential entry condition
+const omega = Math.PI / 2;   // driver speed, CCW positive (period 4 s)
+const phi0 = 0;              // driver angle at t = 0
+const TAU = 2 * Math.PI;
+const step = TAU / n;
+
+// wheel / pin dimensions derived from geometry
+const rp = 5;               // drive pin radius
+const w = 12.5, h = w / 2;  // slot width
+const dE = C * Math.cos(Math.PI / n);  // pin-to-W distance at engagement tangency
+const Rw = dE - rp;         // wheel outer radius (locking circle)
+const Rb = C - a - rp - 1;  // slot bottom radius
+const tr = Math.sqrt(Rw * Rw - h * h);
+const betaR = Math.atan2(h, tr);
+const phiE = Math.acos(a / C);  // driver half-angle of engagement (about O->W)
+
+// ---- kinematics (pure) ----
+// theta(u): direction W->pin (world angle) while engaged, u = driver angle in (-pi, pi]
+function theta(u) {
+  return Math.PI - Math.atan2(a * Math.sin(u), C - a * Math.cos(u));
+}
+// wheel angle (direction W->s0) for total driver angle phiT
+function wheelAngle(phiT) {
+  const c = Math.round(phiT / TAU);
+  const u = phiT - TAU * c;
+  if (Math.abs(u) < phiE) return theta(u) - step * c;        // engaged: slot on pin line
+  if (u >= phiE) return Math.PI + Math.PI / n - step * (c + 1); // locked after index
+  return Math.PI + Math.PI / n - step * c;                      // locked before index
+}
+function deg360(rad) {
+  let d = ((rad * 180 / Math.PI) % 360 + 360) % 360;
+  if (d >= 359.995) d = 0;
+  return d;
+}
+
+// ---- scene ----
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f172a);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 2000);
+camera.position.set(50, -30, 290);
+camera.lookAt(50, 0, 0);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 1.0));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(120, -150, 250);
+scene.add(key);
+
+const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, metalness: 0.15 });
+function addCyl(parent, r, hgt, x, y, z, m) {
+  const g = new THREE.CylinderGeometry(r, r, hgt, 40);
+  g.rotateX(Math.PI / 2);            // axis along Z
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.set(x, y, z);
+  parent.add(mesh);
+  return mesh;
+}
+function addBox(parent, sx, sy, sz, x, y, z, m) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), m);
+  mesh.position.set(x, y, z);
+  parent.add(mesh);
+  return mesh;
+}
+function marker(parent, name, x, y) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, 0);
+  parent.add(o);
+  return o;
+}
+
+// frame (fixed)
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+scene.add(frame);
+addBox(frame, 230, 130, 6, 60, 0, -11, mat(0x64748b));          // base plate z -14..-8
+addCyl(frame, 9, 18, 0, 0, 1, mat(0x475569));                   // O pillar z -8..10
+addCyl(frame, 9, 2, C, 0, -7, mat(0x475569));                   // W pillar z -8..-6
+marker(frame, 'frame@O', 0, 0);
+marker(frame, 'frame@W', C, 0);
+
+// driver (rotates about O)
+const driver = new THREE.Object3D();
+driver.name = 'driver';
+scene.add(driver);
+addCyl(driver, 12, 6, 0, 0, 13, mat(0xf59e0b));                 // hub z 10..16
+addBox(driver, a, 14, 6, a / 2, 0, 13, mat(0xf59e0b));          // arm O->pin
+addCyl(driver, 5, 16, a, 0, 2, mat(0xd1d5db));                  // drive pin z -6..10
+marker(driver, 'driver@O', 0, 0);
+marker(driver, 'driver@pin', a, 0);
+
+// wheel (rotates about W)
+const wheel = new THREE.Object3D();
+wheel.name = 'wheel';
+wheel.position.set(C, 0, 0);
+scene.add(wheel);
+
+// slotted outline: rim circle Rw with n radial slots (width w, bottom at Rb)
+function slotPts(k) {
+  const al = k * step, dx = Math.cos(al), dy = Math.sin(al), nx = -dy, ny = dx;
+  const P = (t, o) => [t * dx + o * nx, t * dy + o * ny];
+  return { Ar: P(tr, -h), Ab: P(Rb, -h), Bb: P(Rb, h), Br: P(tr, h) };
+}
+const shape = new THREE.Shape();
+shape.moveTo(...slotPts(0).Ar);
+const M = 10;
+for (let k = 0; k < n; k++) {
+  const q = slotPts(k);
+  shape.lineTo(...q.Ab);
+  shape.lineTo(...q.Bb);
+  shape.lineTo(...q.Br);
+  const a0 = k * step + betaR;
+  const a1 = (k < n - 1 ? (k + 1) * step : TAU) - betaR;
+  for (let j = 1; j <= M; j++) {
+    const ang = a0 + (a1 - a0) * j / (M + 1);
+    shape.lineTo(Rw * Math.cos(ang), Rw * Math.sin(ang));
+  }
+  if (k < n - 1) shape.lineTo(...slotPts(k + 1).Ar);
+}
+shape.closePath();
+const wheelGeo = new THREE.ExtrudeGeometry(shape, { depth: 10, bevelEnabled: false, curveSegments: 4 });
+wheelGeo.translate(0, 0, -6);      // z -6..4
+const wheelMesh = new THREE.Mesh(wheelGeo, mat(0x3b82f6));
+wheel.add(wheelMesh);
+addCyl(wheel, 10, 12, 0, 0, -2, mat(0x2563eb));                 // hub
+marker(wheel, 'wheel@W', 0, 0);
+const Rm = Rw - 4;   // slot centre line, near rim
+for (let k = 0; k < n; k++) {
+  marker(wheel, `wheel@s${k}`, Rm * Math.cos(k * step), Rm * Math.sin(k * step));
+}
+
+// ---- panel ----
+const driverEl = document.querySelector('[data-q="driver_deg"]');
+const wheelEl = document.querySelector('[data-q="wheel_deg"]');
+
+// ---- SIM contract ----
+function render(t) {
+  const phiT = phi0 + omega * t;
+  const psi = wheelAngle(phiT);
+  driver.rotation.z = phiT;
+  wheel.rotation.z = psi;
+  driverEl.textContent = deg360(phiT).toFixed(2);
+  wheelEl.textContent = deg360(psi).toFixed(2);
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: TAU / omega,
+  params: { n, C, a, omega, phi0 },
+  render,
+};
+render(0);
+window.SIM_READY = true;
+
+// ---- live viewing ----
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

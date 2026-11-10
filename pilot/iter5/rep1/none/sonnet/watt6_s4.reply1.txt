@@ -1,0 +1,1 @@
+CHANGED: Loop 2 could not assemble (C was ~178 mm from O6 but CD+O6D reaches only 130), so I changed the ternary rocker's fixed O4B-to-O4C angle from +60 to -90 degrees, which puts C within 43-70 mm of O6 with transmission angles of about 38-70 degrees over the whole revolution.

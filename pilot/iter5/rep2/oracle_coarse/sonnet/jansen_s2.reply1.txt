@@ -1,0 +1,1 @@
+CHANGED: Swapped the leg-triangle lengths to UT=65.7 and WT=49.0 (the 0.341 error equals (65.7-49)/49, so the two were interchanged versus the published numbers); the foot stays on the lower branch.

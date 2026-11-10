@@ -1,0 +1,1 @@
+NO_CHANGE: link lengths match Jansen's holy numbers, X offset (-38,-7.8) is correct, circle-intersection branches give upper Y/V and lower W with foot below, and markers, panel, pure render(t) and SIM contract all conform to the spec.

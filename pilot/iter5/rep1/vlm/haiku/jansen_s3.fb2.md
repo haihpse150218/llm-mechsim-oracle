@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is a tall rounded oval (foot y spans about -86 to +90 mm, x about -135 to +57 mm) with a small loop at the far left, not the flat-bottomed, wider-than-tall Jansen walking path. This suggests a wrong assembly branch or wrong link lengths. The foot does not trace a flat ground-contact segment (t=2.00s to 3.67s). (frames t=0.00s, t=1.33s, t=2.00s, t=2.67s, t=3.33s)

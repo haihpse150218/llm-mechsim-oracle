@@ -61,6 +61,7 @@ for (const [name, pts] of Object.entries(s0)) {
   scene.add(g); parts[name] = {g, keys};
   pi++;
 }
+
 const rows = document.getElementById('rows');
 const pnl0 = panel(0, s0);
 for (const q of Object.keys(pnl0)) { const d = document.createElement('div'); d.innerHTML = q + ': <span data-q="' + q + '"></span>'; rows.appendChild(d); }

@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is not the characteristic flat-bottomed D-shaped Jansen curve. The foot (leg triangle tip) swings all the way around the frame, ending far above the pivots at t=2.00-3.00s and below them at t=0.00s, as if the leg rotates as a whole around the fixed pivots. This indicates a wrong assembly configuration (wrong branch or mirrored triangle) or wrong link lengths. (frames t=0.00s, t=2.00s, t=2.33s, t=2.67s, t=3.00s)
+- The leg triangle and upper links fold over and overlap the crank and rods, so the linkage looks flipped relative to a real Strandbeest leg, where the foot stays below the frame. (frames t=0.33s, t=1.67s, t=3.33s)

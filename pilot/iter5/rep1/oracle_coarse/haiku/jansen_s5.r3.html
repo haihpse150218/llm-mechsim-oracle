@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jansen Leg Linkage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1d22; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #panel {
+    position: fixed; left: 16px; top: 16px;
+    background: rgba(20, 22, 28, 0.8); color: #e8e8ee;
+    padding: 12px 16px; border-radius: 8px;
+    font-size: 15px; line-height: 1.7; min-width: 220px;
+  }
+  #panel .lbl { color: #9ec5ff; display: inline-block; width: 128px; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><span class="lbl">crank angle (deg)</span><span data-q="crank_deg">0.0</span></div>
+  <div><span class="lbl">foot x (mm)</span><span data-q="foot_x">0.0</span></div>
+  <div><span class="lbl">foot y (mm)</span><span data-q="foot_y">0.0</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- mechanism parameters (mm, rad) ----------
+const P = {
+  O: [0, 0],                 // crank axle (fixed)
+  X: [7.8, 0],               // second fixed pivot (fixed); ground link O-X = holy number l = 7.8
+  len: { OZ: 38, ZY: 41.5, XY: 50, ZW: 39.3, XW: 40.1, XV: 55.8, YV: 15,
+         VU: 39.4, WU: 36.7, UT: 49, WT: 61.9 },
+  omega: 2 * Math.PI / 6,    // 6 s per crank revolution, counter-clockwise
+  theta0: 0
+};
+const L = P.len;
+const PERIOD = 2 * Math.PI / P.omega;
+
+// fixed interior angles of the two rigid triangles (law of cosines)
+const alphaXY = Math.acos((L.XY * L.XY + L.XV * L.XV - L.YV * L.YV) / (2 * L.XY * L.XV)); // at X, between XY and XV
+const gammaW  = Math.acos((L.WU * L.WU + L.WT * L.WT - L.UT * L.UT) / (2 * L.WU * L.WT)); // at W, between WU and WT
+
+// intersection of circle(c1,r1) and circle(c2,r2) on the left of c1->c2 (fixed branch)
+function circleInt(c1, r1, c2, r2) {
+  const dx = c2[0] - c1[0], dy = c2[1] - c1[1];
+  const d = Math.hypot(dx, dy);
+  const ux = dx / d, uy = dy / d;
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  const bx = c1[0] + a * ux, by = c1[1] + a * uy;
+  return [bx - h * uy, by + h * ux];
+}
+
+// pure kinematic solve: all joint positions at time t
+function solve(t) {
+  const th = P.theta0 + P.omega * t;
+  const Z = [P.O[0] + L.OZ * Math.cos(th), P.O[1] + L.OZ * Math.sin(th)];
+  const X = P.X;
+  const Y = circleInt(X, L.XY, Z, L.ZY);
+  const W = circleInt(X, L.XW, Z, L.ZW);
+  const phiXY = Math.atan2(Y[1] - X[1], Y[0] - X[0]);
+  const V = [X[0] + L.XV * Math.cos(phiXY + alphaXY), X[1] + L.XV * Math.sin(phiXY + alphaXY)];
+  const U = circleInt(V, L.VU, W, L.WU);
+  const phiWU = Math.atan2(U[1] - W[1], U[0] - W[0]);
+  const T = [W[0] + L.WT * Math.cos(phiWU - gammaW), W[1] + L.WT * Math.sin(phiWU - gammaW)];
+  return { th, O: P.O, X, Z, Y, W, V, U, T };
+}
+
+const ang = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]);
+
+// ---------- scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1d22);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(30, 10, 330);
+camera.lookAt(30, 10, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x303038, 0.55));
+const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+sun.position.set(120, -160, 300);
+scene.add(sun);
+
+const mats = {
+  frame: new THREE.MeshStandardMaterial({ color: 0x8c96a0, metalness: 0.4, roughness: 0.5 }),
+  crank: new THREE.MeshStandardMaterial({ color: 0xf2a33a, metalness: 0.2, roughness: 0.45 }),
+  rod:   new THREE.MeshStandardMaterial({ color: 0x4fb3e8, metalness: 0.2, roughness: 0.4 }),
+  tri:   new THREE.MeshStandardMaterial({ color: 0xe6e6ea, metalness: 0.1, roughness: 0.6 }),
+  foot:  new THREE.MeshStandardMaterial({ color: 0xe0556b, metalness: 0.1, roughness: 0.5 }),
+  pin:   new THREE.MeshStandardMaterial({ color: 0x2c2f36, metalness: 0.6, roughness: 0.3 })
+};
+
+const BAR_W = 7, BAR_D = 5;
+
+// bar between two local points, added to group
+function addBar(group, a, b, mat) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, BAR_W, BAR_D), mat);
+  m.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0);
+  m.rotation.z = Math.atan2(dy, dx);
+  group.add(m);
+}
+function addPin(group, p, r = 3.6, mat = mats.pin) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, BAR_D + 5, 20), mat);
+  m.rotation.x = Math.PI / 2;
+  m.position.set(p[0], p[1], 0);
+  group.add(m);
+}
+function addMarker(part, pname, p) {
+  const o = new THREE.Object3D();
+  o.name = part.name + '@' + pname;
+  o.position.set(p[0], p[1], 0);
+  part.add(o);
+  return o;
+}
+function makePart(name) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  scene.add(g);
+  return g;
+}
+function setPose(part, origin, phi) {
+  part.position.set(origin[0], origin[1], 0);
+  part.rotation.set(0, 0, phi);
+}
+
+// local (design) coordinates of rigid triangles
+const locV = [L.XV * Math.cos(alphaXY), L.XV * Math.sin(alphaXY)];   // upper triangle, origin X, x-axis along XY
+const locT = [L.WT * Math.cos(-gammaW), L.WT * Math.sin(-gammaW)];   // leg triangle, origin W, x-axis along WU
+
+// frame
+const frame = makePart('frame');
+frame.position.set(0, 0, 0);
+addBar(frame, [0, 0], P.X, mats.frame);
+addBar(frame, [0, 0], [P.X[0], P.X[1]], mats.frame);
+{
+  const base = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 6), mats.frame);
+  base.position.set(P.X[0] / 2, -12, 0);
+  frame.add(base);
+}
+addPin(frame, [0, 0], 6, mats.frame);
+addPin(frame, P.X, 6, mats.frame);
+addMarker(frame, 'O', [0, 0]);
+addMarker(frame, 'X', P.X);
+
+// crank (origin O)
+const crank = makePart('crank');
+addBar(crank, [0, 0], [L.OZ, 0], mats.crank);
+addPin(crank, [0, 0], 5, mats.crank);
+addPin(crank, [L.OZ, 0], 3.6, mats.crank);
+addMarker(crank, 'O', [0, 0]);
+addMarker(crank, 'Z', [L.OZ, 0]);
+
+// upper rod (origin Z)
+const rodUpper = makePart('rodUpper');
+addBar(rodUpper, [0, 0], [L.ZY, 0], mats.rod);
+addPin(rodUpper, [0, 0]);
+addPin(rodUpper, [L.ZY, 0]);
+addMarker(rodUpper, 'Z', [0, 0]);
+addMarker(rodUpper, 'Y', [L.ZY, 0]);
+
+// lower rod (origin Z)
+const rodLower = makePart('rodLower');
+addBar(rodLower, [0, 0], [L.ZW, 0], mats.rod);
+addPin(rodLower, [0, 0]);
+addPin(rodLower, [L.ZW, 0]);
+addMarker(rodLower, 'Z', [0, 0]);
+addMarker(rodLower, 'W', [L.ZW, 0]);
+
+// upper triangle X-Y-V (origin X)
+const upperTriangle = makePart('upperTriangle');
+addBar(upperTriangle, [0, 0], [L.XY, 0], mats.tri);
+addBar(upperTriangle, [L.XY, 0], locV, mats.tri);
+addBar(upperTriangle, locV, [0, 0], mats.tri);
+addPin(upperTriangle, [0, 0], 4.5, mats.tri);
+addPin(upperTriangle, [L.XY, 0], 4.5, mats.tri);
+addPin(upperTriangle, locV, 4.5, mats.tri);
+addMarker(upperTriangle, 'X', [0, 0]);
+addMarker(upperTriangle, 'Y', [L.XY, 0]);
+addMarker(upperTriangle, 'V', locV);
+
+// link X-W (origin X)
+const linkXW = makePart('linkXW');
+addBar(linkXW, [0, 0], [L.XW, 0], mats.frame);
+addPin(linkXW, [0, 0]);
+addPin(linkXW, [L.XW, 0]);
+addMarker(linkXW, 'X', [0, 0]);
+addMarker(linkXW, 'W', [L.XW, 0]);
+
+// link V-U (knee, origin V)
+const linkVU = makePart('linkVU');
+addBar(linkVU, [0, 0], [L.VU, 0], mats.rod);
+addPin(linkVU, [0, 0]);
+addPin(linkVU, [L.VU, 0]);
+addMarker(linkVU, 'V', [0, 0]);
+addMarker(linkVU, 'U', [L.VU, 0]);
+
+// leg triangle W-U-T (origin W)
+const legTriangle = makePart('legTriangle');
+addBar(legTriangle, [0, 0], [L.WU, 0], mats.tri);
+addBar(legTriangle, [L.WU, 0], locT, mats.tri);
+addBar(legTriangle, locT, [0, 0], mats.tri);
+addPin(legTriangle, [0, 0], 4.5, mats.tri);
+addPin(legTriangle, [L.WU, 0], 4.5, mats.tri);
+{
+  const foot = new THREE.Mesh(new THREE.SphereGeometry(6, 24, 16), mats.foot);
+  foot.position.set(locT[0], locT[1], 0);
+  legTriangle.add(foot);
+}
+addMarker(legTriangle, 'W', [0, 0]);
+addMarker(legTriangle, 'U', [L.WU, 0]);
+addMarker(legTriangle, 'T', locT);
+
+// foot path trace (static, precomputed from the same solve)
+{
+  const N = 360;
+  const pts = [];
+  for (let k = 0; k <= N; k++) {
+    const s = solve(k * PERIOD / N);
+    pts.push(new THREE.Vector3(s.T[0], s.T[1], -2));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  scene.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xe0556b, transparent: true, opacity: 0.55 })));
+}
+
+// ---------- panel ----------
+const q = (name) => document.querySelector('[data-q="' + name + '"]');
+
+// ---------- pure render ----------
+function render(t) {
+  const s = solve(t);
+
+  setPose(crank, s.O, s.th);
+  setPose(rodUpper, s.Z, ang(s.Z, s.Y));
+  setPose(rodLower, s.Z, ang(s.Z, s.W));
+  setPose(upperTriangle, s.X, ang(s.X, s.Y));
+  setPose(linkXW, s.X, ang(s.X, s.W));
+  setPose(linkVU, s.V, ang(s.V, s.U));
+  setPose(legTriangle, s.W, ang(s.W, s.U));
+
+  let deg = ((s.th * 180 / Math.PI) % 360 + 360) % 360;
+  let shown = Number(deg.toFixed(1));
+  if (shown >= 360) shown = 0;
+  q('crank_deg').textContent = shown.toFixed(1);
+  q('foot_x').textContent = s.T[0].toFixed(1);
+  q('foot_y').textContent = s.T[1].toFixed(1);
+
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.position.z = 330 / Math.min(1, camera.aspect * 1.4);
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', () => { onResize(); });
+onResize();
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: {
+    O: P.O,
+    X: P.X,
+    len: { ...L },
+    omega: P.omega,
+    theta0: P.theta0
+  },
+  render
+};
+
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    render((performance.now() - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

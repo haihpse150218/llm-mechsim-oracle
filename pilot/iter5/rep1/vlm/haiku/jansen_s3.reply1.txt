@@ -1,0 +1,1 @@
+CHANGED: Replaced the fixed left-branch circle intersection with a pure, step-wise continuation from theta0 that always picks the intersection nearest the previous joint solution, so the knee and foot no longer jump across the V-W line (the cause of the folded frames and the x≈-117 mm excursion); the fixed frame X placement was left unchanged.

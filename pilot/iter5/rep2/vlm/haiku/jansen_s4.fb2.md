@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path does not look like the Jansen flat-bottomed loop: the foot only rises about 8-16 mm above its lowest point (y -41 to -57 mm) and the traced curve is an open shallow arc rather than a closed loop with a clear lift phase, suggesting wrong link lengths or wrong assembly configuration (e.g. knee/triangle branch flipped). (frames t=0.00s, t=0.65s, t=5.89s, t=6.54s, t=7.20s)
+- Linkage shows odd configuration at some phases: upper triangle and links collapse/overlap near the frame bar and the leg triangle changes orientation abruptly, which is not typical of the correct assembly. (frames t=5.24s, t=5.89s)

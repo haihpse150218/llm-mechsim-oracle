@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planetary gear set</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #11151c; color: #e8edf5; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+  canvas { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  #panel { position: fixed; left: 16px; top: 16px; background: rgba(10, 14, 20, 0.72); padding: 12px 16px; border-radius: 8px; font-size: 15px; line-height: 1.7; border: 1px solid rgba(255, 255, 255, 0.08); }
+  #panel .lbl { color: #9aa6b8; display: inline-block; min-width: 128px; }
+  #panel .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+  @media (max-width: 480px) { #panel { font-size: 13px; left: 8px; top: 8px; padding: 8px 10px; } #panel .lbl { min-width: 96px; } }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><span class="lbl">Sun angle</span><span class="val" data-q="sun_deg">0.0°</span></div>
+  <div><span class="lbl">Carrier angle</span><span class="val" data-q="carrier_deg">0.0°</span></div>
+  <div><span class="lbl">Speed ratio</span><span class="val" data-q="ratio">3.500</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- parameters and kinematics ----------
+// Spur gears, module 2 mm. Ring fixed, sun is input, carrier is output.
+// Zr = Zs + 2*Zp must hold: 60 = 24 + 2*18.
+const P = { module: 2, Zs: 24, Zp: 18, Zr: 60, omega: 1.0, theta0: 0 };
+const TWO_PI = Math.PI * 2;
+const rs = P.module * P.Zs / 2;          // sun pitch radius   24 mm
+const rp = P.module * P.Zp / 2;          // planet pitch radius 18 mm
+const rr = P.module * P.Zr / 2;          // ring pitch radius  60 mm
+const A = rs + rp;                       // carrier radius (planet axle distance) 42 mm
+const RATIO = 1 + P.Zr / P.Zs;           // |omega_s / omega_c| with ring fixed (Willis) = 3.5
+const OMEGA_C = P.omega / RATIO;         // carrier angular velocity, same sense as sun
+const OMEGA_P = -(A / rp) * OMEGA_C;     // planet absolute spin (= -2/3 * omega)
+const PERIOD = TWO_PI / Math.abs(P.omega);
+
+const deg = (x) => { let d = (x * 180 / Math.PI) % 360; if (d < 0) d += 360; return d; };
+
+// ---------- scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x11151c, 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(0, -150, 210);
+camera.lookAt(0, 0, 0);
+
+scene.add(new THREE.HemisphereLight(0xdde6f5, 0x202630, 0.6));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(120, -160, 220);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9db8ff, 0.5);
+fill.position.set(-150, 100, 120);
+scene.add(fill);
+
+const mat = (color, metal = 0.25, rough = 0.55) =>
+  new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
+const matFrame = mat(0x6b7280, 0.5, 0.5);
+const matSun = mat(0xf0883e);
+const matRing = mat(0x4a7bd9);
+const matCarrier = mat(0x5fbf7a, 0.4, 0.45);
+const matPlanet = mat(0xe8c547);
+const matPin = mat(0xcfd6e0, 0.8, 0.3);
+
+// ---------- geometry helpers ----------
+const polar = (r, a) => new THREE.Vector2(r * Math.cos(a), r * Math.sin(a));
+
+// Tooth outline: per tooth, root-flank-tip-tip-flank-root; tipR = tooth tip radius, rootR = gap bottom radius.
+function toothLoop(Z, tipR, rootR) {
+  const pts = [];
+  const step = TWO_PI / Z;
+  for (let i = 0; i < Z; i++) {
+    const c = i * step;
+    pts.push(polar(rootR, c - 0.30 * step), polar(tipR, c - 0.12 * step),
+              polar(tipR, c + 0.12 * step), polar(rootR, c + 0.30 * step));
+  }
+  return pts;
+}
+
+function loopToPath(pts, path) {
+  path.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x, pts[i].y);
+  path.closePath();
+  return path;
+}
+
+function extrude(shape, depth) {
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 });
+}
+
+// External spur gear, z = 0..depth, centred on origin, with a bore.
+function externalGear(Z, m, bore, depth) {
+  const r = m * Z / 2;
+  const shape = loopToPath(toothLoop(Z, r + m, r - 1.25 * m), new THREE.Shape());
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, bore, 0, TWO_PI, true);
+  shape.holes.push(hole);
+  return extrude(shape, depth);
+}
+
+// Internal ring gear: teeth point inward, tooth tips at rr - m, gap bottoms at rr + 1.25 m.
+function internalGear(Z, m, outerR, depth) {
+  const r = m * Z / 2;
+  const shape = new THREE.Shape();
+  shape.absarc(0, 0, outerR, 0, TWO_PI, false);
+  const hole = loopToPath(toothLoop(Z, r - m, r + 1.25 * m), new THREE.Path());
+  shape.holes.push(hole);
+  return extrude(shape, depth);
+}
+
+// Flat annulus, z = 0..depth.
+function annulus(rOut, rIn, depth) {
+  const shape = new THREE.Shape();
+  shape.absarc(0, 0, rOut, 0, TWO_PI, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, rIn, 0, TWO_PI, true);
+  shape.holes.push(hole);
+  return extrude(shape, depth);
+}
+
+function addMesh(parent, geom, material, x = 0, y = 0, z = 0, rx = 0, rz = 0) {
+  const m = new THREE.Mesh(geom, material);
+  m.position.set(x, y, z);
+  m.rotation.set(rx, 0, rz);
+  parent.add(m);
+  return m;
+}
+
+function marker(parent, name, x, y, z = 0) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, z);
+  parent.add(o);
+  return o;
+}
+
+// ---------- parts ----------
+// frame: fixed base disc and ring mount
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+scene.add(frame);
+addMesh(frame, annulus(78, 4, 4), matFrame, 0, 0, -14);
+addMesh(frame, annulus(72, 50, 10), matFrame, 0, 0, -10);
+marker(frame, 'frame@C', 0, 0);
+
+// ring: fixed internal gear, z = 0..10
+const ring = new THREE.Object3D();
+ring.name = 'ring';
+scene.add(ring);
+addMesh(ring, internalGear(P.Zr, P.module, rr + 10, 10), matRing);
+marker(ring, 'ring@C', 0, 0);
+marker(ring, 'ring@ringRef', rr, 0);
+
+// sun: input gear, z = 0..10
+const sun = new THREE.Object3D();
+sun.name = 'sun';
+scene.add(sun);
+addMesh(sun, externalGear(P.Zs, P.module, 3, 10), matSun);
+marker(sun, 'sun@C', 0, 0);
+marker(sun, 'sun@sunRef', rs, 0);
+
+// carrier: output arm, arms and hub at z = -6..0, pins up through planets
+const carrier = new THREE.Object3D();
+carrier.name = 'carrier';
+scene.add(carrier);
+addMesh(carrier, new THREE.CylinderGeometry(10, 10, 6, 32), matCarrier, 0, 0, -3, Math.PI / 2);
+for (let k = 0; k < 3; k++) {
+  const phi = TWO_PI * k / 3;
+  addMesh(carrier, new THREE.BoxGeometry(A, 10, 4), matCarrier,
+          (A / 2) * Math.cos(phi), (A / 2) * Math.sin(phi), -2, 0, phi);
+  addMesh(carrier, new THREE.CylinderGeometry(2.5, 2.5, 24, 16), matPin,
+          A * Math.cos(phi), A * Math.sin(phi), 8, Math.PI / 2);
+}
+marker(carrier, 'carrier@C', 0, 0);
+for (let k = 0; k < 3; k++) {
+  const phi = TWO_PI * k / 3;
+  marker(carrier, `carrier@P${k}`, A * Math.cos(phi), A * Math.sin(phi));
+}
+
+// planets: each a rigid gear on its own axle, spinning at absolute OMEGA_P
+const planets = [];
+const planetGeom = externalGear(P.Zp, P.module, 2.5, 10);
+for (let k = 0; k < 3; k++) {
+  const pl = new THREE.Object3D();
+  pl.name = `planet${k}`;
+  scene.add(pl);
+  addMesh(pl, planetGeom, matPlanet);
+  marker(pl, `planet${k}@P${k}`, 0, 0);
+  marker(pl, `planet${k}@planet${k}Ref`, rp, 0);
+  planets.push(pl);
+}
+
+// ---------- pose and panel ----------
+const q = (name) => document.querySelector(`[data-q="${name}"]`);
+const sunOut = q('sun_deg');
+const carrierOut = q('carrier_deg');
+const ratioOut = q('ratio');
+
+function render(t) {
+  const thetaS = P.theta0 + P.omega * t;   // sun angle
+  const thetaC = OMEGA_C * t;              // carrier angle (carrier initial angle 0)
+
+  sun.rotation.set(0, 0, thetaS);
+  carrier.rotation.set(0, 0, thetaC);
+  for (let k = 0; k < 3; k++) {
+    const phi = thetaC + TWO_PI * k / 3;
+    planets[k].position.set(A * Math.cos(phi), A * Math.sin(phi), 0);
+    // planet initial ref points at the sun (angle pi from its axle), absolute spin OMEGA_P
+    planets[k].rotation.set(0, 0, Math.PI + TWO_PI * k / 3 + OMEGA_P * t);
+  }
+
+  if (sunOut) sunOut.textContent = deg(thetaS).toFixed(1) + '°';
+  if (carrierOut) carrierOut.textContent = deg(thetaC).toFixed(1) + '°';
+  if (ratioOut) ratioOut.textContent = Math.abs(P.omega / OMEGA_C).toFixed(3);
+
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: { module: P.module, Zs: P.Zs, Zp: P.Zp, Zr: P.Zr, omega: P.omega, theta0: P.theta0 },
+  render
+};
+
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+if (!window.location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    requestAnimationFrame(loop);
+    window.SIM.render((performance.now() - t0) / 1000);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

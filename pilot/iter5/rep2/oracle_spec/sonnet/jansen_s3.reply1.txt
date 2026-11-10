@@ -1,0 +1,1 @@
+CHANGED: Corrected the swapped link lengths (XW 39.3, XV 40.1, YV 55.8, UT 65.7, WT 49) and fixed part rotation so each part's local frame (built with p0->p1 along +x) is rotated by the current p0->p1 angle instead of that angle minus a0, making shared joints coincide.

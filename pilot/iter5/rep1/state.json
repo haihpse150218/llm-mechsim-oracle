@@ -1,0 +1,170 @@
+{
+  "oracle_spec": {
+    "haiku/jansen_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/jansen_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/jansen_s5": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "oracle pass"
+    },
+    "haiku/planetary_s5": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/watt6_s4": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/watt6_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    }
+  },
+  "oracle_coarse": {
+    "haiku/jansen_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s4": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s5": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/planetary_s5": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/watt6_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "sonnet/jansen_s4": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "sonnet/watt6_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    }
+  },
+  "vlm": {
+    "haiku/jansen_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s4": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s5": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/planetary_s5": {
+      "active": false,
+      "stopRound": 0,
+      "stopReason": "vlm says correct"
+    },
+    "haiku/watt6_s4": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "vlm says correct"
+    },
+    "sonnet/jansen_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "sonnet/jansen_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "vlm says correct"
+    },
+    "sonnet/watt6_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "vlm says correct"
+    }
+  },
+  "none": {
+    "haiku/jansen_s3": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/jansen_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/jansen_s5": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/planetary_s5": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/watt6_s4": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    },
+    "sonnet/jansen_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "sonnet/jansen_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "sonnet/watt6_s4": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    }
+  }
+}

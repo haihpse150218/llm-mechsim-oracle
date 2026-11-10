@@ -1,0 +1,1 @@
+CHANGED: Replaced the fixed (apparently wrong) circle-intersection branch choices with an assembly branch selected at load time (deterministic) as the one feasible over the full revolution with the foot lowest and flattest-bottomed, and auto-framed the camera on the motion bounds.

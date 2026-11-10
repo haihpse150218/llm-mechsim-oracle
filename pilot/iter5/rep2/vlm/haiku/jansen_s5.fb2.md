@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path is a tall, rounded loop (y from about -64 to +56 mm, taller than wide) with a notch, not Jansen's flat-bottomed D-shaped walking path with a long flat stride. This indicates wrong link lengths or a wrong assembly configuration. (frames t=0.00s, t=2.50s, t=4.50s, t=5.00s)
+- Linkage folds into a collapsed, overlapping configuration, with the triangles and links bunched together near the fixed pivots. This suggests the wrong branch of the assembly or wrong link ratios. (frames t=3.00s, t=3.50s, t=4.00s)

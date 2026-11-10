@@ -209,7 +209,166 @@ const MECH = {
       R.panel('ratio', S.panel('ratio').map((x) => Math.abs(x - (Zs + Zr) / Zs) / ((Zs + Zr) / Zs)), 'rel');
     },
   },
+  // ---- phase 5 ----
+  cam: {
+    revs: () => 1,
+    near: [['cam', 'follower@C']], // XY distance from the roller centre to the nearest vertex of the cam's meshes
+    check(S, R) {
+      const {Rb, Rr, e, h, axisAngle, betaRise: b1, betaDwellTop: b2, betaReturn: b3, betaDwellBottom: b4, omega, theta0} = S.params;
+      R.design('phase angles sum to 360 deg', Math.abs(deg(b1 + b2 + b3 + b4) - 360), 0.5,
+        `betaRise + betaDwellTop + betaReturn + betaDwellBottom = ${f1(deg(b1 + b2 + b3 + b4))} deg, must be 360`);
+      const law = camLaw(h, b1, b2, b3);
+      const O = S.P('frame@O')[0];
+      const u = [Math.cos(axisAngle), Math.sin(axisAngle)], nv = [-u[1], u[0]];
+      const Cs = S.P('follower@C');
+      const along = Cs.map((c) => (c[0] - O[0]) * u[0] + (c[1] - O[1]) * u[1]);
+      const perp = Cs.map((c) => (c[0] - O[0]) * nv[0] + (c[1] - O[1]) * nv[1]);
+      R.gt('follower moves along axisAngle (no sideways motion)', perp.map((w) => Math.abs(w - perp[0])), 'mm', undefined,
+        (k) => `the roller centre must move only along the direction axisAngle = ${f1(deg(axisAngle))} deg; its sideways coordinate is ${f1(perp[0])} mm at t=${S.times[0].toFixed(3)} s but ${f1(perp[k])} mm at t=${S.times[k].toFixed(3)} s`);
+      R.param('offset |e| = distance from O to the line of motion', [Math.abs(Math.abs(perp[0]) - Math.abs(e))], 'mm', undefined,
+        () => `the roller centre's line of motion passes ${f1(Math.abs(perp[0]))} mm from O, but SIM.params.e = ${e}`);
+      const G = S.P('frame@G')[0];
+      R.param('G on the line of motion', [Math.abs((G[0] - O[0]) * nv[0] + (G[1] - O[1]) * nv[1] - perp[0])]);
+      const fa = S.P('follower@F').map((f, k) => ang(Cs[k], f));
+      R.gt('follower translates without rotating (deg)', fa.map((a) => angDiffDeg(a, fa[0])), 'deg');
+      const th = S.times.map((t) => theta0 + omega * t);
+      R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('cam@O')[k], S.P('cam@camRef')[k]), th[k])), 'deg');
+      const psi = S.times.map((t) => Math.abs(omega) * t);
+      const s0 = Math.sqrt(Math.max(0, (Rb + Rr) ** 2 - e * e));
+      const lift = along.map((a) => a - s0);
+      const errs = lift.map((x, k) => Math.abs(x - law.s(psi[k])));
+      const tolLift = Math.min(TOL.mm * S.scale, 0.02 * Math.abs(h)); // marker positions are computed, so cycloidal vs harmonic (max diff 0.058 h) must be separable
+      R.gt('lift vs cycloidal rise-dwell-return-dwell law', errs, 'mm', tolLift, (k) => {
+        let msg = `at t=${S.times[k].toFixed(3)} s the cam has turned ${f1(deg(psi[k] % TAU))} deg since the start of the rise (${law.phase(psi[k])}); the roller centre is ${f1(along[k])} mm along the line of motion from O's projection, i.e. lift ${f1(lift[k])} mm (lowest roller-centre position = sqrt((Rb+Rr)^2 - e^2) = ${f1(s0)} mm), but the cycloidal law from your params gives lift ${f1(law.s(psi[k]))} mm`;
+        const tol = tolLift;
+        const fits = (g) => Math.max(...lift.map((x, i) => Math.abs(x - g(psi[i])))) < Math.min(tol, Math.max(...errs) / 3);
+        const off = lift.reduce((a, x, i) => a + x - law.s(psi[i]), 0) / lift.length;
+        if (fits(law.harm)) msg += '. The drawn lift matches SIMPLE-HARMONIC rise/return, not cycloidal';
+        else if (fits((p) => law.s(-p))) msg += '. The drawn lift matches the law run BACKWARDS in cam angle (the phase order is reversed relative to the rotation direction)';
+        else if (fits((p) => law.s(p) + off)) msg += `. The drawn lift is the right shape but offset by a constant ${f1(off)} mm (check where the lowest roller-centre position is)`;
+        else {
+          let best = null;
+          for (let d = 1; d < 360; d++) {
+            const sh = (d * Math.PI) / 180;
+            const m = Math.max(...lift.map((x, i) => Math.abs(x - law.s(psi[i] - sh))));
+            if (!best || m < best.m) best = {d, m};
+          }
+          if (best.m < Math.max(...errs) / 3) msg += `. The drawn lift matches the law shifted by ${best.d} deg of cam rotation (the rise must start at t = 0)`;
+        }
+        return msg;
+      });
+      const nd = S.near(0);
+      const contact = nd.map((d) => (d == null || d < 0 ? Infinity : Math.abs(d - Rr)));
+      R.gt('roller touches the cam surface (no gap / penetration)', contact, 'mm', undefined, (k) => {
+        if (nd[k] == null || nd[k] < 0) return 'no meshes were found under the object named "cam" (the cam outline must be a mesh inside the cam part)';
+        const tol = TOL.mm * S.scale;
+        const gaps = nd.filter((d) => d - Rr > tol).length, pens = nd.filter((d) => Rr - d > tol).length;
+        return `at t=${S.times[k].toFixed(3)} s (cam turned ${f1(deg(psi[k] % TAU))} deg, ${law.phase(psi[k])}) the nearest point of the cam meshes is ${f1(nd[k])} mm from the roller centre, but the roller radius Rr = ${Rr} mm: ${nd[k] > Rr ? 'a GAP' : 'PENETRATION'} of ${f1(Math.abs(nd[k] - Rr))} mm. Over the revolution: gap at ${gaps} of ${nd.length} samples, penetration at ${pens}`;
+      });
+      // pressure angle and undercut from params + drawn offset side (dense)
+      const N = 1440, w0 = perp[0];
+      let pmax = 0, pAt = 0, rhoMin = Infinity, rAt = 0;
+      const q = [];
+      for (let i = 0; i < N; i++) {
+        const p = (i * TAU) / N, s = law.s(p), ds = law.ds(p);
+        const C = [O[0] + w0 * nv[0] + (s0 + s) * u[0], O[1] + w0 * nv[1] + (s0 + s) * u[1]];
+        const v = [ds * Math.abs(omega) * u[0], ds * Math.abs(omega) * u[1]];
+        const I = [O[0] + v[1] / omega, O[1] - v[0] / omega];
+        const Nn = [C[0] - I[0], C[1] - I[1]];
+        const phi = deg(Math.acos(Math.min(1, Math.abs(Nn[0] * u[0] + Nn[1] * u[1]) / Math.hypot(...Nn))));
+        if (phi > pmax) { pmax = phi; pAt = p; }
+        const rot = -Math.sign(omega) * p; // cam-fixed frame
+        const d = [C[0] - O[0], C[1] - O[1]];
+        q.push([Math.cos(rot) * d[0] - Math.sin(rot) * d[1], Math.sin(rot) * d[0] + Math.cos(rot) * d[1]]);
+      }
+      let area = 0;
+      for (let i = 0; i < N; i++) area += q[i][0] * q[(i + 1) % N][1] - q[i][1] * q[(i + 1) % N][0];
+      for (let i = 0; i < N; i++) {
+        const a = q[(i - 1 + N) % N], b = q[i], c = q[(i + 1) % N];
+        const d1 = [(c[0] - a[0]) / 2, (c[1] - a[1]) / 2], d2 = [c[0] - 2 * b[0] + a[0], c[1] - 2 * b[1] + a[1]];
+        const cr = d1[0] * d2[1] - d1[1] * d2[0];
+        if (Math.sign(cr) !== Math.sign(area) || cr === 0) continue; // concave part: no undercut from a convex roller
+        const rho = Math.hypot(...d1) ** 3 / Math.abs(cr);
+        if (rho < rhoMin) { rhoMin = rho; rAt = (i * TAU) / N; }
+      }
+      R.design('pressure angle <= 30 deg', Math.max(0, pmax - 30), 0.5,
+        `with Rb=${Rb}, Rr=${Rr}, e=${e} (drawn on the ${w0 >= 0 ? 'left' : 'right'} of the rise direction), h=${h}, betaRise=${f1(deg(b1))} deg, betaReturn=${f1(deg(b3))} deg the pressure angle reaches ${f1(pmax)} deg at ${f1(deg(pAt))} deg of cam rotation (${law.phase(pAt)}); it must stay <= 30 deg`);
+      R.design('no undercut (pitch-curve radius > Rr)', Math.max(0, Rr - rhoMin), 0.01,
+        `the roller-centre (pitch) curve has a convex radius of curvature of only ${f1(rhoMin)} mm at ${f1(deg(rAt))} deg of cam rotation, smaller than Rr = ${Rr} mm, so the cam profile would be undercut`);
+      R.panel('cam_deg', S.panel('cam_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
+      R.panel('lift', S.panel('lift').map((x, k) => Math.abs(x - law.s(psi[k]))), 'mm', tolLift,
+        (k) => `at t=${S.times[k].toFixed(3)} s the panel lift reads ${S.panel('lift')[k]}, the law from your params gives ${f1(law.s(psi[k]))} mm`);
+    },
+  },
+  watt6: {
+    revs: () => 1,
+    check(S, R) {
+      const {O2, O4, O6, len: L, omega, theta0} = S.params;
+      const pairs = {O2A: ['crank@O2', 'crank@A'], AB: ['coupler1@A', 'coupler1@B'], O4B: ['rocker1@O4', 'rocker1@B'], O4C: ['rocker1@O4', 'rocker1@C'],
+        BC: ['rocker1@B', 'rocker1@C'], CD: ['coupler2@C', 'coupler2@D'], O6D: ['rocker2@O6', 'rocker2@D']};
+      for (const [k, [p, q]] of Object.entries(pairs))
+        R.param(`len ${k}`, S.P(p).map((x, i) => Math.abs(dist(x, S.P(q)[i]) - L[k])), 'mm', undefined,
+          (i) => `${p} - ${q} is drawn ${f1(dist(S.P(p)[i], S.P(q)[i]))} mm apart, SIM.params.len.${k} = ${L[k]}`);
+      R.param('ground pivots vs params', [dist(S.P('frame@O2')[0], O2), dist(S.P('frame@O4')[0], O4), dist(S.P('frame@O6')[0], O6)], 'mm', undefined,
+        () => `frame markers O2, O4, O6 are at ${fp(S.P('frame@O2')[0])}, ${fp(S.P('frame@O4')[0])}, ${fp(S.P('frame@O6')[0])}; SIM.params says ${fp(O2)}, ${fp(O4)}, ${fp(O6)}`);
+      const th = S.times.map((t) => theta0 + omega * t);
+      R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('crank@O2')[k], S.P('crank@A')[k]), th[k])), 'deg');
+      const Aof = (x) => [O2[0] + L.O2A * Math.cos(x), O2[1] + L.O2A * Math.sin(x)];
+      // branches taken from the drawing at the first sample, then held
+      const sB = crossSide(Aof(th[0]), O4, S.P('rocker1@B')[0]);
+      const B0 = circ(Aof(th[0]), L.AB, O4, L.O4B, sB);
+      const sC = B0 ? crossSide(O4, B0, S.P('rocker1@C')[0]) : 1;
+      const C0 = B0 ? circ(O4, L.O4C, B0, L.BC, sC) : null;
+      const sD = C0 ? crossSide(C0, O6, S.P('rocker2@D')[0]) : 1;
+      const solve = (x) => {
+        const A = Aof(x), B = circ(A, L.AB, O4, L.O4B, sB);
+        if (!B) return {fail: 1, A};
+        const C = circ(O4, L.O4C, B, L.BC, sC);
+        if (!C) return {fail: 0, A, B};
+        const D = circ(C, L.CD, O6, L.O6D, sD);
+        return D ? {A, B, C, D} : {fail: 2, A, B, C};
+      };
+      const Nd = 720, dense = Array.from({length: Nd}, (_, i) => th[0] + (i * TAU) / Nd).map((x) => ({x, s: solve(x)}));
+      const bad = dense.find((d) => d.s.fail != null);
+      if (bad) {
+        const {x, s} = bad, cr = f1(deg(((x % TAU) + TAU) % TAU));
+        const why = s.fail === 0 ? `the ternary rocker triangle O4-B-C cannot be formed (O4B=${L.O4B}, O4C=${L.O4C}, BC=${L.BC})`
+          : s.fail === 1 ? `loop 1 cannot close: |A - O4| = ${f1(dist(s.A, O4))} mm but coupler AB=${L.AB} and rocker O4B=${L.O4B} can only span ${f1(Math.abs(L.AB - L.O4B))}..${f1(L.AB + L.O4B)} mm`
+          : `loop 2 cannot close: |C - O6| = ${f1(dist(s.C, O6))} mm but coupler CD=${L.CD} and output rocker O6D=${L.O6D} can only span ${f1(Math.abs(L.CD - L.O6D))}..${f1(L.CD + L.O6D)} mm`;
+        R.design('linkage assembles for all crank angles', 1, 0.5, `with your SIM.params, at crank angle ${cr} deg ${why}`);
+        return;
+      }
+      const tr = (p, q, r) => { const m = deg(Math.acos(Math.max(-1, Math.min(1, ((p[0] - q[0]) * (r[0] - q[0]) + (p[1] - q[1]) * (r[1] - q[1])) / (dist(p, q) * dist(r, q)))))); return Math.min(m, 180 - m); };
+      for (const [loop, f, desc] of [[1, (s) => tr(s.A, s.B, O4), 'coupler 1 (B->A) and ternary rocker (B->O4)'], [2, (s) => tr(s.C, s.D, O6), 'coupler 2 (D->C) and output rocker (D->O6)']]) {
+        let mn = 180, at = 0;
+        for (const d of dense) { const m = f(d.s); if (m < mn) { mn = m; at = d.x; } }
+        R.design(`transmission angle loop ${loop} within [30, 150] deg`, Math.max(0, 30 - mn), 0.5,
+          `the transmission angle between ${desc} comes within ${f1(mn)} deg of 0 or 180 at crank angle ${f1(deg(((at % TAU) + TAU) % TAU))} deg; it must stay between 30 and 150 deg`);
+      }
+      const gt = th.map(solve);
+      for (const [j, mk] of [['B', 'rocker1@B'], ['C', 'rocker1@C'], ['D', 'rocker2@D']])
+        R.gt(`${j} vs solution`, gt.map((g, k) => dist(g[j], S.P(mk)[k])), 'mm', undefined,
+          (k) => `at t=${S.times[k].toFixed(3)} s (crank ${f1(deg(th[k]))} deg) ${mk} is drawn at ${fp(S.P(mk)[k])}; solving the loops from your SIM.params (keeping the assembly branch drawn at t=${S.times[0].toFixed(3)} s) puts ${j} at ${fp(gt[k][j])}`);
+      R.panel('crank_deg', S.panel('crank_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
+      R.panel('rocker1_deg', S.panel('rocker1_deg').map((x, k) => panelAngDiff(x, deg(ang(O4, gt[k].B)))), 'deg');
+      R.panel('output_deg', S.panel('output_deg').map((x, k) => panelAngDiff(x, deg(ang(O6, gt[k].D)))), 'deg');
+    },
+  },
 };
+
+// cycloidal rise-dwell-return-dwell law (and simple-harmonic variant for diagnosis); psi = cam rotation since start of rise
+function camLaw(h, b1, b2, b3) {
+  const cyc = (x) => x - Math.sin(TAU * x) / TAU, dcyc = (x) => 1 - Math.cos(TAU * x);
+  const har = (x) => (1 - Math.cos(Math.PI * x)) / 2;
+  const w = (p) => ((p % TAU) + TAU) % TAU;
+  const gen = (f, df) => ({
+    s: (p0) => { const p = w(p0); return p < b1 ? h * f(p / b1) : p < b1 + b2 ? h : p < b1 + b2 + b3 ? h * (1 - f((p - b1 - b2) / b3)) : 0; },
+    ds: df ? (p0) => { const p = w(p0); return p < b1 ? (h / b1) * df(p / b1) : p < b1 + b2 ? 0 : p < b1 + b2 + b3 ? (-h / b3) * df((p - b1 - b2) / b3) : 0; } : null,
+  });
+  const c = gen(cyc, dcyc), hm = gen(har);
+  return {s: c.s, ds: c.ds, harm: hm.s,
+    phase: (p0) => { const p = w(p0); return p < b1 ? 'rise' : p < b1 + b2 ? 'top dwell' : p < b1 + b2 + b3 ? 'return' : 'bottom dwell'; }};
+}
 
 // per-link holy-number diagnosis: robust scale = median(len/H), list off links, flag swapped pairs
 function holyDetail(len, O, X, H) {
@@ -270,8 +429,8 @@ function makeRecorder(scaleMM) {
   };
 }
 
-const PROBE = `window.__probeL = (ts, names, qs) => ts.map((t) => {
-  const out = {t, err: null, m: {}, panel: {}};
+const PROBE = `window.__probeL = (ts, names, qs, near) => ts.map((t) => {
+  const out = {t, err: null, m: {}, panel: {}, near: []};
   try { SIM.render(t); } catch (e) { out.err = String(e && e.message || e); return out; }
   SIM.scene.updateMatrixWorld(true);
   const v = new SIM.scene.position.constructor();
@@ -282,6 +441,23 @@ const PROBE = `window.__probeL = (ts, names, qs) => ts.map((t) => {
     out.m[n] = [v.x, v.y, v.z];
   }
   for (const q of qs) { const el = document.querySelector('[data-q="' + q + '"]'); out.panel[q] = el ? el.textContent : null; }
+  out.near = (near || []).map(([part, mk]) => {
+    const o = SIM.scene.getObjectByName(part), m = SIM.scene.getObjectByName(mk);
+    if (!o || !m) return -1;
+    m.getWorldPosition(v);
+    const px = v.x, py = v.y, w = new v.constructor();
+    let best = Infinity;
+    o.traverse((ch) => {
+      const pa = ch.isMesh && ch.geometry && ch.geometry.attributes && ch.geometry.attributes.position;
+      if (!pa) return;
+      for (let i = 0; i < pa.count; i++) {
+        w.fromBufferAttribute(pa, i).applyMatrix4(ch.matrixWorld);
+        const d = Math.hypot(w.x - px, w.y - py);
+        if (d < best) best = d;
+      }
+    });
+    return best === Infinity ? -1 : best;
+  });
   return out;
 });`;
 
@@ -319,7 +495,8 @@ export async function checkLite(page, url, id) {
   const names = Object.entries(parts).flatMap(([p, pts]) => pts.map((x) => `${p}@${x}`));
   const qs = spec.panel.map((p) => p.q);
   await page.evaluate(PROBE);
-  const probe = (ts) => page.evaluate(([ts, n, q]) => window.__probeL(ts, n, q), [ts, names, qs]);
+  const near = mech.near || [];
+  const probe = (ts) => page.evaluate(([ts, n, q, nr]) => window.__probeL(ts, n, q, nr), [ts, names, qs, near]);
   const Tin = TAU / Math.abs(params.omega);
   const revs = mech.revs(params);
   const N = 120 * revs;
@@ -389,7 +566,7 @@ export async function checkLite(page, url, id) {
   R.meta('frame static', fr.map((n) => Math.max(...fwd.map((s) => dist(s.m[n], fwd[0].m[n])))));
 
   try {
-    mech.check({times, P, params, panel, revs}, R);
+    mech.check({times, P, params, panel, revs, scale, near: (i) => fwd.map((s) => s.near?.[i])}, R);
   } catch (e) {
     R.design('params usable by oracle: ' + String(e.message).slice(0, 60), 1, 0.5);
   }

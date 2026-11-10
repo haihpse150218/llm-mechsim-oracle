@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot path does not look like the Jansen D-shaped path. The foot barely lifts, only about 16 mm of vertical range against a roughly 65 mm step. The return stroke nearly retraces the stance stroke and shows only a thin crescent trace with no clear lift loop. This suggests wrong link lengths or a wrong assembly branch. (frames t=0.00s, t=5.89s, t=6.54s, t=7.20s)
+- Foot x stays almost constant at about 28 mm across crank angles 330 to 120 degrees, a span of about 150 degrees. The whole foot advance happens in the other half of the revolution. The motion looks implausibly non-uniform for the Jansen leg. (frames t=6.54s, t=7.20s, t=0.00s, t=0.65s)

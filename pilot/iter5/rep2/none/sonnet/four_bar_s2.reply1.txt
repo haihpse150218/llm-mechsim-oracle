@@ -1,0 +1,1 @@
+NO_CHANGE: The loop closure (circle intersection), Grashof crank-rocker proportions, marker placement, angle conventions, and the pure render(t) all check out against the spec.

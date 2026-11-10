@@ -1,0 +1,1 @@
+CHANGED: Reassigned link lengths so the X-pivot links are XW=40.1, XV=39.3 and YV=55.8 (matching Jansen's b,c,d,e layout, which assembles), and set the Y and V solver branches to the upper joint and the outer-left apex.

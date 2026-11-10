@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (210,20) to (30,-80) so |C-O6| stays within 10..130 mm (loop 2 always closes, D markers coincide), and recentred the camera.

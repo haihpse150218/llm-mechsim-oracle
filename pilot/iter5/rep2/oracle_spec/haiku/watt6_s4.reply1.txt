@@ -1,0 +1,1 @@
+CHANGED: Moved output pivot O6 from (230,40) to (-90,30) so the output loop's O4-C-O6 distance stays within the D-circle reach (about 90-106 mm) over the whole revolution (the old placement made the D solve fail, leaving the parts unposed), and moved the camera to frame the new machine position.

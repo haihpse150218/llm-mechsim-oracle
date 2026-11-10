@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- The assembly looks wrong. Several links (yellow rod, white upper triangle, red leg triangle) do not close cleanly at their joints. The links appear to flip and change configuration between frames, and the leg triangle looks too small relative to the other links to match the holy-number proportions. (frames t=0.00s, t=1.57s, t=1.83s)
+- The foot panel values do not match the drawn foot-path trace. The panel foot_y swings from about -24 to -76 mm and foot_x from about -18 to -76 mm with abrupt jumps between 150 and 210 deg. The static trace is a small teardrop, not the flat-bottomed D-shaped walking path. (frames t=1.31s, t=1.57s, t=1.83s)

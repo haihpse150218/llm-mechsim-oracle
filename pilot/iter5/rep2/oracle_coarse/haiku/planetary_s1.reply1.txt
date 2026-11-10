@@ -1,0 +1,1 @@
+CHANGED: Changed tooth counts to Zp=28 and Zr=76 so that (Zs+Zr)=96 is divisible by 3 for three equally spaced planets, keeping the ring = sun + 2*planet meshing relation, and updated the derived geometry comments and the initial ratio label to 4.80.

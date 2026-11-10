@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Loop 1 transmission angle (crank O2-A vs coupler1 A-B) leaves the 30-150 degree window: crank and coupler1 are nearly collinear (about 170 degrees) near crank 90 and nearly folded back (about 30 degrees or less) near crank 330, i.e. close to a dead-centre. The link lengths do not satisfy the spec's transmission-angle requirement. (frames t=1.50s, t=5.50s)

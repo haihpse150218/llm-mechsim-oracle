@@ -1,0 +1,1 @@
+CHANGED: Fixed part posing so each part's rotation is the current angle of its first-to-second point direction (the local geometry is already expressed in that frame), removing the spurious "- a0" offset that detached links and misplaced joints.

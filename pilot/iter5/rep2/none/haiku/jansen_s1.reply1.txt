@@ -1,0 +1,1 @@
+CHANGED: Part orientation in render() used rotation.z = angle - a0 while the local marker/geometry coordinates were already expressed relative to the t=0 frame, so every part except the crank (a0 = 0) was placed with a double rotation; the rotation is now the absolute link angle, so markers and meshes sit on their named points at all times.

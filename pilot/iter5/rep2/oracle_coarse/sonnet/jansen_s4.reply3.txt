@@ -1,0 +1,1 @@
+CHANGED: swapped the lengths XW (now 65.7) and XV (now 40.1) so the link lengths match Jansen's holy-number assignment and the linkage assembles at all crank angles (U now coincident).

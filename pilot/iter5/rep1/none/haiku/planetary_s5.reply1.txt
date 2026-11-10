@@ -1,0 +1,1 @@
+CHANGED: Changed tooth counts to Zs=24, Zp=24, Zr=72 (were 20/30/80) so Zs+Zr=96 is divisible by the 3 planets and the sun and ring teeth fall on whole tooth pitches at each planet, fixing the assembly and mesh-phase errors (ratio now 4.00, carrier radius 48 mm, omegaC = omega/4, omegaP = -omega/2).

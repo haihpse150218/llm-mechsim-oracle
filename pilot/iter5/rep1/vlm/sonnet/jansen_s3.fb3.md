@@ -1,0 +1,3 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Assembly configuration changes/flips around crank angles 180-240 deg: the upper triangle and leg triangle collapse and fold over each other, unlike the open walking configuration in other frames, suggesting a wrong branch or non-rigid links (frames t=1.57s, t=1.83s, t=2.09s)
+- Foot position in the leg does not match the plotted foot trace and the panel foot coordinates (foot trail/ground line far from the drawn foot tip; foot only varies ~20 mm in y while the drawn foot lifts much more) (frames t=0.00s, t=1.57s, t=2.09s)

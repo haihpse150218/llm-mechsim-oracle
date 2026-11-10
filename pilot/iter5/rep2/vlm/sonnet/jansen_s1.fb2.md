@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Foot trace is a tilted, slanted loop (lowest around 120-150 deg, rising on one side) rather than Jansen's characteristic flat-bottomed D-shaped path; the ground-contact phase is not flat, suggesting wrong link lengths/ratios or wrong assembly configuration (mirrored or flipped branch). Foot y range (-62 to -108 mm) and slanted stroke do not match the expected path. (frames t=1.05s, t=1.40s, t=1.75s, t=2.09s, t=2.44s)

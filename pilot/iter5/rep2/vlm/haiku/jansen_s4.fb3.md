@@ -1,0 +1,2 @@
+Visual review report (an engineer looked at 12 rendered frames over one revolution). Problems found:
+- Leg triangle/linkage appears to flip assembly branch between crank 330 and 0 deg: foot jumps from x=85 to x=29 mm (about 56 mm in 30 deg) with the leg triangle swinging from the right side to the left side, which is not a smooth Jansen motion; the foot path lacks the proper lifted return arc and the foot y range is only about 17 mm, too flat versus the real Strandbeest path. (frames t=5.24s, t=5.89s, t=6.54s)

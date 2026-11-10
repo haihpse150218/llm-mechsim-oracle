@@ -1,0 +1,1 @@
+CHANGED: Switched the assembly branches of V, U and T (V on the right of X->Y, U and T on the opposite sides) so the knee triangle is no longer near-collinear and the foot swings below the linkage, and recentered the camera.

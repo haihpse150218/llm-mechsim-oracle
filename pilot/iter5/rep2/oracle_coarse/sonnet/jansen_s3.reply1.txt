@@ -1,0 +1,1 @@
+CHANGED: swapped upper-triangle sides to XV=39.3 and YV=55.8 so apex V lies within reach of W and the knee/foot circle intersections assemble.
