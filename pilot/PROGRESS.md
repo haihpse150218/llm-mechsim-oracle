@@ -78,4 +78,5 @@ Kế hoạch: thêm cam (cần cam đĩa + cần đẩy con lăn tịnh tiến, 
     4) r=3: grade 3, plan 3 (dừng hết), `summary`. Max 20 agent đồng thời.
   - Trạng thái 11:40: rep1 r2 (17 tác vụ) đang chạy; rep2 r2 (28) đã mở 6 (spec haiku j3,j5,j1,j2; coarse haiku j3,j4), còn 22 từ coarse/haiku/jansen_s5.
   - Trạng thái 11-10 (phiên mới): rep2 r2 đã chấm; rep2 vlm/r2 (8 review) đang chạy; rep1 plan 2 → 10 tác vụ r3 đang chạy. Ghi chú: agent rep2 vlm/sonnet/jansen_s1 r2 đã chạy lệnh Python (vi phạm "không chạy lệnh").
+  - [x] audit mesh↔marker: oracle/audit_mesh.mjs; mutant gamed PASS oracle nhưng audit bắt (drift 41); 109/109 file PASS có drift 0 → không PASS giả. results/audit_mesh.jsonl
   - [x] PHA 5 XONG (11-10): rep1+rep2 chấm đủ r3, summary tại iter5/rep*/summary.json, REPORT.md mục "Pha 5". Gộp (bỏ geneva_s2 oracle-invisible): spec 22/22, coarse 10/22, vlm 5/22, none 6/22; Jansen: 14/2/0/0 trên 14.
