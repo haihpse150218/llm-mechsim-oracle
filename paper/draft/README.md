@@ -1,6 +1,7 @@
 # Bản thảo 1 (2026-11-13) — ISSE
 
-**Trạng thái**: bản thảo đầu đủ mọi mục, khoảng 7.000 chữ (không tính bảng và tài liệu tham khảo; ISSE không giới hạn độ dài). **Chưa biên dịch**, vì máy chưa có TeX. Có thể đưa lên Overleaf với template "Springer Nature LaTeX Template", hoặc cài TeX rồi dùng `sn-jnl.cls` và `sn-basic.bst` của template đó.
+**Trạng thái**: bản thảo đầu đủ mọi mục, khoảng 7.000 chữ (không tính bảng và tài liệu tham khảo; ISSE không giới hạn độ dài). **Đã biên dịch** (2026-11-13, MiKTeX 25.12, pdflatex): 17 trang, không lỗi, không overfull, không tham chiếu thiếu. Dùng thư mục `../overleaf/` (bản phẳng, có kèm `sn-jnl.cls` và `sn-mathphys-num.bst` lấy từ template chính thức của Springer Nature, tháng 12/2024). Trích dẫn dạng số theo Guide của ISSE. Cách build: `pdflatex main; bibtex main; pdflatex main; pdflatex main` trong `paper/overleaf/`, hoặc dùng LaTeX Workshop trong VS Code. Muốn đưa lên Overleaf thì upload `../mechsim_draft_overleaf.zip` bằng New Project → Upload Project.
+Khi sửa bản thảo: sửa trong `draft/`, chạy `node make_tables.mjs`, rồi chép `sections/` và `tables/` sang `overleaf/`. Bảng chỉ sinh ra trong `draft/tables`.
 
 ## Cấu trúc
 - `main.tex`: `sn-jnl` với `[pdflatex,sn-basic,iicol]`; tham khảo lấy từ `../references.bib` và `llm3d.bib`.
