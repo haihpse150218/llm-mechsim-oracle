@@ -3,7 +3,14 @@
 - Ngày: 2026-11-13. Tạp chí mục tiêu: **Innovations in Systems and Software Engineering (ISSE)**, Springer, Q3, single-blind, đăng subscription (không APC).
 - Căn cứ: `../novelty_gate.md` (định vị, công trình gần nhất), `../pilot/REPORT.md` pha 1–6 (mọi con số dưới đây lấy từ đó), `journals/innovations-in-systems-and-software-engineering/01_profile.md` (checklist nộp).
 - Lưu ý: mục 2.4 trong `08_plan.md` của ISSE là outline cho đề tài khác (type-aware tool filtering). Dàn ý này **thay thế** cho đề tài mechsim; chỉ dùng lại phần format và checklist.
-- Giới hạn độ dài, loại bài, số chữ abstract của ISSE vẫn `[CHƯA KIỂM CHỨNG]` — phải mở Guide for Authors bằng Chrome trước khi viết bản thảo.
+- **Guide for Authors ISSE (đã kiểm 2026-11-13, chi tiết ở `journals/innovations-in-systems-and-software-engineering/01_profile.md`)**:
+  - **Không giới hạn số trang/chữ**; heading thập phân tối đa 3 cấp; abstract **150–250 từ**, không viết tắt chưa định nghĩa, không trích dẫn; **4–6 keywords**.
+  - LaTeX, Springer Nature template tuỳ chọn `[iicol]`; nộp toàn bộ source + PDF; citation số [n]; danh sách tham khảo kiểu Springer basic **kèm DOI dạng link**.
+  - Bắt buộc: mục **"Statements and Declarations"** (Competing Interests, Funding…) và **Data Availability Statement**; Author Contribution/Competing Interest khai cả trong giao diện nộp.
+  - **Dùng LLM phải mô tả trong mục Methods** — với bài này, LLM là *đối tượng nghiên cứu* (sinh và sửa simulator) và là công cụ hỗ trợ code/thí nghiệm (Claude Code): cả hai phải nằm ở mục Study design.
+  - Hình màu online miễn phí, in màu tốn phí → hình phải đọc được khi in đen trắng.
+  - Preprint arXiv được phép bất cứ lúc nào (Springer policy) → đăng preprint sớm để giảm rủi ro bị scoop.
+  - **Aims & Scope: "A NASA Journal"** → mở đầu và cover letter phải nêu liên hệ với V&V phần mềm mô phỏng / digital twin / phần mềm do AI sinh trong hệ thống kỹ thuật.
 - Mục tiêu: ~9.000–10.000 chữ (không tính reference), 6 hình, 7 bảng, 40–50 reference.
 
 ---
@@ -17,7 +24,7 @@ Tên bài (chọn 1):
 2. *Where and What: Localized Oracle Feedback for Repairing LLM-Generated Kinematic Simulators*
 3. *Beyond Screenshot Review: Test Oracles for LLM-Generated 3D Mechanism Simulators*
 
-Keywords (4–6): test oracle, LLM code generation, automated program repair, simulation software V&V, metamorphic testing, vision-language models.
+Keywords (4–6, đúng yêu cầu ISSE): test oracle, LLM code generation, automated program repair, simulation software V&V, metamorphic testing, vision-language models.
 
 ## 1. Câu hỏi nghiên cứu ↔ dữ liệu đã có
 
@@ -66,7 +73,7 @@ Phụ (độ tin cậy của chính oracle): audit mesh↔marker, 0 drift trên 
 | 7 | Chuyên gia cơ khí rà bộ kiểm DESIGN (1 người, có ghi nhận) | Threat construct lớn nhất | Trung bình |
 | 8 | ~~Related work nhánh SE~~ — **XONG 11-13**: `paper/related_work.md` (định vị 7 nhánh), `rw_testing.md` (34), `rw_repair.md` (42), `references.bib` (79). Chưa thấy ai làm 'mức cụ thể feedback × cỡ model' với oracle tất định; gần nhất: Pan et al. DL4C@ICLR'25. Còn: kiểm 18 mục chỉ có arXiv | — | Xong (phần lớn) |
 | 9 | Kiểm lại arXiv ngay trước khi nộp (lĩnh vực ra bài hàng tháng) | Rủi ro scoop | Trước nộp |
-| 10 | Xác nhận Guide for Authors ISSE (độ dài, abstract, citation style) | Đang `[CHƯA KIỂM CHỨNG]` | Trước nộp |
+| 10 | ~~Xác nhận Guide for Authors ISSE~~ — **XONG 11-13** (xem ghi chú đầu file) | — | Xong |
 | 11 | Đóng gói artifact (repo công khai, Zenodo DOI, README tái lập) | Data availability | Trước nộp |
 
 ## 5. Hình/bảng cần dựng từ dữ liệu có sẵn
