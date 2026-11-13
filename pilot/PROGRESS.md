@@ -99,3 +99,4 @@ RUNBOOK: `ITER_DIR=iter5/ablN ARMS=oracle_locate node oracle/iter_repair.mjs gra
 - [x] Sửa lặp iter7/rep1 xong: spec 6/6, locate 1/6, coarse 1/6, none 1/6 (haiku 5/5 vs 0/5 ×3; sonnet 1/1 mọi nhánh); audit drift 0 trên 29 file; REPORT mục 'Pha 7'. PHA 7 XONG.
 - [x] 11-13 thống kê: stats/stats.mjs → stats/STATS.md; REPORT mục 'Thống kê'
 - [x] 11-13 related work SE: paper/related_work.md + rw_testing.md + rw_repair.md + references.bib (79)
+- [x] 11-13 bản thảo 1: paper/draft/ (main.tex sn-jnl iicol, 11 section, 3 bảng sinh từ dữ liệu, ~7.000 chữ, chưa biên dịch — máy chưa có TeX). TODO: paper/draft/README.md

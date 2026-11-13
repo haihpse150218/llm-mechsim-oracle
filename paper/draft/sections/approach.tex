@@ -1,0 +1,53 @@
+\section{An executable oracle for generated mechanism simulators}\label{sec:approach}
+
+\subsection{Output contract}
+The generator receives a short prose description of the mechanism, for example ``one leg of Theo Jansen's Strandbeest walking linkage, with the link lengths of Jansen's published holy numbers'', together with a fixed output contract. It chooses all dimensions, placement, speed and direction itself. The contract asks for:
+\begin{enumerate}
+\item one self-contained HTML page that loads \texttt{three.js} from a fixed path and no other network resource;
+\item one named \texttt{Object3D} per listed part (for example \texttt{crank}, \texttt{coupler}, \texttt{rocker}), holding all of that part's meshes, and a child marker named \texttt{<part>@<point>} at each listed joint of that part (\texttt{crank@A}, \texttt{coupler@A}, \ldots);
+\item a panel element per listed quantity, marked with a \texttt{data-q} attribute (for example the crank angle and the foot position);
+\item an object \texttt{window.SIM} exposing the scene, the period, the parameters the simulator actually uses (\texttt{SIM.params}: link lengths, pivot positions, angular speed, initial angle) and a function \texttt{render(t)} that poses all parts and the panel for time $t$. The function must be \emph{pure}: no randomness, no clock, no state carried between calls.
+\end{enumerate}
+The contract fixes \emph{names}, not dimensions. It is a reduced version of the teardown skill's own contract \cite{teardown}, which already requires a pure \texttt{render(t)} so that videos can be captured frame by frame. In a first phase we also tried a detailed specification that fixed coordinate frames, assembly branches and formulas; it is discussed in Section~\ref{sec:design}.
+
+\subsection{Sampling}
+The oracle loads the page in headless Chrome through Playwright and waits for a readiness flag. It then calls \texttt{render(t)} at 120 instants per input period (two periods for the Geneva drive) and records the world position of every marker and the text of every panel element. Times are offset by a small irrational fraction of the period to avoid special angles. Tolerances scale with the machine: lengths are compared to within 1~mm per 100~mm of machine size (at least 1~mm), angles to within $1^\circ$, and relative quantities to within 1\%.
+
+\subsection{Check families}
+Table~\ref{tab:checks} lists the checks. They fall into five families, ordered by how much ground truth they need.
+
+\begin{table*}[t]
+\caption{Check families of the oracle. Only DESIGN encodes mechanism-specific engineering knowledge; GT and PANEL use the kinematic solution computed from the simulator's own declared parameters.}\label{tab:checks}
+\begin{tabular*}{\textwidth}{@{\extracolsep\fill}lp{0.38\textwidth}p{0.42\textwidth}}
+\toprule
+Family & Checks & Ground truth needed \\
+\midrule
+META & determinism under reversed call order; periodicity ($t$ vs.\ $t+T$); rigidity of every part (marker distances constant); coincidence of every shared joint; fixed frame static; markers rigidly attached to their part's geometry (drift) & none (metamorphic and structural relations implied by the contract) \\
+PARAM & drawn distances between markers equal the declared link lengths; fixed pivots at declared positions; input angle equals $\theta_0+\omega t$; declared period consistent with $\omega$ & the simulator's own \texttt{SIM.params} \\
+DESIGN & Grashof condition; Geneva pin enters slots tangentially; planetary $Z_r=Z_s+2Z_p$ and $(Z_s+Z_r)$ divisible by the number of planets; cam law (cycloidal rise--dwell--return--dwell), pressure angle $\le 30^\circ$, no undercut; six-bar assembles and transmission angles stay in $[30^\circ,150^\circ]$; Jansen's published link lengths; Chebyshev lambda proportions; Peaucellier--Lipkin conditions & engineering knowledge, one rule set per mechanism \\
+GT & every marker vs.\ the position obtained by solving the loop-closure equations from \texttt{SIM.params} (assembly branch taken from the drawing at the first sample, or the canonical branch where one is defined) & kinematic solver per mechanism type \\
+PANEL & every displayed number vs.\ the same solution & as GT \\
+\botrule
+\end{tabular*}
+\end{table*}
+
+Two design choices make the oracle reusable without a specification per task. First, GT and PANEL compare the drawing with the solution of the simulator's \emph{own} declared parameters, not with a fixed reference design. Any dimensions are acceptable as long as the drawing is consistent with them. Second, engineering knowledge enters only through DESIGN rules, one small rule set per mechanism type. The rules state what any correct instance must satisfy, for example that a lambda linkage has Chebyshev's proportions up to a uniform scale, regardless of the scale and placement the generator chose. A proportion check therefore uses the best uniform scale. With ratios $r_i$ between drawn and published values, the minimax relative error is $(r_{\max}-r_{\min})/(r_{\max}+r_{\min})$.
+
+\subsection{Guarding against marker gaming}
+Because GT checks markers, a simulator could pass by placing each marker at the solved position while drawing the parts elsewhere. We observed one repair attempt that said it did this (Section~\ref{sec:results}). To close this gap, the META family includes a drift check. For every marker it computes the marker's position in the local frame of each mesh of its part over 24 samples per period. It fails if, for every mesh, this position moves by more than 0.5~mm (scaled). A mutant that redraws a four-bar's coupler 0.3~rad off while resetting its marker passes all other checks but fails this one with a drift of 41~mm.
+
+\subsection{Diagnostics and feedback levels}\label{sec:feedback}
+For every failed check the oracle records a diagnostic that \emph{localises} the problem and, where a ground truth exists, gives the \emph{correct value}. Examples:
+\begin{itemize}
+\item \emph{DESIGN, Jansen}: ``Links that do not match at this scale: \texttt{len.XV} = 55.8~mm, expected 40.1~mm (looks swapped with \texttt{len.YV}); \ldots''. The scale used for this diagnosis is the one at which most drawn lengths equal some published length, which is robust to permuted links.
+\item \emph{DESIGN, Peaucellier}: ``\texttt{len.OA} = 45~mm does not fit the inversor geometry --- the crank must be exactly as long as the distance between the fixed pivots O and Q (expected 50~mm)''.
+\item \emph{GT}: ``at $t=2.016$~s (crank $181.4^\circ$) marker \texttt{rodUpper@Y} is drawn at $(-26.1, 38.8)$; solving the linkage from your SIM.params puts Y at $(-22, -39.2)$''.
+\item \emph{META}: ``the markers \texttt{coupler2@D}, \texttt{rocker2@D} are 51.8~mm apart; parts sharing joint D must meet there at every instant''.
+\end{itemize}
+From the same oracle result we derive three feedback levels by deterministic transformation, so that they differ only in information content:
+\begin{description}
+\item[Location + value (\emph{spec})] the full diagnostics above.
+\item[Location only (\emph{locate})] the same diagnostics with every correct value removed. Published numbers, ``expected'' values, solved positions and correct panel values are dropped, and for relation-type rules the relation is dropped too, so the message reduces to ``\texttt{len.OA} does not fit the inversor geometry''. What the simulator currently draws, the names of the wrong elements and ``looks swapped with'' hints are kept.
+\item[Check + magnitude (\emph{coarse})] only the family, name, measured value and tolerance of each failed check, plus a one-line explanation of what proportion checks compare.
+\end{description}
+The oracle, including the eight mechanism modules, the specifications and the browser harness, is about 1{,}060 lines of JavaScript; it runs in 0.2~s per simulator (median) and uses no model calls.
