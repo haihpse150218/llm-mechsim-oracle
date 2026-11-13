@@ -1,0 +1,1 @@
+CHANGED: Corrected SIM.params.len to Jansen's holy numbers by swapping ZY/XY (39.3/41.5), ZW/WT (61.9/50), XV/YV (36.7/55.8) and WU/UT (49/65.7).

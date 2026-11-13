@@ -1,0 +1,1 @@
+CHANGED: Flipped the branch sign for joint B from +1 to -1 in solvePose, because the +1 branch leaves C out of reach of O6 so D never solves and render() returns early, leaving every marker and panel value stale.

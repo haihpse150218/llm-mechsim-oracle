@@ -1,0 +1,1 @@
+CHANGED: Moved the fixed pivot X from (15, 0) mm to (7.8, 0) mm so that its distance from the crank axle O matches the published Jansen ground link (7.8 mm), since the report flagged X as misplaced relative to O and the 15 mm value is a different Jansen dimension.

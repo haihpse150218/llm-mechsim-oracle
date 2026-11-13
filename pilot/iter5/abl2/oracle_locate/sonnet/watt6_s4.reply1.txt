@@ -1,0 +1,1 @@
+CHANGED: Moved O6 to (40,-90) and set CD=80, O6D=70 (recentered camera) so loop 2 closes for every crank angle (|C-O6| spans ~65..118 mm, within 10..150) with transmission angles ~50-103 deg.

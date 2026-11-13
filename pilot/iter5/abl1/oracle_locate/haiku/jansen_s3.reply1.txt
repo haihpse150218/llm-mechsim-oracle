@@ -1,0 +1,1 @@
+CHANGED: Replaced the fixed-side circle intersection with explicit branch selection (Y upper, W lower, V and U outer, T lowest) so the linkage assembles in the canonical configuration, which should fix the Y/V/U/T marker and foot_x/foot_y mismatches.

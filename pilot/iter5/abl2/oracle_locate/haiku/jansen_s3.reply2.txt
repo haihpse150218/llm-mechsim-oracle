@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from (-7.8, -24) to (-6.2, -19.0) mm because with crank 38 and links ZW 40.1 / XW 55.8 the W-joint circles cannot intersect once |OX| exceeds 22.3 mm, which caused the non-assembly near 235 deg and the joint W mismatch.

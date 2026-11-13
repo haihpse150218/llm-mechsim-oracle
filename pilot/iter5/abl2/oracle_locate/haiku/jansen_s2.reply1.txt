@@ -1,0 +1,1 @@
+CHANGED: Moved the reference assembly to the canonical outer-V/outer-U branch (V, U, T recomputed from the link lengths) and replaced the single-Newton continuation with a branch-tracking solver that subdivides steps on non-convergence or large joint jumps, which removes the wrong-branch and diverging poses reported by the checks.

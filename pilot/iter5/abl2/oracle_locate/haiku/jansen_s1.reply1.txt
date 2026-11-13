@@ -1,0 +1,1 @@
+CHANGED: In render(), each part's rotation.z now uses the absolute direction of its p0->p1 segment instead of that direction minus the t=0 offset a0, because the parts' geometry is built along the t=0 direction, so the old offset rotated every bar and marker by a0 and broke the shared joints.

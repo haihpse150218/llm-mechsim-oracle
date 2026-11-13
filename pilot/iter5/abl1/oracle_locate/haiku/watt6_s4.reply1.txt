@@ -1,0 +1,1 @@
+CHANGED: The first loop's coupler joint B is now solved on the -1 circle branch, so the ternary rocker swings in the arc where the output loop's D solve always succeeds, fixing the stale poses and panel values that came from render() returning early.

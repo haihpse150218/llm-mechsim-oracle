@@ -1,0 +1,1 @@
+CHANGED: Reassigned the Jansen holy-number lengths to the correct links (ZY 36.7, XY 55.8, ZW 61.9, XV 39.3, YV 41.5, WU 49, UT 65.7, WT 50), keeping XW 40.1 and VU 39.4.

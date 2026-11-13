@@ -1,0 +1,38 @@
+[
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/haiku/jansen_s3.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/jansen_s3.fb1.md",
+      "iter5/abl1/oracle_locate/haiku/jansen_s3.fb2.md",
+      "iter5/abl1/oracle_locate/haiku/jansen_s3.fb3.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/jansen_s3.reply3.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/haiku/jansen_s4.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/jansen_s4.fb1.md",
+      "iter5/abl1/oracle_locate/haiku/jansen_s4.fb2.md",
+      "iter5/abl1/oracle_locate/haiku/jansen_s4.fb3.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/jansen_s4.reply3.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/haiku/jansen_s5.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/jansen_s5.fb1.md",
+      "iter5/abl1/oracle_locate/haiku/jansen_s5.fb2.md",
+      "iter5/abl1/oracle_locate/haiku/jansen_s5.fb3.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/jansen_s5.reply3.txt"
+  }
+]

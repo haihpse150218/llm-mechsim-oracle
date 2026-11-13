@@ -339,3 +339,49 @@ Cách đọc bảng:
   - Gap lớn chỉ xuất hiện ở các điểm tâm không có hình học: `ring@C`, tâm cam và trục `@O`, và điểm rãnh của geneva.
   - Như vậy **không có PASS giả do lách marker** trong mọi số liệu đã báo cáo. Agent ở rep2 coarse/haiku/jansen_s1 r3 có thử, nhưng bản đó vẫn trượt DESIGN.
 - Đề xuất cho bài báo: đưa "drift ≤ 0.5 mm" vào oracle thành một kiểm tra META ("markers rigidly attached to the part's geometry"). Thêm kiểm tra này không đổi kết quả nào đã có, vì cả 109 file đều đạt.
+
+# Pha 6 — ablation mức cụ thể của feedback: "ở đâu" vs "ở đâu + giá trị đúng" (2026-11-13)
+
+## Thiết kế
+- Nhánh mới **oracle_locate**: dùng đúng diagnostics của oracle_spec nhưng **bỏ mọi giá trị đúng**:
+  - holy numbers: bỏ bộ số đã công bố, bỏ "expected …", bỏ hệ số scale; chỉ giữ danh sách `len.*` sai, gợi ý "looks swapped with len.*" và câu "fixed pivot X is misplaced";
+  - GT: giữ marker, thời điểm, vị trí đang vẽ; bỏ vị trí lời giải;
+  - PANEL: bỏ giá trị đúng.
+  - Các diagnosis không chứa giá trị đúng (khớp không trùng, PARAM, điều kiện lắp planetary, loop không đóng) giữ nguyên.
+- Code: `locateDetail()` trong `oracle/iter_repair.mjs`, chọn nhánh bằng env `ARMS=oracle_locate`.
+- Cùng 22 lượt file như pha 5: `iter5/abl1` = 8 file của rep1, `iter5/abl2` = 14 file của rep2 (bỏ geneva_s2). K=3, luật dừng như oracle_spec (chỉ dừng khi PASS hoặc hết vòng). Tổng 40 lượt sửa.
+
+## Kết quả (số file PASS oracle sau vòng r)
+| | r0 | r1 | r2 | r3 |
+|---|---|---|---|---|
+| abl1 (n=8) | 0 | 4 | 5 | **5** |
+| abl2 (n=14) | 0 | 8 | 9 | **9** |
+
+Gộp 22 lượt, so với pha 5 (cùng file, cùng K):
+| nhánh | ngoài Jansen (8) | Jansen sonnet (6) | Jansen haiku (8) | tổng (22) |
+|---|---|---|---|---|
+| oracle_spec (ở đâu + giá trị) | 8/8 | 6/6 | **8/8** | **22/22** |
+| **oracle_locate (chỉ ở đâu)** | 8/8 | **6/6** | **0/8** | **14/22** |
+| oracle_coarse (tên check + độ lệch) | 8/8 | 2/6 | 0/8 | 10/22 |
+| none (self-refine) | 6/8 | 0/6 | 0/8 | 6/22 |
+| vlm | 5/8 | 0/6 | 0/8 | 5/22 |
+
+- Audit mesh↔marker trên 14 file PASS mới: drift 0 ở cả 14 (`results/audit_mesh_abl.jsonl`) → không PASS giả.
+
+## Nhận xét
+1. **Thông tin "ở đâu" đủ cho sonnet, không đủ cho haiku.** Với Jansen, locate đưa sonnet từ 2/6 (coarse) lên 6/6 — bằng spec. Gợi ý "looks swapped with" cho sonnet biết cặp nào cần đổi, và sonnet nhớ đủ bộ số để hoàn tất. Haiku 0/8 ở locate nhưng 8/8 ở spec: haiku cần chính **giá trị đúng**.
+2. **Cơ chế thất bại của haiku là trí nhớ sai, không phải thiếu định vị.**
+   - 9/40 lượt trả NO_CHANGE, tất cả là haiku Jansen, đều khẳng định "len khớp holy numbers đã công bố" và đổ lỗi cho checker ("checker artifact", "report may be unreliable").
+   - Các lượt CHANGED của haiku thay một số sai bằng số sai khác: dùng 7.8 (độ lệch dọc của X) làm chiều dài YV hoặc làm |OX|, đặt X ở (−7.8, 15), giữ OZ = 38.
+   - Một agent bác bỏ đúng cặp hoán đổi oracle gợi ý vì nó làm crank "non-Grashof" — tính đúng, nhưng dựa trên OZ = 38 sai.
+3. **Lỗi ngoài Jansen không cần giá trị đúng**: 8/8 ở cả spec, locate, coarse. Với lỗi lắp ráp/ràng buộc, biết check nào trượt là đủ.
+4. **Phát hiện phụ về diagnosis holy numbers**: oracle ước lượng scale bằng median(len/H). Khi phần lớn thanh sai, scale lệch và oracle có thể gắn cờ cả thanh đúng (vd. OZ = 15). Ở spec, giá trị "expected" kèm scale giúp agent hiểu; ở locate, agent thấy mâu thuẫn và mất tin vào báo cáo. Nên sửa: ước lượng scale bằng phép khớp gán tối ưu (assignment) thay vì median, trước khi dùng lại diagnosis này.
+
+## Hệ quả cho bài báo
+- Có thể phát biểu bậc thang thông tin rõ ràng: **có/không lỗi < tên check + độ lệch < vị trí lỗi < vị trí + giá trị đúng**, và ngưỡng cần thiết phụ thuộc năng lực tri thức của model sửa (sonnet đủ ở "vị trí", haiku cần "giá trị").
+- Hàm ý thiết kế: oracle nên trả về giá trị tham chiếu khi có (tri thức thiết kế công bố), vì đó là thứ bù cho trí nhớ sai của model nhỏ.
+
+## Hạn chế
+- Hiệu ứng model gắn hoàn toàn với Jansen (lỗi tri thức thiết kế duy nhất có đủ mẫu). Cần thêm một cơ cấu có "con số công bố" khác để tách hiệu ứng khỏi một cơ cấu.
+- Chưa kiểm định thống kê; so sánh cặp spec vs locate trên haiku Jansen là 8/8 vs 0/8 (McNemar chính xác p ≈ 0.008), nhưng các file không độc lập hoàn toàn (abl1 ⊂ abl2 cùng file gốc).
+- Vẫn chỉ hai model cùng hãng; model hãng khác vẫn bị chặn (không có API key).

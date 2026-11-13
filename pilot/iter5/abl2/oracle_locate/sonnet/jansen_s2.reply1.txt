@@ -1,0 +1,1 @@
+CHANGED: Swapped len.UT and len.WT (UT now 65.7, WT now 49.0) to match Jansen's published proportions.

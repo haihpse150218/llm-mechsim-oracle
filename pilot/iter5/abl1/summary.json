@@ -1,0 +1,112 @@
+{
+ "rows": [
+  {
+   "round": 0,
+   "arm": "oracle_locate",
+   "pass": 0,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "DESIGN",
+    "haiku/watt6_s4": "META,PARAM,GT,PANEL",
+    "sonnet/jansen_s3": "META,PARAM,DESIGN",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "META,DESIGN"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "oracle_locate",
+   "pass": 4,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "META,DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "PASS",
+    "sonnet/jansen_s4": "DESIGN",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "oracle_locate",
+   "pass": 5,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "DESIGN,GT,PANEL",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "PASS",
+    "sonnet/jansen_s4": "PASS",
+    "sonnet/watt6_s4": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "oracle_locate",
+   "pass": 5,
+   "of": 8,
+   "per": {
+    "haiku/jansen_s3": "META,DESIGN",
+    "haiku/jansen_s4": "DESIGN",
+    "haiku/jansen_s5": "DESIGN",
+    "haiku/planetary_s5": "PASS",
+    "haiku/watt6_s4": "PASS",
+    "sonnet/jansen_s3": "PASS",
+    "sonnet/jansen_s4": "PASS",
+    "sonnet/watt6_s4": "PASS"
+   }
+  }
+ ],
+ "state": {
+  "oracle_locate": {
+   "haiku/jansen_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/jansen_s4": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/jansen_s5": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/planetary_s5": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/watt6_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/jansen_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/jansen_s4": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/watt6_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   }
+  }
+ }
+}

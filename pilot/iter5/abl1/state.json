@@ -1,0 +1,44 @@
+{
+  "oracle_locate": {
+    "haiku/jansen_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s4": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/jansen_s5": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/planetary_s5": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/watt6_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/jansen_s4": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/watt6_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    }
+  }
+}

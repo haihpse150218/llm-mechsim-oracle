@@ -1,0 +1,68 @@
+[
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl2/oracle_locate/haiku/jansen_s3.html",
+    "history": [
+      "iter5/abl2/oracle_locate/haiku/jansen_s3.fb1.md",
+      "iter5/abl2/oracle_locate/haiku/jansen_s3.fb2.md"
+    ],
+    "reply": "iter5/abl2/oracle_locate/haiku/jansen_s3.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl2/oracle_locate/haiku/jansen_s4.html",
+    "history": [
+      "iter5/abl2/oracle_locate/haiku/jansen_s4.fb1.md",
+      "iter5/abl2/oracle_locate/haiku/jansen_s4.fb2.md"
+    ],
+    "reply": "iter5/abl2/oracle_locate/haiku/jansen_s4.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl2/oracle_locate/haiku/jansen_s5.html",
+    "history": [
+      "iter5/abl2/oracle_locate/haiku/jansen_s5.fb1.md",
+      "iter5/abl2/oracle_locate/haiku/jansen_s5.fb2.md"
+    ],
+    "reply": "iter5/abl2/oracle_locate/haiku/jansen_s5.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/abl2/oracle_locate/sonnet/jansen_s4.html",
+    "history": [
+      "iter5/abl2/oracle_locate/sonnet/jansen_s4.fb1.md",
+      "iter5/abl2/oracle_locate/sonnet/jansen_s4.fb2.md"
+    ],
+    "reply": "iter5/abl2/oracle_locate/sonnet/jansen_s4.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl2/oracle_locate/haiku/jansen_s1.html",
+    "history": [
+      "iter5/abl2/oracle_locate/haiku/jansen_s1.fb1.md",
+      "iter5/abl2/oracle_locate/haiku/jansen_s1.fb2.md"
+    ],
+    "reply": "iter5/abl2/oracle_locate/haiku/jansen_s1.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl2/oracle_locate/haiku/jansen_s2.html",
+    "history": [
+      "iter5/abl2/oracle_locate/haiku/jansen_s2.fb1.md",
+      "iter5/abl2/oracle_locate/haiku/jansen_s2.fb2.md"
+    ],
+    "reply": "iter5/abl2/oracle_locate/haiku/jansen_s2.reply2.txt"
+  }
+]
