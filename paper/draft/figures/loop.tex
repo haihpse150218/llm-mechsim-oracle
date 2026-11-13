@@ -1,0 +1,26 @@
+%% Figure: iterative repair loop and feedback arms (single column). Requires tikz with positioning, arrows.meta.
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize, node distance=4mm,
+  box/.style={draw, rounded corners=1.5pt, align=center, inner sep=2.2pt, minimum height=6mm},
+  data/.style={box, fill=black!6},
+  arr/.style={-{Stealth[length=1.6mm]}, semithick}]
+\node[data, text width=19mm] (file) {simulator with a detected error};
+\node[box, right=9mm of file, text width=21mm] (oracle) {executable oracle\\ (acceptance gate)};
+\node[box, right=6mm of oracle, text width=6mm, inner sep=1.5pt] (stop) {stop};
+\node[box, below=5mm of oracle.south west, anchor=north west, xshift=-3mm, text width=44mm, align=left] (fb) {feedback arm (one per run):\\[1pt]
+  \textbullet\ oracle: location + value\\
+  \textbullet\ oracle: location only\\
+  \textbullet\ oracle: check + magnitude\\
+  \textbullet\ VLM review of 12 frames\\
+  \textbullet\ none (self-refine)};
+\node[box, below=4mm of fb, text width=44mm] (rep) {repairer = the generating model; reads spec, current file and all reports; cannot run code; edits the file};
+\draw[arr] (file) -- node[above, font=\tiny]{round $r$} (oracle);
+\draw[arr] (oracle) -- node[above, font=\tiny]{PASS} (stop);
+\draw[arr] (oracle.south) -- node[right, font=\tiny]{FAIL} (oracle.south |- fb.north);
+\draw[arr] (fb) -- (rep);
+\draw[arr] (rep.west) -| node[pos=0.75, left, align=right, font=\tiny]{edited file\\ $r \le 3$} (file.south);
+\end{tikzpicture}
+\caption{Iterative repair. Oracle arms stop when the oracle passes; the VLM arm stops when the reviewer says ``correct'' and self-refinement when the repairer replies \texttt{NO\_CHANGE}. The oracle grades every arm's final file, but only the oracle arms see its verdict.}\label{fig:loop}
+\end{figure}
