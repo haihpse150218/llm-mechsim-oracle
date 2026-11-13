@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {startServer, launch, ROOT} from './serve.mjs';
+import {AUDIT} from './drift.mjs';
 import {LITE_SPECS} from './lite_specs.mjs';
 
 const TAU = 2 * Math.PI;
@@ -127,11 +128,7 @@ const MECH = {
       const pairs = {OZ: ['crank@O', 'crank@Z'], ZY: ['rodUpper@Z', 'rodUpper@Y'], XY: ['upperTriangle@X', 'upperTriangle@Y'], ZW: ['rodLower@Z', 'rodLower@W'], XW: ['linkXW@X', 'linkXW@W'], XV: ['upperTriangle@X', 'upperTriangle@V'], YV: ['upperTriangle@Y', 'upperTriangle@V'], VU: ['linkVU@V', 'linkVU@U'], WU: ['legTriangle@W', 'legTriangle@U'], UT: ['legTriangle@U', 'legTriangle@T'], WT: ['legTriangle@W', 'legTriangle@T']};
       for (const [k, [p, q]] of Object.entries(pairs)) R.param(`len ${k}`, [Math.abs(dist(S.P(p)[0], S.P(q)[0]) - len[k])]);
       // holy numbers (uniform scale allowed, mirror allowed); fixed pivot offset a=38, l=7.8
-      const sc = len.OZ / 15;
-      const holyErr = Object.entries(this.HOLY).map(([k, v]) => Math.abs(len[k] / sc - v) / v);
-      const dx = (X[0] - O[0]) / sc, dy = (X[1] - O[1]) / sc;
-      holyErr.push(Math.abs(Math.abs(dx) - 38) / 38, Math.abs(dy + 7.8) / 7.8);
-      R.design('holy numbers (max rel. error)', Math.max(...holyErr), 0.03, () => holyDetail(len, O, X, this.HOLY));
+      R.design('holy numbers (max rel. error)', holyMinimax(len, O, X, this.HOLY), 0.03, () => holyDetail(len, O, X, this.HOLY));
       const th = S.times.map((t) => theta0 + omega * t);
       R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('crank@O')[k], S.P('crank@Z')[k]), th[k])), 'deg');
       // canonical branches (standard orientation: X left of O): Y up, W down, V outer-left, U outer-left, T lowest
@@ -371,10 +368,39 @@ function camLaw(h, b1, b2, b3) {
 }
 
 // per-link holy-number diagnosis: robust scale = median(len/H), list off links, flag swapped pairs
-function holyDetail(len, O, X, H) {
+// verdict: best uniform scale (minimax). ratios r_i = drawn/published for the 11 links and the 2 pivot offsets;
+// with u = 1/scale, max_i |r_i u - 1| is minimised at u = 2/(rmin+rmax), giving (rmax-rmin)/(rmax+rmin).
+// (until 2026-11-13 the scale was anchored on OZ alone; the minimax value is never larger, so no PASS can turn into a FAIL)
+export function holyMinimax(len, O, X, H) {
+  const r = Object.keys(H).map((k) => len[k] / H[k]);
+  r.push(Math.abs(X[0] - O[0]) / 38, -(X[1] - O[1]) / 7.8);
+  if (!r.every((x) => Number.isFinite(x) && x > 0)) return 1;
+  const lo = Math.min(...r), hi = Math.max(...r);
+  return (hi - lo) / (hi + lo);
+}
+// diagnosis scale (consensus): the scale at which the most drawn lengths equal SOME published length within 3%
+// (candidates s = len_i / H_j), ties broken by how many links match their OWN published length; refined as the median
+// ratio over the matched links. Robust to permuted links and to stray non-holy values. A plain median of len/H
+// (used until 2026-11-13) drifts when most links are permuted and then flags correct links too (seen in phase 6).
+export function holyScale(len, H) {
+  const ks = Object.keys(H), hv = ks.map((k) => H[k]);
+  const near = (x, h) => Math.abs(x - h) / h <= 0.03;
+  let best = null;
+  for (const i of ks) for (const h of hv) {
+    const c = len[i] / h;
+    if (!(Number.isFinite(c) && c > 0)) continue;
+    const any = ks.filter((k) => hv.some((v) => near(len[k] / c, v))).length;
+    const own = ks.filter((k) => near(len[k] / c, H[k])).length;
+    if (!best || any > best.any || (any === best.any && own > best.own)) best = {c, any, own};
+  }
+  if (!best) return 1;
+  const r = ks.map((k) => { const v = hv.find((v) => near(len[k] / best.c, v)); return v ? len[k] / v : null; })
+    .filter((x) => x != null).sort((a, b) => a - b);
+  return r.length ? r[Math.floor(r.length / 2)] : best.c;
+}
+export function holyDetail(len, O, X, H) {
   const ks = Object.keys(H);
-  const r = ks.map((k) => len[k] / H[k]).filter(Number.isFinite).sort((a, b) => a - b);
-  const s = r[Math.floor(r.length / 2)];
+  const s = holyScale(len, H);
   const bad = ks.filter((k) => !(Math.abs(len[k] / s - H[k]) / H[k] <= 0.03));
   const out = [`best-fit uniform scale = ${s.toFixed(3)} x the published Jansen numbers (OZ 15, ZY 50, XY 41.5, ZW 61.9, XW 39.3, XV 40.1, YV 55.8, VU 39.4, WU 36.7, UT 65.7, WT 49; fixed pivot X 38 to the side of O and 7.8 below it). Links that do not match at this scale:`];
   for (const k of bad) {
@@ -564,6 +590,19 @@ export async function checkLite(page, url, id) {
   }
   const fr = names.filter((n) => n.startsWith('frame@'));
   R.meta('frame static', fr.map((n) => Math.max(...fwd.map((s) => dist(s.m[n], fwd[0].m[n])))));
+  // META: markers rigidly attached to their part's drawn geometry (closes the "move the marker, not the mesh" loophole;
+  // added 2026-11-13 after the mesh-vs-marker audit). Markers on parts with no mesh are skipped.
+  try {
+    await page.evaluate(AUDIT);
+    const ts = times.filter((_, k) => k % Math.max(1, Math.floor(N / 24)) === 0);
+    const au = await page.evaluate(([ts, parts]) => window.__audit(ts, parts), [ts, parts]);
+    const dr = Object.entries(au).filter(([, r]) => r.drift != null);
+    if (dr.length) {
+      const [wn, wr] = dr.reduce((a, b) => (b[1].drift > a[1].drift ? b : a));
+      R.meta('markers attached to part geometry', dr.map(([, r]) => r.drift), 'mm', 0.5 * scale,
+        () => `marker ${wn} moves by up to ${f1(wr.drift)} mm relative to the drawn geometry of part ${wn.split('@')[0]}; markers must be children of (or rigidly fixed to) the part they mark, not placed independently`);
+    }
+  } catch (e) { /* audit failure never fails the oracle */ }
 
   try {
     mech.check({times, P, params, panel, revs, scale, near: (i) => fwd.map((s) => s.near?.[i])}, R);
