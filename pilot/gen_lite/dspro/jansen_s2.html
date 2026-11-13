@@ -1,0 +1,263 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Theo Jansen Leg Simulator</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #111; }
+  #panel {
+    position: fixed; top: 10px; left: 10px;
+    color: #eee; background: rgba(0,0,0,0.7);
+    padding: 10px 14px; border-radius: 8px;
+    font: 14px/1.5 monospace;
+    pointer-events: none;
+  }
+  #panel div { white-space: nowrap; }
+  #panel span { color: #7cf; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><span>crank_deg</span> <span data-q="crank_deg">0.00</span></div>
+  <div><span>foot_x</span> <span data-q="foot_x">0.00</span></div>
+  <div><span>foot_y</span> <span data-q="foot_y">0.00</span></div>
+</div>
+
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// --- Fixed parameters of this Jansen leg (holy numbers) ---
+// O = crank axle, X = second fixed pivot.
+// The 11 link lengths are Jansen's published values (mm).
+const params = {
+  O: [0, 0],
+  X: [-15, 0],
+  len: {
+    OZ: 38.0,
+    ZY: 41.5,
+    XY: 39.3,
+    ZW: 39.4,
+    XW: 61.9,
+    XV: 55.8,
+    YV: 40.1,
+    VU: 65.7,
+    WU: 36.7,
+    UT: 49.0,
+    WT: 50.0
+  },
+  omega: 1.0,        // rad/s
+  theta0: 0.0        // radians
+};
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x18202a);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+camera.position.set(0, -40, 300);
+camera.lookAt(0, -40, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+dir.position.set(80, 120, 200);
+scene.add(dir);
+
+// --- Geometry helpers -------------------------------------------------------
+
+function circleIntersect(P1, P2, r1, r2, sideSign) {
+  const dx = P2.x - P1.x;
+  const dy = P2.y - P1.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 1e-9) return { x: P1.x, y: P1.y };
+
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h2 = Math.max(0, r1 * r1 - a * a);
+  const h = Math.sqrt(h2);
+
+  const ux = dx / d;
+  const uy = dy / d;
+  const px = -uy;
+  const py = ux;
+
+  return {
+    x: P1.x + a * ux + sideSign * h * px,
+    y: P1.y + a * uy + sideSign * h * py
+  };
+}
+
+function computePositions(theta) {
+  const O = { x: params.O[0], y: params.O[1] };
+  const X = { x: params.X[0], y: params.X[1] };
+  const L = params.len;
+
+  const Z = {
+    x: O.x + L.OZ * Math.cos(theta),
+    y: O.y + L.OZ * Math.sin(theta)
+  };
+
+  const Y = circleIntersect(X, Z, L.XY, L.ZY, -1);
+  const W = circleIntersect(X, Z, L.XW, L.ZW, -1);
+  const V = circleIntersect(X, Y, L.XV, L.YV, -1);
+  const U = circleIntersect(V, W, L.VU, L.WU, -1);
+  const T = circleIntersect(W, U, L.WT, L.UT, -1);
+
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+// --- Scene parts and markers ------------------------------------------------
+
+const partNames = [
+  'frame', 'crank', 'rodUpper', 'rodLower',
+  'upperTriangle', 'linkXW', 'linkVU', 'legTriangle'
+];
+
+const parts = {};
+for (const p of partNames) {
+  parts[p] = new THREE.Object3D();
+  parts[p].name = p;
+  scene.add(parts[p]);
+}
+
+const markers = {};
+const markerDefs = [
+  ['frame', 'O'], ['frame', 'X'],
+  ['crank', 'O'], ['crank', 'Z'],
+  ['rodUpper', 'Z'], ['rodUpper', 'Y'],
+  ['rodLower', 'Z'], ['rodLower', 'W'],
+  ['upperTriangle', 'X'], ['upperTriangle', 'Y'], ['upperTriangle', 'V'],
+  ['linkXW', 'X'], ['linkXW', 'W'],
+  ['linkVU', 'V'], ['linkVU', 'U'],
+  ['legTriangle', 'W'], ['legTriangle', 'U'], ['legTriangle', 'T']
+];
+
+for (const [partName, pointName] of markerDefs) {
+  const m = new THREE.Object3D();
+  m.name = `${partName}@${pointName}`;
+  parts[partName].add(m);
+  markers[m.name] = m;
+}
+
+// Each edge is rendered as a cylinder mesh child of its part.
+const edges = [];
+function addEdge(partName, p1, p2, radius, color) {
+  const geom = new THREE.CylinderGeometry(radius, radius, 1, 16);
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.1 });
+  const mesh = new THREE.Mesh(geom, mat);
+  parts[partName].add(mesh);
+  edges.push({ mesh, partName, p1, p2, radius });
+}
+
+const rodRadius = 2.4;
+const crankRadius = 3.2;
+const frameRadius = 4.0;
+
+addEdge('frame', 'O', 'X', frameRadius, 0x8899aa);
+
+addEdge('crank', 'O', 'Z', crankRadius, 0xe06050);
+
+addEdge('rodUpper', 'Z', 'Y', rodRadius, 0x55b86a);
+addEdge('rodLower', 'Z', 'W', rodRadius, 0x55b86a);
+
+addEdge('upperTriangle', 'X', 'Y', rodRadius, 0x5b8dd6);
+addEdge('upperTriangle', 'Y', 'V', rodRadius, 0x5b8dd6);
+addEdge('upperTriangle', 'X', 'V', rodRadius, 0x5b8dd6);
+
+addEdge('linkXW', 'X', 'W', rodRadius, 0xd8a23a);
+addEdge('linkVU', 'V', 'U', rodRadius, 0xa85cc0);
+
+addEdge('legTriangle', 'W', 'U', rodRadius, 0xd0724a);
+addEdge('legTriangle', 'U', 'T', rodRadius, 0xd0724a);
+addEdge('legTriangle', 'W', 'T', rodRadius, 0xd0724a);
+
+const UP = new THREE.Vector3(0, 1, 0);
+function updateEdgeMesh(edge, positions) {
+  const p1 = positions[edge.p1];
+  const p2 = positions[edge.p2];
+  const a = new THREE.Vector3(p1.x, p1.y, 0);
+  const b = new THREE.Vector3(p2.x, p2.y, 0);
+  const dir = b.clone().sub(a);
+  const len = dir.length() || 1e-6;
+  edge.mesh.position.copy(a).addScaledVector(dir, 0.5);
+  edge.mesh.scale.set(1, len, 1);
+  edge.mesh.quaternion.setFromUnitVectors(UP, dir.clone().normalize());
+}
+
+function updateMarkers(positions) {
+  for (const [key, m] of Object.entries(markers)) {
+    const [partName, pointName] = key.split('@');
+    const p = positions[pointName];
+    if (p) m.position.set(p.x, p.y, 0);
+  }
+}
+
+// --- Panel ----------------------------------------------------------------
+
+const panel = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  foot_x: document.querySelector('[data-q="foot_x"]'),
+  foot_y: document.querySelector('[data-q="foot_y"]')
+};
+
+function updatePanel(theta, positions) {
+  const deg = ((theta * 180 / Math.PI) % 360 + 360) % 360;
+  panel.crank_deg.textContent = deg.toFixed(2);
+  panel.foot_x.textContent = positions.T.x.toFixed(2);
+  panel.foot_y.textContent = positions.T.y.toFixed(2);
+}
+
+// --- Render function -------------------------------------------------------
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const pos = computePositions(theta);
+
+  for (const e of edges) updateEdgeMesh(e, pos);
+  updateMarkers(pos);
+  updatePanel(theta, pos);
+
+  renderer.render(scene, camera);
+}
+
+// --- Expose SIM contract before first frame --------------------------------
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: (2 * Math.PI) / params.omega,
+  params: {
+    O: [...params.O],
+    X: [...params.X],
+    len: { ...params.len },
+    omega: params.omega,
+    theta0: params.theta0
+  },
+  render
+};
+window.SIM_READY = true;
+
+// --- Live viewing -----------------------------------------------------------
+
+if (!location.search.includes('capture')) {
+  const startTime = performance.now();
+  function loop(now) {
+    const t = (now - startTime) / 1000;
+    render(t);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

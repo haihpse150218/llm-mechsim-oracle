@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chebyshev Lambda Linkage</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #12151b;
+  }
+  canvas {
+    display: block;
+  }
+  #panel {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    background: rgba(18, 23, 32, 0.82);
+    border: 1px solid rgba(120, 170, 255, 0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: #e6eefc;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px);
+    user-select: none;
+    pointer-events: none;
+  }
+  #panel .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  #panel .label {
+    color: #8ea7c9;
+  }
+  [data-q] {
+    color: #ffffff;
+    font-weight: 600;
+  }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div class="row"><span class="label">crank</span><span data-q="crank_deg">0.00°</span></div>
+  <div class="row"><span class="label">P.x</span><span data-q="P_x">0.00 mm</span></div>
+  <div class="row"><span class="label">P.y</span><span data-q="P_y">0.00 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ------------------------------------------------------------------
+// Parameters
+// ------------------------------------------------------------------
+const params = {
+  O2: [0, 0],
+  O4: [60, 0],
+  len: { O2A: 30, O4B: 75, AB: 75, AP: 150 },
+  omega: 1.0,
+  theta0: Math.PI / 2
+};
+
+// ------------------------------------------------------------------
+// Renderer, scene, camera
+// ------------------------------------------------------------------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x12151b);
+
+const camera = new THREE.PerspectiveCamera(
+  40,
+  window.innerWidth / window.innerHeight,
+  1,
+  5000
+);
+camera.position.set(15, -130, 350);
+camera.lookAt(50, 45, 0);
+
+// ------------------------------------------------------------------
+// Lights
+// ------------------------------------------------------------------
+const hemi = new THREE.HemisphereLight(0xbfd6ff, 0x1a1d24, 0.9);
+scene.add(hemi);
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+keyLight.position.set(120, 250, 300);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.near = 1;
+keyLight.shadow.camera.far = 900;
+keyLight.shadow.camera.left = -220;
+keyLight.shadow.camera.right = 220;
+keyLight.shadow.camera.top = 260;
+keyLight.shadow.camera.bottom = -120;
+keyLight.shadow.bias = -0.0004;
+keyLight.target.position.set(45, 40, 0);
+scene.add(keyLight, keyLight.target);
+
+const fillLight = new THREE.DirectionalLight(0x88aaff, 0.8);
+fillLight.position.set(-150, -60, 220);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffaa66, 0.55);
+rimLight.position.set(-80, 200, -150);
+scene.add(rimLight);
+
+// ------------------------------------------------------------------
+// Materials
+// ------------------------------------------------------------------
+const frameMat   = new THREE.MeshStandardMaterial({ color: 0x3a4150, metalness: 0.55, roughness: 0.55 });
+const crankMat   = new THREE.MeshStandardMaterial({ color: 0xd9534f, metalness: 0.5,  roughness: 0.4  });
+const couplerMat = new THREE.MeshStandardMaterial({ color: 0x4f8fd9, metalness: 0.6,  roughness: 0.35 });
+const rockerMat  = new THREE.MeshStandardMaterial({ color: 0x50b87a, metalness: 0.5,  roughness: 0.4  });
+const pivotMat   = new THREE.MeshStandardMaterial({ color: 0x22262e, metalness: 0.9,  roughness: 0.25 });
+const pointMat   = new THREE.MeshStandardMaterial({ color: 0xffc832, metalness: 0.4,  roughness: 0.3, emissive: 0x442200 });
+
+// ------------------------------------------------------------------
+// Geometry helpers
+// ------------------------------------------------------------------
+function makeLink(length, width, depth, material, offsetX = 0) {
+  const geo = new THREE.BoxGeometry(length, width, depth);
+  geo.translate(length / 2, 0, 0);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.x = offsetX;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeJoint(radius, height, material, x = 0, y = 0, z = 0) {
+  const geo = new THREE.CylinderGeometry(radius, radius, height, 32);
+  geo.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+// ------------------------------------------------------------------
+// Frame (fixed)
+// ------------------------------------------------------------------
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+scene.add(frame);
+
+// base plate
+{
+  const geo = new THREE.BoxGeometry(190, 8, 110);
+  const mesh = new THREE.Mesh(geo, frameMat);
+  mesh.position.set(30, -44, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  frame.add(mesh);
+}
+
+// vertical posts
+{
+  const geo = new THREE.CylinderGeometry(9, 9, 44, 24);
+  const post1 = new THREE.Mesh(geo, frameMat);
+  post1.position.set(0, -22, 0);
+  post1.castShadow = true;
+  post1.receiveShadow = true;
+  frame.add(post1);
+
+  const post2 = post1.clone();
+  post2.position.set(60, -22, 0);
+  frame.add(post2);
+}
+
+// bearing bosses
+frame.add(makeJoint(14, 28, frameMat, 0, 0, -15));
+frame.add(makeJoint(14, 28, frameMat, 60, 0, -15));
+
+// markers
+{
+  const o2 = new THREE.Object3D();
+  o2.name = 'frame@O2';
+  o2.position.set(0, 0, 0);
+  const o4 = new THREE.Object3D();
+  o4.name = 'frame@O4';
+  o4.position.set(60, 0, 0);
+  frame.add(o2, o4);
+}
+
+// ------------------------------------------------------------------
+// Crank
+// ------------------------------------------------------------------
+const crank = new THREE.Object3D();
+crank.name = 'crank';
+scene.add(crank);
+crank.add(makeLink(30, 10, 12, crankMat));
+crank.add(makeJoint(8, 26, pivotMat, 0, 0, 0));
+crank.add(makeJoint(8, 26, pivotMat, 30, 0, 0));
+{
+  const o2 = new THREE.Object3D();
+  o2.name = 'crank@O2';
+  o2.position.set(0, 0, 0);
+  const a = new THREE.Object3D();
+  a.name = 'crank@A';
+  a.position.set(30, 0, 0);
+  crank.add(o2, a);
+}
+
+// ------------------------------------------------------------------
+// Coupler
+// ------------------------------------------------------------------
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';
+scene.add(coupler);
+coupler.add(makeLink(75, 9, 10, couplerMat));
+coupler.add(makeLink(75, 6, 6, couplerMat, 75));
+coupler.add(makeJoint(8, 26, pivotMat, 0, 0, 0));
+coupler.add(makeJoint(8, 26, pivotMat, 75, 0, 0));
+coupler.add(makeJoint(4.5, 40, pointMat, 150, 0, 0));
+{
+  const a = new THREE.Object3D();
+  a.name = 'coupler@A';
+  a.position.set(0, 0, 0);
+  const b = new THREE.Object3D();
+  b.name = 'coupler@B';
+  b.position.set(75, 0, 0);
+  const p = new THREE.Object3D();
+  p.name = 'coupler@P';
+  p.position.set(150, 0, 0);
+  coupler.add(a, b, p);
+}
+
+// ------------------------------------------------------------------
+// Rocker
+// ------------------------------------------------------------------
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';
+scene.add(rocker);
+rocker.add(makeLink(75, 10, 12, rockerMat));
+rocker.add(makeJoint(8, 26, pivotMat, 0, 0, 0));
+rocker.add(makeJoint(8, 26, pivotMat, 75, 0, 0));
+{
+  const o4 = new THREE.Object3D();
+  o4.name = 'rocker@O4';
+  o4.position.set(0, 0, 0);
+  const b = new THREE.Object3D();
+  b.name = 'rocker@B';
+  b.position.set(75, 0, 0);
+  rocker.add(o4, b);
+}
+
+// ------------------------------------------------------------------
+// Panel elements
+// ------------------------------------------------------------------
+const panelCrank = document.querySelector('[data-q="crank_deg"]');
+const panelPx    = document.querySelector('[data-q="P_x"]');
+const panelPy    = document.querySelector('[data-q="P_y"]');
+
+// ------------------------------------------------------------------
+// Render (pure function of time t)
+// ------------------------------------------------------------------
+const O2x = params.O2[0];
+const O2y = params.O2[1];
+const O4x = params.O4[0];
+const O4y = params.O4[1];
+const lenO2A = params.len.O2A;
+const lenO4B = params.len.O4B;
+const lenAB  = params.len.AB;
+const lenAP  = params.len.AP;
+const omega  = params.omega;
+const theta0 = params.theta0;
+
+function render(t) {
+  const theta = theta0 + omega * t;
+  const ct = Math.cos(theta);
+  const st = Math.sin(theta);
+
+  // A
+  const Ax = O2x + lenO2A * ct;
+  const Ay = O2y + lenO2A * st;
+
+  // B via circle intersection: |B-A| = lenAB, |B-O4| = lenO4B
+  const vx = O4x - Ax;
+  const vy = O4y - Ay;
+  const D = Math.hypot(vx, vy);
+  const mx = (Ax + O4x) / 2;
+  const my = (Ay + O4y) / 2;
+  const halfD = D / 2;
+  const h = Math.sqrt(Math.max(0, lenAB * lenAB - halfD * halfD));
+  // Unit perpendicular to v rotated +90 deg CCW
+  const nx = -vy / D;
+  const ny =  vx / D;
+  const Bx = mx + h * nx;
+  const By = my + h * ny;
+
+  // P on the extended coupler line (A -> B -> P)
+  const k = lenAP / lenAB;
+  const Px = Ax + k * (Bx - Ax);
+  const Py = Ay + k * (By - Ay);
+
+  // Pose crank
+  crank.position.set(O2x, O2y, 0);
+  crank.rotation.set(0, 0, theta);
+
+  // Pose coupler
+  const couplerAngle = Math.atan2(By - Ay, Bx - Ax);
+  coupler.position.set(Ax, Ay, 0);
+  coupler.rotation.set(0, 0, couplerAngle);
+
+  // Pose rocker
+  const rockerAngle = Math.atan2(By - O4y, Bx - O4x);
+  rocker.position.set(O4x, O4y, 0);
+  rocker.rotation.set(0, 0, rockerAngle);
+
+  // Panel
+  const crankDeg = ((theta * 180 / Math.PI) % 360 + 360) % 360;
+  panelCrank.textContent = crankDeg.toFixed(2) + '\u00b0';
+  panelPx.textContent = Px.toFixed(2) + ' mm';
+  panelPy.textContent = Py.toFixed(2) + ' mm';
+
+  renderer.render(scene, camera);
+}
+
+// ------------------------------------------------------------------
+// Public API
+// ------------------------------------------------------------------
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: (2 * Math.PI) / Math.abs(omega),
+  params: {
+    O2: [O2x, O2y],
+    O4: [O4x, O4y],
+    len: { O2A: lenO2A, O4B: lenO4B, AB: lenAB, AP: lenAP },
+    omega,
+    theta0
+  },
+  render
+};
+
+window.SIM_READY = true;
+
+// Initialize at t = 0
+window.SIM.render(0);
+
+// ------------------------------------------------------------------
+// Live animation (unless ?capture)
+// ------------------------------------------------------------------
+if (!location.search.includes('capture')) {
+  const startTime = performance.now();
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = (performance.now() - startTime) / 1000;
+    window.SIM.render(t);
+  }
+  animate();
+}
+
+// ------------------------------------------------------------------
+// Resize
+// ------------------------------------------------------------------
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

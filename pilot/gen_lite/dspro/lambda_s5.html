@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chebyshev Lambda Linkage</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #111; font-family: monospace; }
+  #panel { position: absolute; top: 10px; left: 10px; color: #fff; background: rgba(0,0,0,0.6); padding: 10px 14px; border-radius: 6px; font-size: 16px; line-height: 1.5; }
+  #panel span { display: inline-block; min-width: 90px; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div>crank_deg: <span data-q="crank_deg">0.0°</span></div>
+  <div>P_x: <span data-q="P_x">0.0 mm</span></div>
+  <div>P_y: <span data-q="P_y">0.0 mm</span></div>
+</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// Parameters
+const params = {
+  O2: [0, 0],
+  O4: [400, 0],
+  len: {
+    O2A: 200,
+    O4B: 500,
+    AB: 500,
+    AP: 1000
+  },
+  omega: 1.0,
+  theta0: 0
+};
+
+const { O2, O4, len } = params;
+const d = O4[0] - O2[0];
+const a = len.O2A;
+const b = len.O4B;
+const c = len.AB;
+const ap = len.AP;
+const lambda = ap / c;
+
+// Scene setup
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e0e14);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 8000);
+camera.position.set(400, 400, 1700);
+camera.lookAt(400, 400, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(600, 800, 1200);
+scene.add(dirLight);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.35);
+fillLight.position.set(-400, 200, 600);
+scene.add(fillLight);
+
+// Helper: create a box bar along local +X
+function addBar(part, length, width, thickness, color) {
+  const geo = new THREE.BoxGeometry(length, width, thickness);
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.25 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(length / 2, 0, 0);
+  part.add(mesh);
+  return mesh;
+}
+
+// Helper: create a pivot sphere
+function addSphere(part, x, y, z, radius, color) {
+  const geo = new THREE.SphereGeometry(radius, 32, 16);
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.4 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  part.add(mesh);
+  return mesh;
+}
+
+// Helper: create a named marker
+function addMarker(part, name, x, y = 0, z = 0) {
+  const obj = new THREE.Object3D();
+  obj.name = name;
+  obj.position.set(x, y, z);
+  part.add(obj);
+  return obj;
+}
+
+// Create named part containers
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+const crank = new THREE.Object3D();
+crank.name = 'crank';
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';
+
+scene.add(frame);
+scene.add(crank);
+scene.add(coupler);
+scene.add(rocker);
+
+// Frame: O2-O4 base
+addBar(frame, d, 40, 30, 0x888888);
+addSphere(frame, 0, 0, 0, 28, 0xaaaaaa);
+addSphere(frame, d, 0, 0, 28, 0xaaaaaa);
+
+// Crank: O2-A
+addBar(crank, a, 24, 16, 0x4c9aff);
+addSphere(crank, 0, 0, 0, 22, 0x3a7bd5);
+addSphere(crank, a, 0, 0, 20, 0x3a7bd5);
+
+// Coupler: A-B-P (B lies between A and P)
+addBar(coupler, ap, 22, 16, 0xffa64d);
+addSphere(coupler, 0, 0, 0, 20, 0xe68a3e);
+addSphere(coupler, c, 0, 0, 18, 0xe68a3e);
+addSphere(coupler, ap, 0, 0, 26, 0xff3d3d);
+
+// Rocker: O4-B
+addBar(rocker, b, 24, 16, 0x6bc46b);
+addSphere(rocker, 0, 0, 0, 22, 0x4f9f4f);
+addSphere(rocker, b, 0, 0, 20, 0x4f9f4f);
+
+// Markers
+addMarker(frame, 'frame@O2', 0, 0, 0);
+addMarker(frame, 'frame@O4', d, 0, 0);
+addMarker(crank, 'crank@O2', 0, 0, 0);
+addMarker(crank, 'crank@A', a, 0, 0);
+addMarker(coupler, 'coupler@A', 0, 0, 0);
+addMarker(coupler, 'coupler@B', c, 0, 0);
+addMarker(coupler, 'coupler@P', ap, 0, 0);
+addMarker(rocker, 'rocker@O4', 0, 0, 0);
+addMarker(rocker, 'rocker@B', b, 0, 0);
+
+// Panel elements
+const elCrankDeg = document.querySelector('[data-q="crank_deg"]');
+const elPx = document.querySelector('[data-q="P_x"]');
+const elPy = document.querySelector('[data-q="P_y"]');
+
+// Pure render function
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const cosT = Math.cos(theta);
+  const sinT = Math.sin(theta);
+
+  // Four-bar solution for rocker angle phi
+  const Acoeff = d - a * cosT;
+  const Bcoeff = -a * sinT;
+  const Ccoeff = (d * d + a * a + b * b - c * c - 2 * d * a * cosT) / (2 * b);
+  const R = Math.sqrt(Acoeff * Acoeff + Bcoeff * Bcoeff);
+  const gamma = Math.atan2(Bcoeff, Acoeff);
+
+  let acosArg = -Ccoeff / R;
+  acosArg = Math.max(-1, Math.min(1, acosArg));
+  const phi = gamma + Math.acos(acosArg);
+
+  const cosP = Math.cos(phi);
+  const sinP = Math.sin(phi);
+
+  // World positions
+  const O2x = O2[0], O2y = O2[1];
+  const O4x = O4[0], O4y = O4[1];
+  const Ax = O2x + a * cosT;
+  const Ay = O2y + a * sinT;
+  const Bx = O4x + b * cosP;
+  const By = O4y + b * sinP;
+  const Px = Ax + lambda * (Bx - Ax);
+  const Py = Ay + lambda * (By - Ay);
+
+  // Pose parts
+  frame.position.set(O2x, O2y, 0);
+  frame.rotation.set(0, 0, 0);
+
+  crank.position.set(O2x, O2y, 0);
+  crank.rotation.set(0, 0, theta);
+
+  rocker.position.set(O4x, O4y, 0);
+  rocker.rotation.set(0, 0, phi);
+
+  const psi = Math.atan2(By - Ay, Bx - Ax);
+  coupler.position.set(Ax, Ay, 0);
+  coupler.rotation.set(0, 0, psi);
+
+  // Update panel
+  const crankDeg = ((theta * 180 / Math.PI) % 360 + 360) % 360;
+  elCrankDeg.textContent = crankDeg.toFixed(1) + '°';
+  elPx.textContent = Px.toFixed(1) + ' mm';
+  elPy.textContent = Py.toFixed(1) + ' mm';
+
+  renderer.render(scene, camera);
+}
+
+// Expose API
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: (2 * Math.PI) / params.omega,
+  params,
+  render
+};
+window.SIM_READY = true;
+
+// Initial pose
+render(0);
+
+// Live viewing loop unless capture mode
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  function loop() {
+    const elapsed = (performance.now() - start) / 1000;
+    render(elapsed);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+// Handle resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

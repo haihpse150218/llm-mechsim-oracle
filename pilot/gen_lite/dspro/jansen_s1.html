@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strandbeest Leg Simulator</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #141428;
+    font-family: monospace;
+  }
+  canvas {
+    display: block;
+  }
+  #panel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    color: #eee;
+    background: rgba(0,0,0,0.65);
+    padding: 10px 14px;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 10;
+    line-height: 1.5;
+  }
+  #panel .row {
+    display: flex;
+    gap: 10px;
+  }
+  #panel .label {
+    opacity: 0.7;
+    min-width: 82px;
+  }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div class="row"><span class="label">crank_deg</span><span data-q="crank_deg">0.0°</span></div>
+  <div class="row"><span class="label">foot_x</span><span data-q="foot_x">0.00 mm</span></div>
+  <div class="row"><span class="label">foot_y</span><span data-q="foot_y">0.00 mm</span></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0],
+  X: [-7.8, 0],
+  len: {
+    OZ: 38.0,
+    ZY: 41.5,
+    XY: 39.3,
+    ZW: 40.1,
+    XW: 55.8,
+    XV: 39.4,
+    YV: 36.7,
+    VU: 65.7,
+    WU: 49.0,
+    UT: 50.0,
+    WT: 61.9
+  },
+  omega: 2.0,
+  theta0: 0.0
+};
+
+// Joint branches for this assembly. Signs are relative to the directed line
+// from A to B inside circleIntersect(A,B,...).
+const SIGN_Y = -1;   // upper rod / upper triangle joint
+const SIGN_W =  1;   // lower rod / linkXW joint
+const SIGN_V =  1;   // upper triangle apex
+const SIGN_U = -1;   // knee
+const SIGN_T =  1;   // foot triangle apex
+
+const P = {
+  O: { x: params.O[0], y: params.O[1] },
+  X: { x: params.X[0], y: params.X[1] },
+  Z: { x: 0, y: 0 },
+  Y: { x: 0, y: 0 },
+  W: { x: 0, y: 0 },
+  V: { x: 0, y: 0 },
+  U: { x: 0, y: 0 },
+  T: { x: 0, y: 0 }
+};
+
+function circleIntersect(A, B, rA, rB, side) {
+  const dx = B.x - A.x;
+  const dy = B.y - A.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+
+  if (d < 1e-12) {
+    return { x: A.x, y: A.y };
+  }
+
+  const a = (rA * rA - rB * rB + d * d) / (2 * d);
+  const h2 = Math.max(0, rA * rA - a * a);
+  const h = Math.sqrt(h2);
+
+  const ux = dx / d;
+  const uy = dy / d;
+
+  const px = A.x + a * ux;
+  const py = A.y + a * uy;
+
+  const pxx = -uy;
+  const pyy = ux;
+
+  return {
+    x: px + side * h * pxx,
+    y: py + side * h * pyy
+  };
+}
+
+function computeKinematics(t) {
+  const theta = params.theta0 + params.omega * t;
+  const L = params.len;
+
+  P.O.x = params.O[0];
+  P.O.y = params.O[1];
+  P.X.x = params.X[0];
+  P.X.y = params.X[1];
+
+  P.Z.x = P.O.x + L.OZ * Math.cos(theta);
+  P.Z.y = P.O.y + L.OZ * Math.sin(theta);
+
+  const Y = circleIntersect(P.Z, P.X, L.ZY, L.XY, SIGN_Y);
+  P.Y.x = Y.x;
+  P.Y.y = Y.y;
+
+  const W = circleIntersect(P.Z, P.X, L.ZW, L.XW, SIGN_W);
+  P.W.x = W.x;
+  P.W.y = W.y;
+
+  const V = circleIntersect(P.X, P.Y, L.XV, L.YV, SIGN_V);
+  P.V.x = V.x;
+  P.V.y = V.y;
+
+  const U = circleIntersect(P.V, P.W, L.VU, L.WU, SIGN_U);
+  P.U.x = U.x;
+  P.U.y = U.y;
+
+  const T = circleIntersect(P.W, P.U, L.WT, L.UT, SIGN_T);
+  P.T.x = T.x;
+  P.T.y = T.y;
+}
+
+// Initial pose so markers and meshes have valid coordinates at creation time.
+computeKinematics(0);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x141428);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(0, -15, 450);
+camera.lookAt(0, -15, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x141428, 1);
+document.body.appendChild(renderer.domElement);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+scene.add(ambientLight);
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+keyLight.position.set(200, 300, 400);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+fillLight.position.set(-200, -200, 300);
+scene.add(fillLight);
+
+const materials = {
+  frame: new THREE.MeshStandardMaterial({ color: 0x7a7a7a, roughness: 0.5, metalness: 0.4 }),
+  crank: new THREE.MeshStandardMaterial({ color: 0xd35400, roughness: 0.4, metalness: 0.3 }),
+  rodUpper: new THREE.MeshStandardMaterial({ color: 0x3498db, roughness: 0.4, metalness: 0.2 }),
+  rodLower: new THREE.MeshStandardMaterial({ color: 0x1abc9c, roughness: 0.4, metalness: 0.2 }),
+  upperTriangle: new THREE.MeshStandardMaterial({ color: 0x9b59b6, roughness: 0.4, metalness: 0.2 }),
+  linkXW: new THREE.MeshStandardMaterial({ color: 0x2ecc71, roughness: 0.4, metalness: 0.2 }),
+  linkVU: new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.4, metalness: 0.2 }),
+  legTriangle: new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.4, metalness: 0.2 })
+};
+
+const parts = {};
+const markers = {};
+const edgeMeshes = [];
+
+function createPart(name) {
+  const obj = new THREE.Object3D();
+  obj.name = name;
+  obj.scale.set(1, 1, 1);
+  scene.add(obj);
+  parts[name] = obj;
+  return obj;
+}
+
+function addPartMarker(part, partName, pointName, point) {
+  const marker = new THREE.Object3D();
+  marker.name = `${partName}@${pointName}`;
+  marker.position.set(point.x, point.y, 0);
+  part.add(marker);
+  markers[marker.name] = marker;
+}
+
+function addEdge(part, pointA, pointB, thickness, material) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, thickness, thickness), material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = false;
+  part.add(mesh);
+  edgeMeshes.push({ mesh, a: pointA, b: pointB });
+  return mesh;
+}
+
+// Frame (fixed): O and X
+const frameObj = createPart('frame');
+addPartMarker(frameObj, 'frame', 'O', P.O);
+addPartMarker(frameObj, 'frame', 'X', P.X);
+addEdge(frameObj, 'O', 'X', 6, materials.frame);
+const framePlate = new THREE.Mesh(new THREE.BoxGeometry(30, 18, 6), materials.frame);
+framePlate.position.set((P.O.x + P.X.x) / 2, (P.O.y + P.X.y) / 2, 0);
+frameObj.add(framePlate);
+
+// Crank: O and Z
+const crankObj = createPart('crank');
+addPartMarker(crankObj, 'crank', 'O', P.O);
+addPartMarker(crankObj, 'crank', 'Z', P.Z);
+addEdge(crankObj, 'O', 'Z', 5, materials.crank);
+
+// rodUpper: Z and Y
+const rodUpperObj = createPart('rodUpper');
+addPartMarker(rodUpperObj, 'rodUpper', 'Z', P.Z);
+addPartMarker(rodUpperObj, 'rodUpper', 'Y', P.Y);
+addEdge(rodUpperObj, 'Z', 'Y', 4, materials.rodUpper);
+
+// rodLower: Z and W
+const rodLowerObj = createPart('rodLower');
+addPartMarker(rodLowerObj, 'rodLower', 'Z', P.Z);
+addPartMarker(rodLowerObj, 'rodLower', 'W', P.W);
+addEdge(rodLowerObj, 'Z', 'W', 4, materials.rodLower);
+
+// upperTriangle: X, Y and V
+const upperTriangleObj = createPart('upperTriangle');
+addPartMarker(upperTriangleObj, 'upperTriangle', 'X', P.X);
+addPartMarker(upperTriangleObj, 'upperTriangle', 'Y', P.Y);
+addPartMarker(upperTriangleObj, 'upperTriangle', 'V', P.V);
+addEdge(upperTriangleObj, 'X', 'Y', 5, materials.upperTriangle);
+addEdge(upperTriangleObj, 'Y', 'V', 5, materials.upperTriangle);
+addEdge(upperTriangleObj, 'X', 'V', 5, materials.upperTriangle);
+
+// linkXW: X and W
+const linkXWObj = createPart('linkXW');
+addPartMarker(linkXWObj, 'linkXW', 'X', P.X);
+addPartMarker(linkXWObj, 'linkXW', 'W', P.W);
+addEdge(linkXWObj, 'X', 'W', 5, materials.linkXW);
+
+// linkVU: V and U
+const linkVUObj = createPart('linkVU');
+addPartMarker(linkVUObj, 'linkVU', 'V', P.V);
+addPartMarker(linkVUObj, 'linkVU', 'U', P.U);
+addEdge(linkVUObj, 'V', 'U', 4, materials.linkVU);
+
+// legTriangle: W, U and T
+const legTriangleObj = createPart('legTriangle');
+addPartMarker(legTriangleObj, 'legTriangle', 'W', P.W);
+addPartMarker(legTriangleObj, 'legTriangle', 'U', P.U);
+addPartMarker(legTriangleObj, 'legTriangle', 'T', P.T);
+addEdge(legTriangleObj, 'W', 'U', 5, materials.legTriangle);
+addEdge(legTriangleObj, 'U', 'T', 5, materials.legTriangle);
+addEdge(legTriangleObj, 'W', 'T', 6, materials.legTriangle);
+
+const footMesh = new THREE.Mesh(new THREE.BoxGeometry(16, 5, 5), materials.legTriangle);
+footMesh.position.set(P.T.x, P.T.y, 0);
+footMesh.rotation.z = Math.atan2(P.T.y - P.U.y, P.T.x - P.U.x);
+legTriangleObj.add(footMesh);
+
+const markerPointMap = {
+  'frame@O': 'O',
+  'frame@X': 'X',
+  'crank@O': 'O',
+  'crank@Z': 'Z',
+  'rodUpper@Z': 'Z',
+  'rodUpper@Y': 'Y',
+  'rodLower@Z': 'Z',
+  'rodLower@W': 'W',
+  'upperTriangle@X': 'X',
+  'upperTriangle@Y': 'Y',
+  'upperTriangle@V': 'V',
+  'linkXW@X': 'X',
+  'linkXW@W': 'W',
+  'linkVU@V': 'V',
+  'linkVU@U': 'U',
+  'legTriangle@W': 'W',
+  'legTriangle@U': 'U',
+  'legTriangle@T': 'T'
+};
+
+function updateEdgeMesh(mesh, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const length = Math.sqrt(dx * dx + dy * dy) || 1e-6;
+
+  mesh.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0);
+  mesh.rotation.set(0, 0, Math.atan2(dy, dx));
+  mesh.scale.set(length, 1, 1);
+}
+
+function updatePartVisuals() {
+  for (const markerName in markers) {
+    const pointName = markerPointMap[markerName];
+    if (!pointName) continue;
+    const point = P[pointName];
+    if (!point) continue;
+    markers[markerName].position.set(point.x, point.y, 0);
+  }
+
+  for (const edge of edgeMeshes) {
+    updateEdgeMesh(edge.mesh, P[edge.a], P[edge.b]);
+  }
+
+  footMesh.position.set(P.T.x, P.T.y, 0);
+  footMesh.rotation.z = Math.atan2(P.T.y - P.U.y, P.T.x - P.U.x);
+}
+
+const panelEls = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  foot_x: document.querySelector('[data-q="foot_x"]'),
+  foot_y: document.querySelector('[data-q="foot_y"]')
+};
+
+function render(t) {
+  computeKinematics(t);
+  updatePartVisuals();
+
+  const theta = params.theta0 + params.omega * t;
+  const crankDeg = ((theta * 180 / Math.PI) % 360 + 360) % 360;
+
+  panelEls.crank_deg.textContent = `${crankDeg.toFixed(1)}°`;
+  panelEls.foot_x.textContent = `${P.T.x.toFixed(2)} mm`;
+  panelEls.foot_y.textContent = `${P.T.y.toFixed(2)} mm`;
+
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: 2 * Math.PI / params.omega,
+  params,
+  render
+};
+
+window.SIM_READY = true;
+window.SIM.render(0);
+
+if (!location.search.includes('capture')) {
+  let startTime = null;
+  function frame(now) {
+    if (startTime === null) startTime = now;
+    const elapsed = (now - startTime) / 1000;
+    window.SIM.render(elapsed);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

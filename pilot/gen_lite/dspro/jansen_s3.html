@@ -1,0 +1,316 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin:0; overflow:hidden; background:#111; font-family:monospace; }
+  #panel {
+    position: fixed; top: 10px; left: 10px;
+    background: rgba(0,0,0,0.72); color: #eaf2ff;
+    padding: 10px 14px; border-radius: 6px;
+    pointer-events: none; line-height: 1.45;
+    font-size: 13px; letter-spacing: 0.4px;
+  }
+  #panel span { color: #9cd4ff; }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div>crank <span data-q="crank_deg">0.00</span>°</div>
+  <div>foot x <span data-q="foot_x">0.00</span> mm</div>
+  <div>foot y <span data-q="foot_y">0.00</span> mm</div>
+</div>
+
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* Theo Jansen "holy numbers" for one leg. O and X are the fixed pivots.
+   The fixed distance OX is chosen to keep the crank fully rotatable. */
+const params = {
+  O: [0, 0],
+  X: [15.7, 0],
+  len: {
+    OZ: 38.0,
+    ZY: 41.5,
+    XY: 39.3,
+    ZW: 40.1,
+    XW: 55.8,
+    XV: 39.4,
+    YV: 36.7,
+    VU: 65.7,
+    WU: 49.0,
+    UT: 50.0,
+    WT: 61.9
+  },
+  omega: 2.0,
+  theta0: 0.0
+};
+
+/* Assembly branch. These signs are chosen so the leg keeps the traditional
+   Jansen posture and the foot path is below the upper mechanism. */
+const branch = {
+  sY: -1,
+  sW: -1,
+  sV: 1,
+  sU: 1,
+  sT: 1
+};
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x141414);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 360);
+camera.lookAt(0, -25, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+keyLight.position.set(120, 120, 240);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.35);
+fillLight.position.set(-100, -60, 120);
+scene.add(fillLight);
+
+/* ---------- helpers ---------- */
+
+function createCylinder(p1, p2, radius, material) {
+  const dir = new THREE.Vector3().subVectors(p2, p1);
+  const length = dir.length();
+  const geo = new THREE.CylinderGeometry(radius, radius, Math.max(length, 1e-4), 20);
+  const mesh = new THREE.Mesh(geo, material);
+  const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+  mesh.position.copy(mid);
+  if (length > 1e-5) {
+    const axis = new THREE.Vector3(0, 1, 0);
+    const target = dir.clone().normalize();
+    mesh.quaternion.setFromUnitVectors(axis, target);
+  }
+  return mesh;
+}
+
+function triPoint(dirLen, rOrigin, rDir, sign) {
+  const x = (rOrigin * rOrigin + dirLen * dirLen - rDir * rDir) / (2 * dirLen);
+  const h = Math.sqrt(Math.max(0, rOrigin * rOrigin - x * x));
+  return { x, y: sign * h };
+}
+
+/* ---------- local part geometry ---------- */
+
+const len = params.len;
+const OX = Math.hypot(params.X[0] - params.O[0], params.X[1] - params.O[1]);
+
+const local = {
+  frame: {
+    O: new THREE.Vector3(0, 0, 0),
+    X: new THREE.Vector3(OX, 0, 0)
+  },
+  crank: {
+    O: new THREE.Vector3(0, 0, 0),
+    Z: new THREE.Vector3(len.OZ, 0, 0)
+  },
+  rodUpper: {
+    Z: new THREE.Vector3(0, 0, 0),
+    Y: new THREE.Vector3(len.ZY, 0, 0)
+  },
+  rodLower: {
+    Z: new THREE.Vector3(0, 0, 0),
+    W: new THREE.Vector3(len.ZW, 0, 0)
+  },
+  upperTriangle: {
+    X: new THREE.Vector3(0, 0, 0),
+    Y: new THREE.Vector3(len.XY, 0, 0)
+  },
+  linkXW: {
+    X: new THREE.Vector3(0, 0, 0),
+    W: new THREE.Vector3(len.XW, 0, 0)
+  },
+  linkVU: {
+    V: new THREE.Vector3(0, 0, 0),
+    U: new THREE.Vector3(len.VU, 0, 0)
+  },
+  legTriangle: {
+    W: new THREE.Vector3(0, 0, 0),
+    U: new THREE.Vector3(len.WU, 0, 0)
+  }
+};
+
+const upTriV = triPoint(len.XY, len.XV, len.YV, branch.sV);
+local.upperTriangle.V = new THREE.Vector3(upTriV.x, upTriV.y, 0);
+
+const legTriT = triPoint(len.WU, len.WT, len.UT, branch.sT);
+local.legTriangle.T = new THREE.Vector3(legTriT.x, legTriT.y, 0);
+
+/* ---------- named part groups, meshes and markers ---------- */
+
+const partDefinitions = {
+  frame:         { color: 0xcccccc, edges: [['O', 'X']] },
+  crank:         { color: 0xff6600, edges: [['O', 'Z']] },
+  rodUpper:      { color: 0xff4444, edges: [['Z', 'Y']] },
+  rodLower:      { color: 0x44aa44, edges: [['Z', 'W']] },
+  upperTriangle: { color: 0x4488ff, edges: [['X', 'Y'], ['Y', 'V'], ['X', 'V']] },
+  linkXW:        { color: 0xaa44cc, edges: [['X', 'W']] },
+  linkVU:        { color: 0x00bbcc, edges: [['V', 'U']] },
+  legTriangle:   { color: 0xcc8833, edges: [['W', 'U'], ['U', 'T'], ['W', 'T']] }
+};
+
+const parts = {};
+const jointGeo = new THREE.SphereGeometry(2.3, 14, 14);
+const jointMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.25 });
+
+for (const partName of Object.keys(partDefinitions)) {
+  const def = partDefinitions[partName];
+  const group = new THREE.Group();
+  group.name = partName;
+
+  const material = new THREE.MeshStandardMaterial({
+    color: def.color,
+    roughness: 0.42,
+    metalness: 0.15
+  });
+
+  for (const [a, b] of def.edges) {
+    group.add(createCylinder(local[partName][a], local[partName][b], 2.0, material));
+  }
+
+  for (const pointName of Object.keys(local[partName])) {
+    const marker = new THREE.Object3D();
+    marker.name = `${partName}@${pointName}`;
+    marker.position.copy(local[partName][pointName]);
+    const sphere = new THREE.Mesh(jointGeo, jointMat);
+    marker.add(sphere);
+    group.add(marker);
+  }
+
+  scene.add(group);
+  parts[partName] = group;
+}
+
+/* ---------- kinematics ---------- */
+
+function intersect(p1, p2, r1, r2, sign) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const d = Math.hypot(dx, dy);
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  const ux = dx / d;
+  const uy = dy / d;
+  const nx = -uy * sign;
+  const ny = ux * sign;
+  return {
+    x: p1.x + ux * a + nx * h,
+    y: p1.y + uy * a + ny * h,
+    z: 0
+  };
+}
+
+function computeWorld(theta) {
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  const O = { x: params.O[0], y: params.O[1], z: 0 };
+  const X = { x: params.X[0], y: params.X[1], z: 0 };
+  const Z = { x: O.x + len.OZ * cos, y: O.y + len.OZ * sin, z: 0 };
+
+  const Y = intersect(Z, X, len.ZY, len.XY, branch.sY);
+  const W = intersect(Z, X, len.ZW, len.XW, branch.sW);
+  const V = intersect(X, Y, len.XV, len.YV, branch.sV);
+  const U = intersect(V, W, len.VU, len.WU, branch.sU);
+  const T = intersect(W, U, len.WT, len.UT, branch.sT);
+
+  return {
+    O: new THREE.Vector3(O.x, O.y, 0),
+    X: new THREE.Vector3(X.x, X.y, 0),
+    Z: new THREE.Vector3(Z.x, Z.y, 0),
+    Y: new THREE.Vector3(Y.x, Y.y, 0),
+    W: new THREE.Vector3(W.x, W.y, 0),
+    V: new THREE.Vector3(V.x, V.y, 0),
+    U: new THREE.Vector3(U.x, U.y, 0),
+    T: new THREE.Vector3(T.x, T.y, 0)
+  };
+}
+
+const partOrigin = {
+  frame: 'O', crank: 'O', rodUpper: 'Z', rodLower: 'Z',
+  upperTriangle: 'X', linkXW: 'X', linkVU: 'V', legTriangle: 'W'
+};
+const partDirPoint = {
+  frame: 'X', crank: 'Z', rodUpper: 'Y', rodLower: 'W',
+  upperTriangle: 'Y', linkXW: 'W', linkVU: 'U', legTriangle: 'U'
+};
+
+function setPartPose(group, localOrigin, localDir, worldOrigin, worldDir) {
+  group.position.copy(worldOrigin);
+  const localAngle = Math.atan2(localDir.y - localOrigin.y, localDir.x - localOrigin.x);
+  const worldAngle = Math.atan2(worldDir.y - worldOrigin.y, worldDir.x - worldOrigin.x);
+  group.rotation.set(0, 0, worldAngle - localAngle);
+}
+
+function poseParts(world) {
+  for (const partName of Object.keys(parts)) {
+    const originName = partOrigin[partName];
+    const dirPointName = partDirPoint[partName];
+    setPartPose(
+      parts[partName],
+      local[partName][originName],
+      local[partName][dirPointName],
+      world[originName],
+      world[dirPointName]
+    );
+  }
+}
+
+/* ---------- render ---------- */
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const thetaMod = theta % (2 * Math.PI);
+  const deg = ((thetaMod * 180 / Math.PI) + 360) % 360;
+
+  const world = computeWorld(theta);
+  poseParts(world);
+
+  document.querySelector('[data-q="crank_deg"]').textContent = deg.toFixed(2);
+  document.querySelector('[data-q="foot_x"]').textContent = world.T.x.toFixed(2);
+  document.querySelector('[data-q="foot_y"]').textContent = world.T.y.toFixed(2);
+
+  renderer.render(scene, camera);
+}
+
+/* ---------- expose SIM ---------- */
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: (2 * Math.PI) / params.omega,
+  params,
+  render
+};
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  function loop(now) {
+    const elapsed = (now - start) / 1000;
+    window.SIM.render(elapsed);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

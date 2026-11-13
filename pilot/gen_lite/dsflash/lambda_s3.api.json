@@ -1,0 +1,21 @@
+{
+ "model": "deepseek-flash",
+ "finish": "stop",
+ "usage": {
+  "prompt_tokens": 841,
+  "completion_tokens": 29746,
+  "total_tokens": 30587,
+  "prompt_tokens_details": {
+   "cached_tokens": 640
+  },
+  "completion_tokens_details": {
+   "reasoning_tokens": 25267
+  },
+  "prompt_cache_hit_tokens": 640,
+  "prompt_cache_miss_tokens": 201
+ },
+ "ms": 126229,
+ "attempt": 1,
+ "promptChars": 3197,
+ "date": "2026-11-13T09:45:31.081Z"
+}

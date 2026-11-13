@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strandbeest Leg — Jansen Linkage</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0b0e13;}
+  canvas{display:block;}
+  #panel{
+    position:fixed;top:14px;left:14px;z-index:10;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:13px;line-height:1.85;color:#dce7f5;
+    background:rgba(14,19,27,.82);
+    border:1px solid rgba(110,150,200,.25);
+    border-radius:10px;padding:10px 14px;
+    backdrop-filter:blur(6px);pointer-events:none;
+    box-shadow:0 6px 24px rgba(0,0,0,.4);
+  }
+  #panel .row{display:flex;gap:10px;align-items:baseline}
+  #panel label{color:#7f93ad;min-width:86px;font-size:12px;letter-spacing:.05em}
+  #panel [data-q]{color:#78d2ff;font-weight:600;font-variant-numeric:tabular-nums;min-width:76px;text-align:right}
+  #panel .unit{color:#586b82;font-size:11px}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div class="row"><label>crank_deg</label><span data-q="crank_deg">0.00</span><span class="unit">deg</span></div>
+  <div class="row"><label>foot_x</label><span data-q="foot_x">0.00</span><span class="unit">mm</span></div>
+  <div class="row"><label>foot_y</label><span data-q="foot_y">0.00</span><span class="unit">mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+/* ==================================================================
+   Jansen "holy numbers" assigned to the eleven links of one leg.
+   ================================================================== */
+const LEN = {
+  OZ: 38.0,
+  ZY: 55.8,
+  XY: 40.1,
+  ZW: 61.9,
+  XW: 49.0,
+  XV: 41.5,
+  YV: 36.7,
+  VU: 65.7,
+  WU: 50.0,
+  UT: 39.3,
+  WT: 39.
