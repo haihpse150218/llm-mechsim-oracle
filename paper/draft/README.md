@@ -22,7 +22,7 @@ Mọi con số trong văn bản đều được đối chiếu với REPORT.md, 
 ## TODO trước khi nộp (cũng được đánh dấu `\todo{}` màu đỏ trong văn bản)
 1. Tên tác giả, đơn vị, email (`main.tex`); funding, đóng góp tác giả (`declarations.tex`).
 2. ~~Mã định danh model và ngày chạy~~ — xong: `claude-sonnet-5-5`, `claude-haiku-5-5`, 8–13/11/2026 (lấy từ transcript của subagent Claude Code; mỗi model chỉ có đúng một phiên bản). Trợ lý lập trình và viết là `claude-opus-5-5`, đã khai trong mục "Use of LLMs". **Tác giả cần đọc lại câu khai báo này.**
-3. URL repo công khai và DOI Zenodo (`introduction.tex`, `declarations.tex`).
+3. ~~URL repo công khai~~: xong, https://github.com/haihpse150218/llm-mechsim-oracle (13/11). Repo được tách từ thư mục này bằng `git subtree split`, giữ nguyên lịch sử. Muốn cập nhật repo thì chạy lại `git subtree split --prefix="List Paper/q4-pipeline/ideas/llm-mechsim-oracle" -b mechsim-export` rồi push `mechsim-export:main`. **Còn DOI Zenodo**: tác giả liên kết Zenodo với GitHub, tạo một release, rồi điền DOI vào `declarations.tex`. Repo chưa có LICENSE.
 4. Model hãng khác (Threats; hiện bị chặn vì chưa có API key).
 5. Chuyên gia cơ khí rà bộ DESIGN rules (Threats).
 6–7. ~~Hoàn thiện bib~~ — xong ngày 13/11, chi tiết trong `../bib_check.md`.
