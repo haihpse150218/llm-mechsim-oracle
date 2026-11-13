@@ -64,7 +64,7 @@ Phụ (độ tin cậy của chính oracle): audit mesh↔marker, 0 drift trên 
 | 5 | ~~Kiểm định thống kê~~ — **XONG 11-13**: `pilot/stats/STATS.md`. Đứng vững: spec > mọi nhánh, locate > vlm/none, tương tác model × nhánh (locate: sonnet 7/7 vs haiku 0/13, p = 1,3e-5). Chưa ý nghĩa: locate vs coarse, oracle vs VLM có panel | — | Xong |
 | 6 | Chạy VLM review 2–3 lần trên cùng sheet (inter-run) | Pha 5 đã thấy VLM không ổn định | Trung bình |
 | 7 | Chuyên gia cơ khí rà bộ kiểm DESIGN (1 người, có ghi nhận) | Threat construct lớn nhất | Trung bình |
-| 8 | Related work nhánh SE: tìm ICSE/FSE/ISSTA/ASE/ICST + bài ISSE 2024–2026 | Novelty gate còn treo; ISSE muốn thấy bài của chính tạp chí | Trung bình |
+| 8 | ~~Related work nhánh SE~~ — **XONG 11-13**: `paper/related_work.md` (định vị 7 nhánh), `rw_testing.md` (34), `rw_repair.md` (42), `references.bib` (79). Chưa thấy ai làm 'mức cụ thể feedback × cỡ model' với oracle tất định; gần nhất: Pan et al. DL4C@ICLR'25. Còn: kiểm 18 mục chỉ có arXiv | — | Xong (phần lớn) |
 | 9 | Kiểm lại arXiv ngay trước khi nộp (lĩnh vực ra bài hàng tháng) | Rủi ro scoop | Trước nộp |
 | 10 | Xác nhận Guide for Authors ISSE (độ dài, abstract, citation style) | Đang `[CHƯA KIỂM CHỨNG]` | Trước nộp |
 | 11 | Đóng gói artifact (repo công khai, Zenodo DOI, README tái lập) | Data availability | Trước nộp |
