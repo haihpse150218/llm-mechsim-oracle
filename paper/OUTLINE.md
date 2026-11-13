@@ -61,7 +61,7 @@ Phụ (độ tin cậy của chính oracle): audit mesh↔marker, 0 drift trên 
 | 2 | ~~Thêm cơ cấu tri thức công bố ngoài Jansen~~ — **XONG 11-13 (pha 7)**: lambda lặp lại kiểu kết quả của Jansen (haiku spec 5/5, locate/coarse/none 0/5); Peaucellier 0/10 lỗi tự nhiên. Gộp haiku: spec 13/13 vs locate 0/13 | — | Xong |
 | 3 | ~~Sửa diagnosis holy numbers~~ — **XONG 11-13**: verdict dùng scale minimax, diagnosis dùng scale đồng thuận; chấm lại 661 verdict không đổi | — | Xong |
 | 4 | ~~Kiểm drift vào oracle~~ — **XONG 11-13**: META drift ≤ 0,5 mm; chỉ mutant gian lận đổi PASS → FAIL | — | Xong |
-| 5 | Kiểm định thống kê: Cochran Q cho 5 nhánh, McNemar từng cặp, CI Wilson | Checklist ISSE nhấn thống kê | Cao |
+| 5 | ~~Kiểm định thống kê~~ — **XONG 11-13**: `pilot/stats/STATS.md`. Đứng vững: spec > mọi nhánh, locate > vlm/none, tương tác model × nhánh (locate: sonnet 7/7 vs haiku 0/13, p = 1,3e-5). Chưa ý nghĩa: locate vs coarse, oracle vs VLM có panel | — | Xong |
 | 6 | Chạy VLM review 2–3 lần trên cùng sheet (inter-run) | Pha 5 đã thấy VLM không ổn định | Trung bình |
 | 7 | Chuyên gia cơ khí rà bộ kiểm DESIGN (1 người, có ghi nhận) | Threat construct lớn nhất | Trung bình |
 | 8 | Related work nhánh SE: tìm ICSE/FSE/ISSTA/ASE/ICST + bài ISSE 2024–2026 | Novelty gate còn treo; ISSE muốn thấy bài của chính tạp chí | Trung bình |

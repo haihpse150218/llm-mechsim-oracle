@@ -97,3 +97,4 @@ RUNBOOK: `ITER_DIR=iter5/ablN ARMS=oracle_locate node oracle/iter_repair.mjs gra
 - [x] Hồi quy 661 verdict (results/regrade_v3.jsonl): 661/661 y hệt regrade_v2
 - [x] Sinh 20 → results/gen_lite7.jsonl: lambda 6/10 lỗi (haiku 5/5, sonnet 1/5: P ở trung điểm), peaucellier 0/10. Kiểm chức năng (đoạn thẳng 1%): 4 PASS đều 200°, 6 FAIL đều 0° → lỗi thật, không cognate hợp lệ bị đánh trượt
 - [x] Sửa lặp iter7/rep1 xong: spec 6/6, locate 1/6, coarse 1/6, none 1/6 (haiku 5/5 vs 0/5 ×3; sonnet 1/1 mọi nhánh); audit drift 0 trên 29 file; REPORT mục 'Pha 7'. PHA 7 XONG.
+- [x] 11-13 thống kê: stats/stats.mjs → stats/STATS.md; REPORT mục 'Thống kê'

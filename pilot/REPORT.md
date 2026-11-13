@@ -450,3 +450,28 @@ Kết quả RQ4 (haiku cần *giá trị đúng*, sonnet chỉ cần *vị trí*
 - Lambda chỉ có 1 lần lặp; sonnet chỉ có 1 file lỗi, nên không kết luận được gì về sonnet ở lambda ngoài "nó nhớ đúng".
 - Peaucellier không cho lỗi tự nhiên nào, nên RQ4 với tri thức dạng *quan hệ* vẫn chưa kiểm được trên lỗi thật (chỉ có mutant).
 - Vẫn chỉ hai model cùng hãng.
+
+# Thống kê (2026-11-13) — chi tiết: `stats/STATS.md`, script `stats/stats.mjs`
+Đơn vị là một lượt file; các nhánh so theo cặp. Kiểm định: Cochran Q, McNemar chính xác theo cặp (hiệu chỉnh Holm), CI Wilson 95%, Fisher chính xác. Kiểm tay: McNemar 8:0 → p = 0,0078; Cochran Q khối haiku gộp = 39; Fisher 7/7 vs 0/13 → p = 1,3e-5.
+
+**RQ3 (22 lượt, pha 5–6, 5 nhánh)**: spec 22/22 [85–100%], locate 14/22, coarse 10/22, vlm 5/22, none 6/22. Cochran Q = 44,5, p = 5e-9.
+- Theo Holm: spec hơn mọi nhánh (locate p = 0,047; coarse 0,004; vlm 1,5e-4; none 2,7e-4); locate hơn vlm (0,027) và none (0,047).
+- locate vs coarse (4:0) và coarse vs vlm/none **chưa có ý nghĩa thống kê**; vlm ≈ none (1:2).
+- Lỗi lắp ráp riêng (n = 8): không có khác biệt nào có ý nghĩa (Q p = 0,064). Mọi nhánh oracle đạt 8/8; vlm và none mất 2–3 lượt.
+
+**RQ4 (lỗi tri thức thiết kế = Jansen + lambda)**:
+- haiku (n = 13): spec 13/13 vs locate, coarse, none đều 0/13; Q = 39, p = 1,7e-8; mỗi cặp với spec p = 2,4e-4 (Holm 0,001).
+- sonnet (n = 7): spec 7/7, locate 7/7, coarse 3/7, none 1/7. Chưa cặp nào qua được Holm (n nhỏ).
+- **Tương tác model × nhánh**: ở nhánh locate, sonnet 7/7 vs haiku 0/13, Fisher p = 1,3e-5; ở coarse 3/7 vs 0/13, p = 0,031; ở spec 7/7 vs 13/13, p = 1. Đây là bằng chứng thống kê chính cho luận điểm "ngưỡng thông tin cần thiết phụ thuộc model".
+- Lambda riêng (n = 6): Q p = 0,002, nhưng từng cặp chỉ 5:0 (p = 0,063). Lambda chỉ mạnh khi gộp với Jansen.
+
+**Độ nhạy (mỗi file gốc dùng một lần: rep2 + lambda, n = 20)**: kết luận giữ nguyên. spec 20/20 hơn locate 10/20 (Holm 0,008), coarse (0,002), none (1,8e-4). Tri thức thiết kế, haiku, n = 10: spec 10/10 vs 0/10 ở cả 3 nhánh kia (Holm 0,012).
+
+**RQ1**: spec chi tiết 0/8 vs spec-lite 7/16, Fisher p = 0,054 (sát ngưỡng). Lambda haiku 5/5 vs sonnet 1/5, p = 0,048. Tỉ lệ lỗi pha 5: 14/60 [14–35%]; ngoài Jansen 5/50 [4–21%].
+
+**RQ2 (24 mutant pha 1, theo cặp)**: oracle vs VLM có panel 4:0, p = 0,125 (chưa ý nghĩa); oracle vs VLM ẩn panel 10:0, p = 0,002; VLM có panel vs ẩn panel 8:2, p = 0,109.
+
+**Hệ quả cho bài**:
+- Các khẳng định đứng vững: spec > mọi nhánh; locate > VLM và self-refine; tương tác model × mức thông tin trên lỗi tri thức thiết kế; oracle > VLM khi VLM không có panel số.
+- Không được khẳng định: locate > coarse; oracle > VLM có panel trên mutant; khác biệt giữa các nhánh trên lỗi lắp ráp.
+- Phải nêu rõ sự phụ thuộc giữa rep1 và rep2 và báo cả phân tích độ nhạy.
