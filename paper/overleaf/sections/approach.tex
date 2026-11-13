@@ -14,7 +14,9 @@ The contract fixes \emph{names}, not dimensions. It is a reduced version of the 
 The oracle loads the page in headless Chrome through Playwright and waits for a readiness flag. It then calls \texttt{render(t)} at 120 instants per input period (two periods for the Geneva drive) and records the world position of every marker and the text of every panel element. Times are offset by a small irrational fraction of the period to avoid special angles. Tolerances scale with the machine: lengths are compared to within 1~mm per 100~mm of machine size (at least 1~mm), angles to within $1^\circ$, and relative quantities to within 1\%.
 
 \subsection{Check families}
-Table~\ref{tab:checks} lists the checks. They fall into five families, ordered by how much ground truth they need.
+Figure~\ref{fig:oracle} gives an overview and Table~\ref{tab:checks} lists the checks. They fall into five families, ordered by how much ground truth they need.
+
+\input{figures/oracle}
 
 \begin{table*}[t]
 \caption{Check families of the oracle. Only DESIGN encodes mechanism-specific engineering knowledge; GT and PANEL use the kinematic solution computed from the simulator's own declared parameters.}\label{tab:checks}
