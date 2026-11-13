@@ -1,0 +1,1 @@
+CHANGED: Reset the link proportions to frame 3 : crank 1 : coupler 2.5 : rocker 2 (O4 at x=120, O4B=80, AP=150) to match the classical Chebyshev ratios flagged by the DESIGN check, which I recalled from memory and could not verify by running the page.

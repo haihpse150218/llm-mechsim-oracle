@@ -1,0 +1,130 @@
+{
+  "oracle_spec": {
+    "haiku/lambda_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/lambda_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/lambda_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/lambda_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "haiku/lambda_s5": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    },
+    "sonnet/lambda_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    }
+  },
+  "oracle_locate": {
+    "haiku/lambda_s1": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s2": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s4": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s5": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "sonnet/lambda_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    }
+  },
+  "oracle_coarse": {
+    "haiku/lambda_s1": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s2": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s3": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s4": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "haiku/lambda_s5": {
+      "active": false,
+      "stopRound": 3,
+      "stopReason": "budget (3 rounds)"
+    },
+    "sonnet/lambda_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "oracle pass"
+    }
+  },
+  "none": {
+    "haiku/lambda_s1": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/lambda_s2": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/lambda_s3": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/lambda_s4": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "haiku/lambda_s5": {
+      "active": false,
+      "stopRound": 1,
+      "stopReason": "repairer: no change"
+    },
+    "sonnet/lambda_s3": {
+      "active": false,
+      "stopRound": 2,
+      "stopReason": "repairer: no change"
+    }
+  }
+}

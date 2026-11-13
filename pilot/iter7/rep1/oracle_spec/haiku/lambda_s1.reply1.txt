@@ -1,0 +1,1 @@
+CHANGED: Set the link lengths to the classical Chebyshev proportions at 40 mm scale (O2A 40, O4B 100, AB 100, AP 200, ground O2O4 80), redefined P as A + AP*unit(B-A) so the drawn tracing point matches the kinematic solution, updated the coupler bar, tip and coupler@P marker to match, and moved the camera back so the larger machine fits.

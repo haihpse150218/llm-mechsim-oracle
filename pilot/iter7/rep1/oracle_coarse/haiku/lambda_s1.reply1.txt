@@ -1,0 +1,1 @@
+CHANGED: Moved tracing point P from AP beyond A (away from B) to AP from A toward B on the coupler, so P's position, the coupler mesh, tip and marker match the checker's solution (the reported 100 mm deviation equals 2*AP); the classical-proportion check (link ratios) was not changed.

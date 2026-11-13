@@ -1,0 +1,1 @@
+CHANGED: Set the ground pivot O4 to [80, 0], len.O4B to 100 mm and len.AP to 200 mm so the link lengths match the classical Chebyshev proportions at 40 mm scale (crank 40, coupler 100, rocker 100, ground 80, tracer 200), as the review report diagnosed.

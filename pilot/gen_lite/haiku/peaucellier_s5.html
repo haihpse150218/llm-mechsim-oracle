@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Peaucellier-Lipkin linkage</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#11151c;color:#e8edf5;font-family:system-ui,sans-serif}
+canvas{display:block;position:fixed;left:0;top:0}
+#panel{position:fixed;left:12px;top:12px;z-index:2;background:rgba(10,14,20,.8);padding:10px 14px;border-radius:8px;font:14px/1.6 ui-monospace,Consolas,monospace;pointer-events:none}
+#panel div b{display:inline-block;width:120px;color:#9fb4d0;font-weight:600}
+#title{position:fixed;left:12px;bottom:12px;z-index:2;font-size:13px;opacity:.7;pointer-events:none}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><b>crank angle</b><span data-q="crank_deg">0.0</span> deg</div>
+  <div><b>P x</b><span data-q="P_x">0.0</span> mm</div>
+  <div><b>P y</b><span data-q="P_y">0.0</span> mm</div>
+</div>
+<div id="title">Peaucellier-Lipkin inversor: output P on a straight line</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- parameters (mm, rad, rad/s) ----
+const PRM = {
+  O: [-60, 0],
+  Q: [0, 0],
+  len: { OA: 60, QB: 100, QD: 100, AB: 50, AD: 50, BP: 50, DP: 50 },
+  omega: 1.0,
+  thetaMid: Math.PI,
+  thetaAmp: 1.0
+};
+const r = PRM.len.OA;          // crank length; |OQ| must equal it so the circle of A passes through Q
+const L = PRM.len.QB;          // arm length Q->B = Q->D
+const s = PRM.len.AB;          // rhombus side
+const O = new THREE.Vector2(PRM.O[0], PRM.O[1]);
+const Q = new THREE.Vector2(PRM.Q[0], PRM.Q[1]);
+const LEN_OQ = O.distanceTo(Q);
+
+// ---- kinematics (pure) ----
+function alphaAt(t) {
+  return PRM.thetaMid + PRM.thetaAmp * Math.sin(PRM.omega * t);
+}
+// Rhombus A-B-P-D: B and D are symmetric about line QA; midpoint M on QA.
+function pose(t) {
+  const a = alphaAt(t);
+  const A = new THREE.Vector2(O.x + r * Math.cos(a), O.y + r * Math.sin(a));
+  const dv = A.clone().sub(Q);
+  const d = dv.length();
+  const e = dv.clone().divideScalar(d);
+  const u = (d * d + L * L - s * s) / (2 * d);       // signed distance Q->M
+  const h = Math.sqrt(Math.max(L * L - u * u, 0));  // half of BD
+  const M = Q.clone().addScaledVector(e, u);
+  const perp = new THREE.Vector2(-e.y, e.x);
+  const B = M.clone().addScaledVector(perp, h);
+  const D = M.clone().addScaledVector(perp, -h);
+  const P = B.clone().add(D).sub(A);                 // opposite vertex of A in the rhombus
+  return { a, A, B, D, P };
+}
+
+// ---- scene ----
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x11151c);
+const camera = new THREE.PerspectiveCamera(40, 1, 1, 5000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x223040, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(-120, 150, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x8fb4ff, 0.5);
+fill.position.set(200, -100, 150);
+scene.add(fill);
+
+const pinMat = new THREE.MeshStandardMaterial({ color: 0xe6e6e6, metalness: 0.8, roughness: 0.25 });
+const parts = {};
+const BAR_W = 9, BAR_T = 6;
+
+function makePart(name, len, color, z) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(len, BAR_W, BAR_T),
+    new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.45 })
+  );
+  bar.position.set(len / 2, 0, z);
+  g.add(bar);
+  for (const x of [0, len]) {
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 40, 24), pinMat);
+    pin.rotation.x = Math.PI / 2;
+    pin.position.set(x, 0, 0);
+    g.add(pin);
+  }
+  scene.add(g);
+  parts[name] = g;
+  return g;
+}
+
+function addMarker(group, point, x) {
+  const m = new THREE.Object3D();
+  m.name = group.name + '@' + point;
+  m.position.set(x, 0, 0);
+  group.add(m);
+}
+
+// frame (fixed): O and Q
+const frame = makePart('frame', LEN_OQ, 0x8a94a6, -14);
+addMarker(frame, 'O', 0);
+addMarker(frame, 'Q', LEN_OQ);
+
+const crank = makePart('crank', r, 0xf0a04b, 0);
+addMarker(crank, 'O', 0);
+addMarker(crank, 'A', r);
+
+const armB = makePart('armB', L, 0x4b8bf0, -6);
+addMarker(armB, 'Q', 0);
+addMarker(armB, 'B', L);
+
+const armD = makePart('armD', L, 0x4b8bf0, -6);
+addMarker(armD, 'Q', 0);
+addMarker(armD, 'D', L);
+
+const linkAB = makePart('linkAB', s, 0x6fd6a0, 6);
+addMarker(linkAB, 'A', 0);
+addMarker(linkAB, 'B', s);
+
+const linkAD = makePart('linkAD', s, 0x3fb8a8, 12);
+addMarker(linkAD, 'A', 0);
+addMarker(linkAD, 'D', s);
+
+const linkBP = makePart('linkBP', s, 0xd86fd0, 6);
+addMarker(linkBP, 'B', 0);
+addMarker(linkBP, 'P', s);
+
+const linkDP = makePart('linkDP', s, 0xc9a0ff, 12);
+addMarker(linkDP, 'D', 0);
+addMarker(linkDP, 'P', s);
+
+// locus of P over one full swing (static guide, computed from pure pose())
+{
+  const N = 240, pts = [];
+  const T = 2 * Math.PI / PRM.omega;
+  for (let i = 0; i <= N; i++) {
+    const p = pose((i / N) * T).P;
+    pts.push(new THREE.Vector3(p.x, p.y, 0));
+  }
+  const trace = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.7 })
+  );
+  trace.name = 'trace_P';
+  scene.add(trace);
+}
+
+// place a rigid part: origin at p, x-axis along p->q (in XY plane)
+function place(g, p, q) {
+  g.position.set(p.x, p.y, 0);
+  g.rotation.set(0, 0, Math.atan2(q.y - p.y, q.x - p.x));
+}
+place(frame, O, Q);
+
+// ---- panel ----
+const qCrank = document.querySelector('[data-q="crank_deg"]');
+const qPx = document.querySelector('[data-q="P_x"]');
+const qPy = document.querySelector('[data-q="P_y"]');
+
+// ---- render(t): pure function of t ----
+function render(t) {
+  const k = pose(t);
+  place(crank, O, k.A);
+  place(armB, Q, k.B);
+  place(armD, Q, k.D);
+  place(linkAB, k.A, k.B);
+  place(linkAD, k.A, k.D);
+  place(linkBP, k.B, k.P);
+  place(linkDP, k.D, k.P);
+
+  let deg = THREE.MathUtils.radToDeg(k.a) % 360;
+  if (deg < 0) deg += 360;
+  qCrank.textContent = deg.toFixed(1);
+  qPx.textContent = k.P.x.toFixed(1);
+  qPy.textContent = k.P.y.toFixed(1);
+
+  renderer.render(scene, camera);
+}
+
+// ---- camera fit ----
+function fit() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  const halfW = 115, halfH = 90;
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const dist = Math.max(halfH / tanHalf, halfW / (tanHalf * camera.aspect));
+  camera.position.set(-60, -30, dist);
+  camera.lookAt(-60, 0, 0);
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', fit);
+
+// ---- expose SIM before first frame ----
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: 2 * Math.PI / PRM.omega,
+  params: {
+    O: PRM.O,
+    Q: PRM.Q,
+    len: PRM.len,
+    omega: PRM.omega,
+    thetaMid: PRM.thetaMid,
+    thetaAmp: PRM.thetaAmp
+  },
+  render
+};
+fit();
+render(0);
+window.SIM_READY = true;
+
+// ---- live loop ----
+if (!/capture/.test(window.location.search)) {
+  const t0 = performance.now();
+  const loop = () => {
+    window.SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+NO_CHANGE: The last report (fb3) still fails the DESIGN proportion check (max rel. error 0.333 vs tolerance 0.03, flagging len.O4B, len.AP and ground distance), but I could not confirm the classical Chebyshev lambda proportions from the spec or from memory, and I cannot run code to test candidate values, so I left the geometry unchanged rather than guess.

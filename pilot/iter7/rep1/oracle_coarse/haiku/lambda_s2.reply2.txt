@@ -1,0 +1,1 @@
+CHANGED: Swapped the coupler and rocker lengths to classical Chebyshev proportions 1:2:2.5:2.5 (crank 40, coupler AB 80, rocker O4B 100, frame 100 mm), since the report flagged a 0.351 proportion error against the 1:2.5:2:2.5 set (not run-tested, as I could not execute the page).

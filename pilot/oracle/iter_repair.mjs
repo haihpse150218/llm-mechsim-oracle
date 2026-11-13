@@ -50,6 +50,9 @@ function coarse(r) {
   if (r.load?.ok === false) lines.push(`- LOAD (${DESC.LOAD}): ${r.load.reason || r.load.renderErr || 'missing markers ' + (r.load.missing || []).join(', ')}${r.load.errors?.length ? `; console errors: ${r.load.errors.join(' | ')}` : ''}`);
   for (const c of r.checks.filter((c) => !c.pass)) lines.push(`- ${c.family} (${DESC[c.family]}): "${c.name}" measured ${+c.value.toPrecision(3)}, tolerance ${+c.tol.toPrecision(3)}`);
   if (r.checks.some((c) => c.family === 'DESIGN' && c.name.startsWith('holy'))) lines.push('  (holy-number check compares your SIM.params.len to the published Jansen link lengths, allowing uniform scale and mirroring)');
+  const fd = (n) => r.checks.some((c) => c.family === 'DESIGN' && !c.pass && c.name.startsWith(n));
+  if (fd('classical proportions')) lines.push("  (proportion check compares your SIM.params link lengths and ground distance to the classical proportions of this mechanism, allowing uniform scale)");
+  if (fd('inversor geometry')) lines.push('  (inversor-geometry check compares your SIM.params to the geometric conditions under which the Peaucellier-Lipkin output point moves on an exact straight line)');
   return lines.join('\n') + '\n';
 }
 function specific(r) {
@@ -71,11 +74,14 @@ export function locateDetail(d) {
   if (d.startsWith('best-fit uniform scale')) {
     const items = d.replace(/^.*?Links that do not match at this scale:\s*/, '').split('; ').map((it) => {
       let m;
-      if ((m = it.match(/^(len\.\w+) = [^,]*, expected [\d.]+ mm( \(looks swapped with len\.\w+\))?$/))) return m[1] + (m[2] || '');
+      if ((m = it.match(/^(.+?) = [-\d.]+ mm, expected [-\d.]+ mm( \(looks swapped with .+\))?$/))) return m[1] + (m[2] || '');
       if (it.startsWith('X - O')) return 'the fixed pivot X is misplaced relative to the crank centre O';
       return it;
     });
-    return `your SIM.params.len does not match the published Jansen proportions (uniform scale and mirroring allowed). Wrong: ${items.join('; ')}`;
+    // Jansen wording kept verbatim (phase 6 used it); phase 7 proportion checks name their mechanism
+    const nm = d.match(/x the classical (.+?) proportions \(/);
+    return nm ? `your SIM.params does not match the classical ${nm[1]} proportions (uniform scale allowed). Wrong: ${items.join('; ')}`
+      : `your SIM.params.len does not match the published Jansen proportions (uniform scale and mirroring allowed). Wrong: ${items.join('; ')}`;
   }
   return d
     .replace(/; solving (.*?) puts (\w+) at \([^)]*\)$/, '; that is not where solving $1 puts $2')
@@ -83,7 +89,10 @@ export function locateDetail(d) {
     .replace(/, the solution from your params puts (\w+) at \([^)]*\)$/, ', which is not where the solution from your params puts $1')
     .replace(/, expected [-\d.]+ deg$/, ', which is not the required carrier rotation')
     .replace(/must turn at omega\*Zs\/\(Zs\+Zr\) = [\d.]+ rad\/s/, 'must turn at omega*Zs/(Zs+Zr)')
-    .replace(/, the law from your params gives [-\d.]+ mm$/, ', which does not follow the lift law from your params');
+    .replace(/, the law from your params gives [-\d.]+ mm$/, ', which does not follow the lift law from your params')
+    .replace(/, the point P from your SIM\.params is at [^(]*\(and drawn at [^)]*\)$/, ', which does not match the point P solved from your SIM.params')
+    .replace(/ \(expected [-\d.]+ mm(?: each)?\)/g, '')
+    .replace(/ — [^;]*/g, ''); // Peaucellier: keep WHICH link breaks the inversor geometry, drop the relation it must satisfy
 }
 function locate(r) {
   return specific({...r, checks: r.checks.map((c) => ({...c, detail: locateDetail(c.detail)}))});

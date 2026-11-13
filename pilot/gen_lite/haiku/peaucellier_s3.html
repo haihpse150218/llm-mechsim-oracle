@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peaucellier-Lipkin Linkage</title>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f1218; color: #e8ecf2; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  canvas { display: block; position: fixed; left: 0; top: 0; z-index: 0; }
+  #panel { position: fixed; left: 16px; top: 16px; z-index: 2; pointer-events: none; background: rgba(15, 18, 24, 0.78); border: 1px solid #2a3240; border-radius: 8px; padding: 10px 14px; font-size: 14px; line-height: 1.7; }
+  #panel .title { font-weight: 600; margin-bottom: 4px; color: #ffffff; }
+  #panel .row b { display: inline-block; width: 110px; font-weight: 500; color: #9fb3c8; }
+  #panel .v { font-variant-numeric: tabular-nums; }
+  @media (max-width: 600px) { #panel { left: 10px; top: 10px; font-size: 13px; } #panel .row b { width: 92px; } }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div class="title">Peaucellier-Lipkin inversor</div>
+  <div class="row"><b>Crank angle</b><span class="v" data-q="crank_deg">0.00</span> deg</div>
+  <div class="row"><b>P x</b><span class="v" data-q="P_x">0.00</span> mm</div>
+  <div class="row"><b>P y</b><span class="v" data-q="P_y">0.00</span> mm</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- Geometry (mm). Q is the inversion centre; the crank circle passes through Q,
+// so |OQ| = OA. Then P = Q + k^2 (A-Q)/|A-Q|^2 lies on the straight line x = -k^2/(2r).
+// Rhombus side a, arms QB = QD = l = sqrt(k^2 + a^2) make B and D exact.
+const r = 100;                    // OA = |OQ|
+const a = 100;                    // AB = AD = BP = DP
+const k2 = 6000;                  // QA * QP (inversion constant)
+const l = Math.sqrt(k2 + a * a);  // QB = QD
+const omega = 1.2;                // rad/s
+const thetaMid = 1.78;            // rad
+const thetaAmp = 0.72;            // rad  -> swing crank angle in [1.06, 2.50] rad (about 61 to 143 deg)
+
+const Oc = { x: -r, y: 0 };
+const Qc = { x: 0, y: 0 };
+const O = new THREE.Vector2(Oc.x, Oc.y);
+const Q = new THREE.Vector2(Qc.x, Qc.y);
+
+// Analytic pose for crank angle th
+function solve(th) {
+  const A = new THREE.Vector2(O.x + r * Math.cos(th), O.y + r * Math.sin(th));
+  const QA = A.clone().sub(Q);
+  const d2 = QA.lengthSq();
+  const Pt = Q.clone().add(QA.clone().multiplyScalar(k2 / d2));
+  const M = A.clone().add(Pt).multiplyScalar(0.5);
+  const AP = Pt.clone().sub(A);
+  const ap = AP.length();
+  const h = Math.sqrt(Math.max(0, a * a - ap * ap / 4));
+  const n = new THREE.Vector2(-AP.y, AP.x).multiplyScalar(1 / ap);
+  const B = M.clone().addScaledVector(n, h);
+  const D = M.clone().addScaledVector(n, -h);
+  return { A, B, D, Pt };
+}
+
+// ---------- Renderer / scene
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f1218);
+
+const camera = new THREE.PerspectiveCamera(40, 1, 1, 5000);
+const CX = -70, CY = 50;
+
+function fit() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const distV = 125 / tanV;                 // half height 125 mm visible
+  const distH = 150 / (tanV * camera.aspect); // half width 150 mm visible
+  camera.position.set(CX, CY, Math.max(distV, distH));
+  camera.lookAt(CX, CY, 0);
+  camera.updateProjectionMatrix();
+}
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x202430, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(-120, 200, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x8fb4ff, 0.5);
+fill.position.set(200, -100, 150);
+scene.add(fill);
+
+// Layers (z of each part, mm). Pins run through all layers.
+const Z = { frame: -22, crank: 0, armB: 8, armD: -8, linkAB: 14, linkAD: -14, linkBP: 14, linkDP: -14 };
+const LINK_W = 12, LINK_T = 6;
+
+function mat(color, rough = 0.45, metal = 0.2) {
+  return new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+}
+
+// Bar from local origin (0,0) to local (L,0), thickness LINK_T along z at height z, with hubs at both ends
+function addBar(group, L, z, color) {
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(L, LINK_W, LINK_T), mat(color));
+  bar.position.set(L / 2, 0, z);
+  group.add(bar);
+  for (const x of [0, L]) {
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(LINK_W / 2 + 1.5, LINK_W / 2 + 1.5, LINK_T, 28), mat(color, 0.35, 0.4));
+    hub.rotation.x = Math.PI / 2;
+    hub.position.set(x, 0, z);
+    group.add(hub);
+  }
+}
+
+// Pin (shaft) along z at local (x, y), spanning all layers
+function addPin(group, x, y) {
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 50, 20), mat(0xd0d6de, 0.3, 0.8));
+  p.rotation.x = Math.PI / 2;
+  p.position.set(x, y, 0);
+  group.add(p);
+}
+
+function makePart(name) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  scene.add(g);
+  return g;
+}
+
+const parts = {};
+const markers = {};
+
+function addMarker(part, pointName, x, y) {
+  const m = new THREE.Object3D();
+  m.name = part.name + '@' + pointName;
+  m.position.set(x, y, 0);
+  part.add(m);
+  markers[m.name] = m;
+}
+
+// frame (fixed): O and Q pivots, base plate and posts
+parts.frame = makePart('frame');
+{
+  const g = parts.frame;
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(220, 14, 6), mat(0x5b6472, 0.7, 0.1));
+  plate.position.set(-50, -37, Z.frame);
+  g.add(plate);
+  for (const x of [Oc.x, Qc.x]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(16, 30, 6), mat(0x5b6472, 0.7, 0.1));
+    post.position.set(x, -15, Z.frame);
+    g.add(post);
+    addPin(g, x, 0);
+  }
+  addMarker(g, 'O', Oc.x, Oc.y);
+  addMarker(g, 'Q', Qc.x, Qc.y);
+}
+
+// crank: O -> A, local +X along the crank
+parts.crank = makePart('crank');
+{
+  const g = parts.crank;
+  addBar(g, r, Z.crank, 0xf29e4c);
+  addPin(g, r, 0);
+  addMarker(g, 'O', 0, 0);
+  addMarker(g, 'A', r, 0);
+}
+
+// armB: Q -> B
+parts.armB = makePart('armB');
+{
+  const g = parts.armB;
+  addBar(g, l, Z.armB, 0x4c9be8);
+  addPin(g, l, 0);
+  addMarker(g, 'Q', 0, 0);
+  addMarker(g, 'B', l, 0);
+}
+
+// armD: Q -> D
+parts.armD = makePart('armD');
+{
+  const g = parts.armD;
+  addBar(g, l, Z.armD, 0x3fc1a8);
+  addPin(g, l, 0);
+  addMarker(g, 'Q', 0, 0);
+  addMarker(g, 'D', l, 0);
+}
+
+// linkAB: A -> B
+parts.linkAB = makePart('linkAB');
+{
+  const g = parts.linkAB;
+  addBar(g, a, Z.linkAB, 0x8bd450);
+  addMarker(g, 'A', 0, 0);
+  addMarker(g, 'B', a, 0);
+}
+
+// linkAD: A -> D
+parts.linkAD = makePart('linkAD');
+{
+  const g = parts.linkAD;
+  addBar(g, a, Z.linkAD, 0xd6c24a);
+  addMarker(g, 'A', 0, 0);
+  addMarker(g, 'D', a, 0);
+}
+
+// linkBP: B -> P
+parts.linkBP = makePart('linkBP');
+{
+  const g = parts.linkBP;
+  addBar(g, a, Z.linkBP, 0xb37de8);
+  addPin(g, a, 0);
+  addMarker(g, 'B', 0, 0);
+  addMarker(g, 'P', a, 0);
+}
+
+// linkDP: D -> P
+parts.linkDP = makePart('linkDP');
+{
+  const g = parts.linkDP;
+  addBar(g, a, Z.linkDP, 0xe86fa3);
+  addMarker(g, 'D', 0, 0);
+  addMarker(g, 'P', a, 0);
+}
+
+// Static guides: the crank circle (faint) and the traced straight path of P over the swing
+{
+  const circ = [];
+  for (let i = 0; i <= 160; i++) {
+    const th = (i / 160) * Math.PI * 2;
+    circ.push(new THREE.Vector3(O.x + r * Math.cos(th), O.y + r * Math.sin(th), 0));
+  }
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(circ), new THREE.LineBasicMaterial({ color: 0x2a3446 })));
+
+  const path = [];
+  for (let i = 0; i <= 160; i++) {
+    const th = thetaMid - thetaAmp + (2 * thetaAmp) * (i / 160);
+    const g = solve(th);
+    path.push(new THREE.Vector3(g.Pt.x, g.Pt.y, 0));
+  }
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(path), new THREE.LineBasicMaterial({ color: 0x3dd6c6 })));
+}
+
+// Pose a part: origin at p0, local +X pointing to p1
+function pose(part, p0, p1) {
+  part.position.set(p0.x, p0.y, 0);
+  part.rotation.set(0, 0, Math.atan2(p1.y - p0.y, p1.x - p0.x));
+}
+
+function setPanel(name, text) {
+  document.querySelectorAll('[data-q="' + name + '"]').forEach((el) => { el.textContent = text; });
+}
+
+// ---------- Simulation entry point: pure function of t
+function render(t) {
+  const th = thetaMid + thetaAmp * Math.sin(omega * t);
+  const g = solve(th);
+  pose(parts.crank, O, g.A);
+  pose(parts.armB, Q, g.B);
+  pose(parts.armD, Q, g.D);
+  pose(parts.linkAB, g.A, g.B);
+  pose(parts.linkAD, g.A, g.D);
+  pose(parts.linkBP, g.B, g.Pt);
+  pose(parts.linkDP, g.D, g.Pt);
+
+  const deg = ((th * 180 / Math.PI) % 360 + 360) % 360;
+  setPanel('crank_deg', deg.toFixed(2));
+  setPanel('P_x', (g.Pt.x + 0).toFixed(2));
+  setPanel('P_y', (g.Pt.y + 0).toFixed(2));
+
+  renderer.render(scene, camera);
+}
+
+fit();
+window.addEventListener('resize', () => { fit(); render(lastT); });
+
+let lastT = 0;
+const _render = render;
+// keep last time so resize can redraw the current pose
+function renderAt(t) { lastT = t; _render(t); }
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: 2 * Math.PI / omega,
+  params: {
+    O: [Oc.x, Oc.y],
+    Q: [Qc.x, Qc.y],
+    len: { OA: r, QB: l, QD: l, AB: a, AD: a, BP: a, DP: a },
+    omega: omega,
+    thetaMid: thetaMid,
+    thetaAmp: thetaAmp
+  },
+  render: renderAt
+};
+
+renderAt(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  let start = null;
+  const loop = (ts) => {
+    if (start === null) start = ts;
+    renderAt((ts - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

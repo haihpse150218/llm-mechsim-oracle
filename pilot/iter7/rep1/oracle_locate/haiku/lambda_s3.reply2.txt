@@ -1,0 +1,1 @@
+CHANGED: Set len.AB from 80 to 100 (coupler equal to rocker O4B, 2.5x the crank) to move the coupler toward the classical Chebyshev proportions flagged in the latest report; len.AP was left at 140 and is not verified against the classical value.

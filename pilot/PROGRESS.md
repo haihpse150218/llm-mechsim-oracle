@@ -90,3 +90,10 @@ RUNBOOK: `ITER_DIR=iter5/ablN ARMS=oracle_locate node oracle/iter_repair.mjs gra
 - [x] r2 (10 agent) → grade 2: abl1 5/8, abl2 9/14 (sonnet Jansen 6/6, haiku Jansen 0/8); r3: abl1 3, abl2 5 tác vụ (đang chạy)
 - [x] r3 (8 agent) → grade 3, plan 3 (dừng hết), summary: abl1 5/8, abl2 9/14 → locate 14/22 (ngoài Jansen 8/8, Jansen sonnet 6/6, haiku 0/8). Audit mesh 14 PASS: drift 0. REPORT.md mục "Pha 6". PHA 6 XONG.
 - [x] 11-13 sửa oracle: holyMinimax (verdict), holyScale đồng thuận (diagnosis), META drift; chấm lại 661 verdict → 660 y hệt, chỉ mutant gian lận PASS→FAIL. REPORT mục 'Sửa oracle'.
+
+## Pha 7 — thêm Chebyshev lambda + Peaucellier–Lipkin (2026-11-13; kế hoạch: ~/.claude/plans/th-m-c-c-u-m-i-joyful-treehouse.md)
+- [x] Ground truth: lambda theo Wikipedia (crank a, rocker 2.5a, coupler 2.5a+2.5a, ground 2a) — mô phỏng: P trong 0.63%·a của dây cung suốt 200°; Peaucellier: P_x hằng tới 1e-13
+- [x] Spec (`lite_specs.mjs`), oracle (`lambda`, `peaucellier` + `propMinimax/propDetail/peaucellierCheck`), locate/coarse (`iter_repair.mjs`), tham chiếu PASS 2/2, mutant `mutants/lite7/` (`oracle/make_mut_lite7.mjs`) bắt 8/8
+- [x] Hồi quy 661 verdict (results/regrade_v3.jsonl): 661/661 y hệt regrade_v2
+- [x] Sinh 20 → results/gen_lite7.jsonl: lambda 6/10 lỗi (haiku 5/5, sonnet 1/5: P ở trung điểm), peaucellier 0/10. Kiểm chức năng (đoạn thẳng 1%): 4 PASS đều 200°, 6 FAIL đều 0° → lỗi thật, không cognate hợp lệ bị đánh trượt
+- [x] Sửa lặp iter7/rep1 xong: spec 6/6, locate 1/6, coarse 1/6, none 1/6 (haiku 5/5 vs 0/5 ×3; sonnet 1/1 mọi nhánh); audit drift 0 trên 29 file; REPORT mục 'Pha 7'. PHA 7 XONG.

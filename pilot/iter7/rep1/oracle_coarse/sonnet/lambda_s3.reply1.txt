@@ -1,0 +1,1 @@
+CHANGED: Set link lengths to Chebyshev's classical lambda proportions (ground 2 : crank 1 : coupler 2.5 : rocker 2.5, AP = 2*AB) at scale 40 mm, i.e. O4=[80,0], O2A=40, AB=O4B=100, AP=200, and recentred the camera.

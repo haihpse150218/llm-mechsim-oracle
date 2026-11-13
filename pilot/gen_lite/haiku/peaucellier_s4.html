@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peaucellier-Lipkin Linkage</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #11151c; color: #e8edf5;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+  #panel { position: fixed; left: 16px; top: 16px; z-index: 2; pointer-events: none;
+    background: rgba(10, 14, 20, 0.75); border: 1px solid #2b3445; border-radius: 8px;
+    padding: 12px 14px; font-size: 14px; line-height: 1.75; font-variant-numeric: tabular-nums; }
+  #panel h1 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #9fb3cc; }
+  #panel .lbl { display: inline-block; width: 110px; color: #8a9ab0; }
+  #panel .unit { color: #8a9ab0; margin-left: 4px; }
+  @media (max-width: 600px) { #panel { font-size: 13px; left: 16px; top: 16px; } }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Peaucellier-Lipkin inversor</h1>
+  <div><span class="lbl">crank angle</span><span data-q="crank_deg">0.00</span><span class="unit">deg</span></div>
+  <div><span class="lbl">P x</span><span data-q="P_x">0.00</span><span class="unit">mm</span></div>
+  <div><span class="lbl">P y</span><span data-q="P_y">0.00</span><span class="unit">mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------------------------------------------------------------------------
+// Parameters (mm, rad, rad/s). Points: O crank pivot, Q inversor centre.
+// Straight-line condition: |OQ| = |OA| (the crank circle passes through Q).
+// Inversion power k = QB^2 - AB^2, and P = Q + (k/|QA|^2)(A - Q), so P moves
+// on the line perpendicular to OQ at distance k/(2*OA) from Q (x = 6.67 here).
+// ---------------------------------------------------------------------------
+const PAR = {
+  O: [0, 0],
+  Q: [60, 0],
+  len: { OA: 60, QB: 100, QD: 100, AB: 60, AD: 60, BP: 60, DP: 60 },
+  omega: 1.0,
+  thetaMid: Math.PI,
+  thetaAmp: Math.PI / 3,   // swing 120..240 deg, |QA| stays in [103.9, 120] (assemblable)
+};
+const T = 5;               // link thickness along Z (mm)
+
+const O = new THREE.Vector2(PAR.O[0], PAR.O[1]);
+const Q = new THREE.Vector2(PAR.Q[0], PAR.Q[1]);
+const L2 = PAR.len.QB * PAR.len.QB;
+const K = L2 - PAR.len.AB * PAR.len.AB;
+
+// Pure closed-form pose of all points at time t.
+function solve(t) {
+  const th = PAR.thetaMid + PAR.thetaAmp * Math.sin(PAR.omega * t);
+  const A = new THREE.Vector2(O.x + PAR.len.OA * Math.cos(th), O.y + PAR.len.OA * Math.sin(th));
+  const dv = new THREE.Vector2().subVectors(A, Q);
+  const d = dv.length();
+  const e = dv.clone().divideScalar(d);
+  const n = new THREE.Vector2(-e.y, e.x);
+  const tt = (K + d * d) / (2 * d);
+  const h = Math.sqrt(L2 - tt * tt);
+  const base = Q.clone().addScaledVector(e, tt);
+  const B = base.clone().addScaledVector(n, h);
+  const D = base.clone().addScaledVector(n, -h);
+  const P = Q.clone().addScaledVector(e, K / d);
+  return { th, O, Q, A, B, D, P };
+}
+
+// ---------------------------------------------------------------------------
+// Scene
+// ---------------------------------------------------------------------------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x11151c);
+
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xdde7ff, 0x202530, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.8);
+key.position.set(-120, -160, 300);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+fill.position.set(200, 120, 150);
+scene.add(fill);
+
+// Frame (fixed): ground plate and two pivot pins at O and Q.
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+scene.add(frame);
+const frameMat = new THREE.MeshStandardMaterial({ color: 0x4a5366, metalness: 0.2, roughness: 0.7 });
+const pinMat = new THREE.MeshStandardMaterial({ color: 0xd8dee9, metalness: 0.8, roughness: 0.25 });
+const plate = new THREE.Mesh(new THREE.BoxGeometry(Q.x - O.x + 60, 24, 6), frameMat);
+plate.position.set((O.x + Q.x) / 2, 0, -20);
+frame.add(plate);
+const pinGeo = new THREE.CylinderGeometry(5, 5, 52, 32);
+pinGeo.rotateX(Math.PI / 2);
+for (const p of [O, Q]) {
+  const pin = new THREE.Mesh(pinGeo, pinMat);
+  pin.position.set(p.x, p.y, 0);
+  frame.add(pin);
+}
+for (const [n, p] of [['O', O], ['Q', Q]]) {
+  const m = new THREE.Object3D();
+  m.name = `frame@${n}`;
+  m.position.set(p.x, p.y, 0);
+  frame.add(m);
+}
+
+// Moving parts. Each part's origin sits at p0 and its local +X points to p1.
+const DEF = [
+  { name: 'crank',  p0: 'O', p1: 'A', L: PAR.len.OA, z: 0,   color: 0xf0a04b },
+  { name: 'armB',   p0: 'Q', p1: 'B', L: PAR.len.QB, z: 12,  color: 0x4fb3bf },
+  { name: 'armD',   p0: 'Q', p1: 'D', L: PAR.len.QD, z: -12, color: 0x4fb3bf },
+  { name: 'linkAB', p0: 'A', p1: 'B', L: PAR.len.AB, z: 6,   color: 0x7aa7ff },
+  { name: 'linkAD', p0: 'A', p1: 'D', L: PAR.len.AD, z: -6,  color: 0x7aa7ff },
+  { name: 'linkBP', p0: 'B', p1: 'P', L: PAR.len.BP, z: 6,   color: 0xb98cff },
+  { name: 'linkDP', p0: 'D', p1: 'P', L: PAR.len.DP, z: -6,  color: 0xb98cff },
+];
+
+function addLinkBody(g, L, zc, color) {
+  const m = new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.4 });
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(L, 8, T), m);
+  bar.position.set(L / 2, 0, zc);
+  g.add(bar);
+  const boss = new THREE.CylinderGeometry(6, 6, T, 28);
+  boss.rotateX(Math.PI / 2);
+  for (const x of [0, L]) {
+    const b = new THREE.Mesh(boss, m);
+    b.position.set(x, 0, zc);
+    g.add(b);
+  }
+}
+
+const G = { frame };
+for (const d of DEF) {
+  const g = new THREE.Object3D();
+  g.name = d.name;
+  scene.add(g);
+  G[d.name] = g;
+  addLinkBody(g, d.L, d.z, d.color);
+  const m0 = new THREE.Object3D();
+  m0.name = `${d.name}@${d.p0}`;
+  g.add(m0);
+  const m1 = new THREE.Object3D();
+  m1.name = `${d.name}@${d.p1}`;
+  m1.position.set(d.L, 0, 0);
+  g.add(m1);
+}
+
+const QS = {};
+document.querySelectorAll('[data-q]').forEach(el => { QS[el.dataset.q] = el; });
+
+// Pure function of t: poses every part, updates the panel, draws the frame.
+function render(t) {
+  const s = solve(t);
+  for (const d of DEF) {
+    const a = s[d.p0], b = s[d.p1];
+    const g = G[d.name];
+    g.position.set(a.x, a.y, 0);
+    g.rotation.set(0, 0, Math.atan2(b.y - a.y, b.x - a.x));
+  }
+  const deg = ((s.th * 180) / Math.PI) % 360;
+  QS.crank_deg.textContent = (deg < 0 ? deg + 360 : deg).toFixed(2);
+  QS.P_x.textContent = s.P.x.toFixed(2);
+  QS.P_y.textContent = s.P.y.toFixed(2);
+  renderer.render(scene, camera);
+}
+
+function fit() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const needH = 90, needW = 125;   // mm half-extents to keep in view
+  const dist = Math.max(needH / tanHalf, needW / (tanHalf * camera.aspect));
+  camera.position.set(15, -30, dist);
+  camera.lookAt(15, 0, 0);
+  camera.updateProjectionMatrix();
+}
+fit();
+window.addEventListener('resize', fit);
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: 2 * Math.PI / PAR.omega,
+  params: {
+    O: PAR.O,
+    Q: PAR.Q,
+    len: PAR.len,
+    omega: PAR.omega,
+    thetaMid: PAR.thetaMid,
+    thetaAmp: PAR.thetaAmp,
+  },
+  render,
+};
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    render((performance.now() - t0) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

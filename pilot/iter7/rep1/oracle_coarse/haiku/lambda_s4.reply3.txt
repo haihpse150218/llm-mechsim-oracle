@@ -1,0 +1,1 @@
+NO_CHANGE: The checker still reports "classical proportions (max rel. error)" at 0.379 (tolerance 0.03), but I could not identify the reference proportions it uses; the file keeps the 4:1:3:3 Chebyshev lambda proportions (ground 160, crank 40, rocker 120, coupler 120) that I cannot verify as the checker's target, so I made no edit rather than guess.

@@ -1,0 +1,1 @@
+CHANGED: Resized the link proportions from frame:crank:coupler:rocker 3:1:2.5:2 to 4:1:3:3 (O4 at x=160, O2A=40, AB=120, O4B=120, AP=180 to keep AP/AB=1.5), extended the frame bar to O4 and recentred the camera, to clear the failed classical-proportions check (max rel. error 0.333 vs tolerance 0.03).

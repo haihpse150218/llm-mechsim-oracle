@@ -1,0 +1,1 @@
+CHANGED: Set len.AP (tracing-point distance AP) from 140 to 170 mm in CFG, the only parameter the last report flagged as off the classical Chebyshev proportions (0.176 relative error).

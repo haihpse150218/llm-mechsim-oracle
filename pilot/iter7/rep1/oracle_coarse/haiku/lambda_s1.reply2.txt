@@ -1,0 +1,1 @@
+CHANGED: Resized the link proportions from crank:coupler:rocker:ground 1:2.5:2:3 to the Chebyshev-style 1:4:3:4 (O2A=25, AB=100, O4B=75, ground O2O4=100) to address the failed classical-proportions DESIGN check, which is unverified since the exact reference values were not available.

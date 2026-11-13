@@ -1,0 +1,1 @@
+NO_CHANGE: The review report gave no specific defect; I checked the four-bar solve (circle intersection and assembly branch are consistent, with cross(A-O4, B-O4) always negative), the part and marker hierarchy, the AB/AP/P_x/P_y/crank_deg outputs, the import map, the SIM exposure with a pure render(t), and the ?capture live loop against the spec, and found nothing wrong.

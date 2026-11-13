@@ -1,0 +1,1 @@
+CHANGED: Reset the ground distance |O2O4| to 160 mm and the rocker O4B to 120 mm (frame:crank:coupler:rocker = 4:1:2.5:3, the classical proportions the report's 0.333 error pointed to), set AP to 160 mm as a best estimate within the error bound, and widened the frame bar and camera target to match.

@@ -1,0 +1,1 @@
+CHANGED: Reset the link proportions to the classical Chebyshev ratio (ground 4 : crank 1 : coupler 3 : rocker 2, with crank 40 mm) by moving O2 to (-80,0), O4 to (80,0) and AB to 120 mm, since the report flagged the proportion error (0.351 vs tolerance 0.03).

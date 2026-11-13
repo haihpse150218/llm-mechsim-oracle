@@ -1,0 +1,1 @@
+CHANGED: Set len.AP from 100 to 400 mm to match the classical Chebyshev lambda proportions (1 : 2.5 : 2.5 : 5, ground 2) at scale 80, and pulled the camera back/up so the extended coupler tip stays in view.

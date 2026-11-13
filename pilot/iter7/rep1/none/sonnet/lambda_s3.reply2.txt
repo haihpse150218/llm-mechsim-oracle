@@ -1,0 +1,1 @@
+NO_CHANGE: link ratios are the classic Chebyshev 2:1:2.5:2.5 with AP = 2*AB, the solver gives a flat P path (y = 320) over about half the revolution (checked at crank 90, 180, 270 deg), and the markers, parts and contract items all match the spec.

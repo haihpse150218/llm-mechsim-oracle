@@ -1,0 +1,1 @@
+CHANGED: Set len.AP from 120 to 96 mm (the tracing-point distance that the last report's 0.25 relative error implies) and drew the coupler extension bar only when AP > AB, so the shorter AP does not produce an inverted bar.
