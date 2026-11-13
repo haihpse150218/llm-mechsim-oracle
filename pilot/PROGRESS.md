@@ -89,3 +89,4 @@ RUNBOOK: `ITER_DIR=iter5/ablN ARMS=oracle_locate node oracle/iter_repair.mjs gra
 - [x] r1 (22 agent) → grade 1: abl1 4/8, abl2 8/14; plan 1 → r2: abl1 4, abl2 6 tác vụ (đang chạy)
 - [x] r2 (10 agent) → grade 2: abl1 5/8, abl2 9/14 (sonnet Jansen 6/6, haiku Jansen 0/8); r3: abl1 3, abl2 5 tác vụ (đang chạy)
 - [x] r3 (8 agent) → grade 3, plan 3 (dừng hết), summary: abl1 5/8, abl2 9/14 → locate 14/22 (ngoài Jansen 8/8, Jansen sonnet 6/6, haiku 0/8). Audit mesh 14 PASS: drift 0. REPORT.md mục "Pha 6". PHA 6 XONG.
+- [x] 11-13 sửa oracle: holyMinimax (verdict), holyScale đồng thuận (diagnosis), META drift; chấm lại 661 verdict → 660 y hệt, chỉ mutant gian lận PASS→FAIL. REPORT mục 'Sửa oracle'.

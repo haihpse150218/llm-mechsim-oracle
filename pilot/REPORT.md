@@ -375,7 +375,7 @@ Gộp 22 lượt, so với pha 5 (cùng file, cùng K):
    - Các lượt CHANGED của haiku thay một số sai bằng số sai khác: dùng 7.8 (độ lệch dọc của X) làm chiều dài YV hoặc làm |OX|, đặt X ở (−7.8, 15), giữ OZ = 38.
    - Một agent bác bỏ đúng cặp hoán đổi oracle gợi ý vì nó làm crank "non-Grashof" — tính đúng, nhưng dựa trên OZ = 38 sai.
 3. **Lỗi ngoài Jansen không cần giá trị đúng**: 8/8 ở cả spec, locate, coarse. Với lỗi lắp ráp/ràng buộc, biết check nào trượt là đủ.
-4. **Phát hiện phụ về diagnosis holy numbers**: oracle ước lượng scale bằng median(len/H). Khi phần lớn thanh sai, scale lệch và oracle có thể gắn cờ cả thanh đúng (vd. OZ = 15). Ở spec, giá trị "expected" kèm scale giúp agent hiểu; ở locate, agent thấy mâu thuẫn và mất tin vào báo cáo. Nên sửa: ước lượng scale bằng phép khớp gán tối ưu (assignment) thay vì median, trước khi dùng lại diagnosis này.
+4. **Diagnosis holy numbers (đã kiểm lại 11-13, xem mục "Sửa oracle")**: scale ước lượng bằng median(len/H) lệch ở **1/53** bộ tham số Jansen đã chấm (abl2 haiku jansen_s4: 0,967 thay vì 1,000). Lời phàn nàn "báo cáo gắn cờ OZ = 15" của agent abl1 haiku jansen_s5 r3 là **agent đọc nhầm**: báo cáo về bản hiện tại không nhắc OZ; OZ = 38 chỉ có trong báo cáo vòng 1.
 
 ## Hệ quả cho bài báo
 - Có thể phát biểu bậc thang thông tin rõ ràng: **có/không lỗi < tên check + độ lệch < vị trí lỗi < vị trí + giá trị đúng**, và ngưỡng cần thiết phụ thuộc năng lực tri thức của model sửa (sonnet đủ ở "vị trí", haiku cần "giá trị").
@@ -385,3 +385,18 @@ Gộp 22 lượt, so với pha 5 (cùng file, cùng K):
 - Hiệu ứng model gắn hoàn toàn với Jansen (lỗi tri thức thiết kế duy nhất có đủ mẫu). Cần thêm một cơ cấu có "con số công bố" khác để tách hiệu ứng khỏi một cơ cấu.
 - Chưa kiểm định thống kê; so sánh cặp spec vs locate trên haiku Jansen là 8/8 vs 0/8 (McNemar chính xác p ≈ 0.008), nhưng các file không độc lập hoàn toàn (abl1 ⊂ abl2 cùng file gốc).
 - Vẫn chỉ hai model cùng hãng; model hãng khác vẫn bị chặn (không có API key).
+
+
+# Sửa oracle: scale holy numbers + kiểm drift chính thức (2026-11-13)
+
+## Thay đổi
+1. **Verdict holy numbers** (`holyMinimax`): trước đây scale neo vào OZ (`len.OZ/15`), không khớp định nghĩa "cho phép một tỉ lệ đều". Nay dùng scale minimax trên 13 tỉ số (11 khâu + 2 độ lệch chốt X): sai số = (rmax − rmin)/(rmax + rmin). Giá trị này luôn ≤ giá trị cũ, nên không PASS nào thành FAIL.
+2. **Diagnosis holy numbers** (`holyScale`): scale đồng thuận — chọn ứng viên s = len_i/H_j sao cho nhiều độ dài vẽ ra trùng *một* holy number nhất (sai lệch ≤ 3%); hoà thì ưu tiên nhiều khâu trùng đúng số của mình; tinh chỉnh bằng median trên các khâu trùng. Chịu được hoán vị khâu và giá trị lạ (7.8, 15). Đã thử phương án ghép cặp sau sắp xếp: hỏng khi model chèn giá trị không thuộc bộ holy (scale 0,934, gắn cờ lại OZ = 15) → bỏ.
+   - Trên 53 bộ tham số Jansen đã chấm: diagnosis chỉ đổi ở 1 bộ (abl2 haiku jansen_s4: scale 1,000; thêm cờ XY 40,1 vs 41,5 và gợi ý hoán đổi XW↔YV).
+3. **Kiểm META "markers attached to part geometry"** đưa vào `run_oracle_lite.mjs` (mã probe dùng chung `oracle/drift.mjs`, `audit_mesh.mjs` import lại): drift của marker trong hệ toạ độ mesh của part ≤ 0,5 mm × scale, lấy 24 mẫu/chu kỳ; bỏ qua marker trên part không có mesh; lỗi probe không bao giờ làm fail oracle.
+
+## Chấm lại toàn bộ dữ liệu (661 verdict: gen_lite5, reference_lite, repair pha 3, mọi snapshot r0–r3 của iter, iter5/rep1, rep2, abl1, abl2, mutant lite5 và mutant gian lận)
+- **660/661 verdict y hệt**, kể cả tập họ lỗi (fails) của từng file.
+- File duy nhất đổi: `mutants/audit/four_bar_gamed.html` PASS → **FAIL [META]** (drift 41 mm) — đúng mục tiêu đóng lỗ hổng.
+- 7/7 mutant lite5 vẫn bị bắt; 6/6 tham chiếu lite vẫn PASS.
+- → Mọi số liệu pha 2–6 trong báo cáo này **không đổi** dưới oracle mới. Dữ liệu: `results/regrade_list.json` (verdict cũ), `results/regrade_v2.jsonl` (verdict mới).

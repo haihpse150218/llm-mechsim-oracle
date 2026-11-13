@@ -59,8 +59,8 @@ Phụ (độ tin cậy của chính oracle): audit mesh↔marker, 0 drift trên 
 |---|---|---|---|
 | 1 | **Model hãng khác** (sinh + sửa), ít nhất 1 model | Reviewer sẽ đánh vào "chỉ Claude"; hiện bị chặn vì không có API key | Chặn |
 | 2 | Thêm 1–2 cơ cấu có **tri thức thiết kế công bố** ngoài Jansen (vd. Chebyshev lambda, Peaucellier, Klann) | RQ4 hiện chỉ dựa trên Jansen | Chặn cho RQ4 |
-| 3 | Sửa diagnosis holy numbers: ước lượng scale bằng phép gán tối ưu thay vì median | Oracle gắn cờ cả khâu đúng khi phần lớn khâu sai; reviewer có thể coi là lỗi oracle | Cao |
-| 4 | Đưa kiểm drift ≤ 0,5 mm vào oracle chính thức; chạy lại toàn bộ để xác nhận không đổi kết quả | Đóng lỗ hổng lách marker trong bài | Cao |
+| 3 | ~~Sửa diagnosis holy numbers~~ — **XONG 11-13**: verdict dùng scale minimax, diagnosis dùng scale đồng thuận; chấm lại 661 verdict không đổi | — | Xong |
+| 4 | ~~Kiểm drift vào oracle~~ — **XONG 11-13**: META drift ≤ 0,5 mm; chỉ mutant gian lận đổi PASS → FAIL | — | Xong |
 | 5 | Kiểm định thống kê: Cochran Q cho 5 nhánh, McNemar từng cặp, CI Wilson | Checklist ISSE nhấn thống kê | Cao |
 | 6 | Chạy VLM review 2–3 lần trên cùng sheet (inter-run) | Pha 5 đã thấy VLM không ổn định | Trung bình |
 | 7 | Chuyên gia cơ khí rà bộ kiểm DESIGN (1 người, có ghi nhận) | Threat construct lớn nhất | Trung bình |
