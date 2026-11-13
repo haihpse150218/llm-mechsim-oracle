@@ -1,0 +1,21 @@
+{
+  "title": "Executable oracles for LLM-generated mechanism simulators: data, code and manuscript",
+  "upload_type": "software",
+  "description": "Data, code and manuscript sources for the paper \"Where and What: Executable Oracles as Acceptance Gates and Repair Feedback for LLM-Generated Mechanism Simulators\". Contains the executable oracle, specifications, reference simulators, seeded mutants, simulators generated and repaired by claude-sonnet-5-5 and claude-haiku-5-5, VLM review inputs and replies, feedback texts, raw oracle results, statistics scripts and the LaTeX manuscript. Code: MIT License; data and text: CC BY 4.0 (see LICENSE-DATA.md).",
+  "creators": [
+    {
+      "name": "Hoang, Phi Hai",
+      "affiliation": "FPT School of Business and Technology (FSB), FPT University"
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "test oracle",
+    "LLM code generation",
+    "automated program repair",
+    "simulation verification and validation",
+    "metamorphic testing",
+    "vision-language models"
+  ],
+  "version": "v1.0-submission"
+}
