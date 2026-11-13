@@ -6,7 +6,7 @@ Data, code and manuscript for the paper
 
 An LLM writes an interactive three.js simulator of a mechanism (four-bar, Geneva drive, planetary gear set, disk cam, Watt II six-bar, Jansen leg, Chebyshev lambda, Peaucellier–Lipkin) from a short prose description. The oracle loads the page in headless Chrome, samples its pure `window.SIM.render(t)`, and checks it in five families (META, PARAM, DESIGN, GT, PANEL) using the simulator's own declared parameters plus a small set of design rules per mechanism type. The study compares the oracle with a VLM reviewer, and uses it as the acceptance gate and feedback source of an iterative repair loop with feedback at different levels of specificity.
 
-Archived on Zenodo: [10.5281/zenodo.24187716](https://doi.org/10.5281/zenodo.24187716) (all versions; v1.0-submission: [10.5281/zenodo.24187717](https://doi.org/10.5281/zenodo.24187717)).
+Archived on Zenodo: [10.5281/zenodo.24187716](https://doi.org/10.5281/zenodo.24187716) (all versions; v1.1-submission: [10.5281/zenodo.24201916](https://doi.org/10.5281/zenodo.24201916); v1.0-submission: [10.5281/zenodo.24187717](https://doi.org/10.5281/zenodo.24187717)).
 
 Models: `claude-sonnet-5-5` and `claude-haiku-5-5`, run as Claude Code sub-agents, 8–13 November 2026.
 
