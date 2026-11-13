@@ -1,0 +1,1 @@
+NO_CHANGE: The only failing check is the classical-proportions rule (0.379 vs tolerance 0.03), but the report does not give the reference proportions, and the current 4:1:3:3 link set (ground 160, crank 40, coupler 120, rocker 120) is what I recall as Chebyshev's classical lambda, so I could not identify a correction with confidence and left the file unchanged.

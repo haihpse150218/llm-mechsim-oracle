@@ -1,0 +1,358 @@
+{
+ "rows": [
+  {
+   "round": 0,
+   "arm": "oracle_spec",
+   "pass": 0,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "DESIGN"
+   }
+  },
+  {
+   "round": 0,
+   "arm": "oracle_locate",
+   "pass": 0,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "DESIGN"
+   }
+  },
+  {
+   "round": 0,
+   "arm": "oracle_coarse",
+   "pass": 0,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "DESIGN"
+   }
+  },
+  {
+   "round": 0,
+   "arm": "none",
+   "pass": 0,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "DESIGN"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "oracle_spec",
+   "pass": 6,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "PASS",
+    "haiku/lambda_s2": "PASS",
+    "haiku/lambda_s3": "PASS",
+    "haiku/lambda_s4": "PASS",
+    "haiku/lambda_s5": "PASS",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "oracle_locate",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "oracle_coarse",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 1,
+   "arm": "none",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "oracle_spec",
+   "pass": 6,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "PASS",
+    "haiku/lambda_s2": "PASS",
+    "haiku/lambda_s3": "PASS",
+    "haiku/lambda_s4": "PASS",
+    "haiku/lambda_s5": "PASS",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "oracle_locate",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "oracle_coarse",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 2,
+   "arm": "none",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "oracle_spec",
+   "pass": 6,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "PASS",
+    "haiku/lambda_s2": "PASS",
+    "haiku/lambda_s3": "PASS",
+    "haiku/lambda_s4": "PASS",
+    "haiku/lambda_s5": "PASS",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "oracle_locate",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "oracle_coarse",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  },
+  {
+   "round": 3,
+   "arm": "none",
+   "pass": 1,
+   "of": 6,
+   "per": {
+    "haiku/lambda_s1": "DESIGN,GT,PANEL",
+    "haiku/lambda_s2": "DESIGN",
+    "haiku/lambda_s3": "DESIGN",
+    "haiku/lambda_s4": "DESIGN",
+    "haiku/lambda_s5": "DESIGN",
+    "sonnet/lambda_s3": "PASS"
+   }
+  }
+ ],
+ "state": {
+  "oracle_spec": {
+   "haiku/lambda_s1": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/lambda_s2": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/lambda_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/lambda_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "haiku/lambda_s5": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   },
+   "sonnet/lambda_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   }
+  },
+  "oracle_locate": {
+   "haiku/lambda_s1": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s2": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s4": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s5": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "sonnet/lambda_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   }
+  },
+  "oracle_coarse": {
+   "haiku/lambda_s1": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s2": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s3": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s4": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "haiku/lambda_s5": {
+    "active": false,
+    "stopRound": 3,
+    "stopReason": "budget (3 rounds)"
+   },
+   "sonnet/lambda_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "oracle pass"
+   }
+  },
+  "none": {
+   "haiku/lambda_s1": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/lambda_s2": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/lambda_s3": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/lambda_s4": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "haiku/lambda_s5": {
+    "active": false,
+    "stopRound": 1,
+    "stopReason": "repairer: no change"
+   },
+   "sonnet/lambda_s3": {
+    "active": false,
+    "stopRound": 2,
+    "stopReason": "repairer: no change"
+   }
+  }
+ }
+}

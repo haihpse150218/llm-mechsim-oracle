@@ -1,0 +1,1 @@
+NO_CHANGE: The output contract (import map, part and marker names and placement, window.SIM fields, pure render(t), data-q panel) and the circle-intersection kinematics check out, and the review report names no specific defect; straightness of the P trace was only spot-checked by hand, not verified numerically.

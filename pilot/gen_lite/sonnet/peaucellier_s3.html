@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Peaucellier-Lipkin linkage</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#101418;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;background:rgba(0,0,0,.55);color:#dfe;padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.5}
+#panel b{display:inline-block;width:80px}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel">
+<div><b>crank_deg</b><span data-q="crank_deg">0</span> deg</div>
+<div><b>P_x</b><span data-q="P_x">0</span> mm</div>
+<div><b>P_y</b><span data-q="P_y">0</span> mm</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0], Q: [60, 0],
+  len: { OA: 60, QB: 100, QD: 100, AB: 40, AD: 40, BP: 40, DP: 40 },
+  omega: 1.5,
+  thetaMid: Math.PI, thetaAmp: 0.8
+};
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x151a20);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(20, -10, 420);
+camera.lookAt(20, 0, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(100, 200, 300);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-200, -100, 150);
+scene.add(dl2);
+
+function mat(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.3, roughness: 0.5 }); }
+
+function makePart(name, color, zOff, len, markers) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  const m = mat(color);
+  if (len > 0) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(len, 6, 4), m);
+    bar.position.set(len / 2, 0, zOff);
+    g.add(bar);
+    for (const x of [0, len]) {
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 8, 24), m);
+      pin.rotation.x = Math.PI / 2;
+      pin.position.set(x, 0, zOff);
+      g.add(pin);
+    }
+  }
+  for (const k of Object.keys(markers)) {
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + k;
+    mk.position.set(markers[k][0], markers[k][1], 0);
+    g.add(mk);
+  }
+  scene.add(g);
+  return g;
+}
+
+// frame
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+{
+  const m = mat(0x667788);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(80, 10, 4), m);
+  base.position.set(30, -14, -8);
+  frame.add(base);
+  for (const p of [params.O, params.Q]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 14, 28), m);
+    post.rotation.x = Math.PI / 2;
+    post.position.set(p[0], p[1], -8);
+    frame.add(post);
+    const st = new THREE.Mesh(new THREE.BoxGeometry(6, 14, 4), m);
+    st.position.set(p[0], p[1] - 7, -8);
+    frame.add(st);
+  }
+  const mo = new THREE.Object3D(); mo.name = 'frame@O'; mo.position.set(params.O[0], params.O[1], 0); frame.add(mo);
+  const mq = new THREE.Object3D(); mq.name = 'frame@Q'; mq.position.set(params.Q[0], params.Q[1], 0); frame.add(mq);
+  scene.add(frame);
+}
+
+const L = params.len;
+const crank = makePart('crank', 0xe8a33d, 0, L.OA, { O: [0, 0], A: [L.OA, 0] });
+const armB = makePart('armB', 0x4aa3df, 5, L.QB, { Q: [0, 0], B: [L.QB, 0] });
+const armD = makePart('armD', 0x4adf8a, -5, L.QD, { Q: [0, 0], D: [L.QD, 0] });
+const linkAB = makePart('linkAB', 0xdf4a6a, 10, L.AB, { A: [0, 0], B: [L.AB, 0] });
+const linkAD = makePart('linkAD', 0xb04adf, -10, L.AD, { A: [0, 0], D: [L.AD, 0] });
+const linkBP = makePart('linkBP', 0xdfd84a, 15, L.BP, { B: [0, 0], P: [L.BP, 0] });
+const linkDP = makePart('linkDP', 0x4adfd8, -15, L.DP, { D: [0, 0], P: [L.DP, 0] });
+
+// tracer for P
+const pMark = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 12), mat(0xffffff));
+scene.add(pMark);
+// reference straight line of P
+{
+  const q = params.Q[0], k = L.QB * L.QB - L.AB * L.AB, R = L.OA;
+  const x = q - k / (2 * R);
+  const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -90, -20), new THREE.Vector3(x, 90, -20)]);
+  scene.add(new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x556677 })));
+}
+
+function place(part, p, q) {
+  part.position.set(p[0], p[1], 0);
+  part.rotation.set(0, 0, Math.atan2(q[1] - p[1], q[0] - p[0]));
+}
+
+const els = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  P_x: document.querySelector('[data-q="P_x"]'),
+  P_y: document.querySelector('[data-q="P_y"]')
+};
+
+function solve(theta) {
+  const O = params.O, Q = params.Q;
+  const A = [O[0] + L.OA * Math.cos(theta), O[1] + L.OA * Math.sin(theta)];
+  const dx = A[0] - Q[0], dy = A[1] - Q[1];
+  const d = Math.hypot(dx, dy);
+  const ux = dx / d, uy = dy / d;
+  const a = (L.QB * L.QB - L.AB * L.AB + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, L.QB * L.QB - a * a));
+  const F = [Q[0] + ux * a, Q[1] + uy * a];
+  const B = [F[0] - uy * h, F[1] + ux * h];
+  const D = [F[0] + uy * h, F[1] - ux * h];
+  const P = [2 * F[0] - A[0], 2 * F[1] - A[1]];
+  return { A, B, D, P };
+}
+
+function render(t) {
+  const theta = params.thetaMid + params.thetaAmp * Math.sin(params.omega * t);
+  const s = solve(theta);
+  const Q = params.Q, O = params.O;
+  place(crank, O, s.A);
+  place(armB, Q, s.B);
+  place(armD, Q, s.D);
+  place(linkAB, s.A, s.B);
+  place(linkAD, s.A, s.D);
+  place(linkBP, s.B, s.P);
+  place(linkDP, s.D, s.P);
+  pMark.position.set(s.P[0], s.P[1], 20);
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  els.crank_deg.textContent = deg.toFixed(2);
+  els.P_x.textContent = s.P[0].toFixed(3);
+  els.P_y.textContent = s.P[1].toFixed(3);
+  scene.updateMatrixWorld(true);
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: 2 * Math.PI / params.omega, params, render };
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  render(window.__lastT || 0);
+});
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => {
+    const t = (performance.now() - t0) / 1000;
+    window.__lastT = t;
+    window.SIM.render(t);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

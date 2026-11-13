@@ -351,7 +351,122 @@ const MECH = {
       R.panel('output_deg', S.panel('output_deg').map((x, k) => panelAngDiff(x, deg(ang(O6, gt[k].D)))), 'deg');
     },
   },
+  // ---- phase 7 ----
+  lambda: {
+    revs: () => 1,
+    // Chebyshev lambda (Wikipedia "Chebyshev lambda linkage"): crank a, rocker 2.5a, coupler 2.5a + 2.5a (rocker joint B at the
+    // middle, tracing point P at the end), ground 2a. Verified numerically: P stays within 0.63% of a from a straight chord for 200 deg.
+    PROP: {O2A: 1, O4B: 2.5, AB: 2.5, AP: 5, O2O4: 2},
+    check(S, R) {
+      const {O2, O4, len: L, omega, theta0} = S.params;
+      const pairs = {O2A: ['crank@O2', 'crank@A'], O4B: ['rocker@O4', 'rocker@B'], AB: ['coupler@A', 'coupler@B'], AP: ['coupler@A', 'coupler@P']};
+      for (const [k, [p, q]] of Object.entries(pairs))
+        R.param(`len ${k}`, S.P(p).map((x, i) => Math.abs(dist(x, S.P(q)[i]) - L[k])), 'mm', undefined,
+          (i) => `${p} - ${q} is drawn ${f1(dist(S.P(p)[i], S.P(q)[i]))} mm apart, SIM.params.len.${k} = ${L[k]}`);
+      R.param('ground pivots vs params', [dist(S.P('frame@O2')[0], O2), dist(S.P('frame@O4')[0], O4)], 'mm', undefined,
+        () => `frame markers O2, O4 are at ${fp(S.P('frame@O2')[0])}, ${fp(S.P('frame@O4')[0])}; SIM.params says ${fp(O2)}, ${fp(O4)}`);
+      const vals = {...L, O2O4: dist(O2, O4)};
+      R.design('classical proportions (max rel. error)', propMinimax(vals, this.PROP), 0.03,
+        () => propDetail(vals, this.PROP, 'Chebyshev lambda', 'crank O2A 1, rocker O4B 2.5, coupler AB 2.5 to the rocker joint and AP 5 to the tracing point, ground O2O4 2', {O2O4: 'ground distance |O2O4|'}));
+      const th = S.times.map((t) => theta0 + omega * t);
+      R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('crank@O2')[k], S.P('crank@A')[k]), th[k])), 'deg');
+      const Aof = (x) => [O2[0] + L.O2A * Math.cos(x), O2[1] + L.O2A * Math.sin(x)];
+      const sB = crossSide(Aof(th[0]), O4, S.P('rocker@B')[0]);
+      const solve = (x) => {
+        const A = Aof(x), B = circ(A, L.AB, O4, L.O4B, sB);
+        if (!B) return null;
+        const u = [(B[0] - A[0]) / L.AB, (B[1] - A[1]) / L.AB];
+        return {A, B, P: [A[0] + L.AP * u[0], A[1] + L.AP * u[1]]};
+      };
+      const Nd = 720, bad = Array.from({length: Nd}, (_, i) => th[0] + (i * TAU) / Nd).find((x) => !solve(x));
+      if (bad != null) {
+        R.design('linkage assembles for all crank angles', 1, 0.5,
+          `with your SIM.params, at crank angle ${f1(deg(((bad % TAU) + TAU) % TAU))} deg the loop cannot close: |A - O4| = ${f1(dist(Aof(bad), O4))} mm but coupler AB=${L.AB} and rocker O4B=${L.O4B} can only span ${f1(Math.abs(L.AB - L.O4B))}..${f1(L.AB + L.O4B)} mm`);
+        return;
+      }
+      const gt = th.map(solve);
+      for (const [j, mk] of [['B', 'rocker@B'], ['P', 'coupler@P']])
+        R.gt(`${j} vs solution`, gt.map((g, k) => dist(g[j], S.P(mk)[k])), 'mm', undefined,
+          (k) => `at t=${S.times[k].toFixed(3)} s (crank ${f1(deg(th[k]))} deg) ${mk} is drawn at ${fp(S.P(mk)[k])}; solving the linkage from your SIM.params (keeping the assembly branch drawn at t=${S.times[0].toFixed(3)} s) puts ${j} at ${fp(gt[k][j])}`);
+      R.panel('crank_deg', S.panel('crank_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
+      const pd = (q, i) => (k) => `at t=${S.times[k].toFixed(3)} s the panel ${q} reads ${S.panel(q)[k]}, the point P from your SIM.params is at ${f1(gt[k].P[i])} mm (and drawn at ${f1(S.P('coupler@P')[k][i])} mm)`;
+      R.panel('P_x', S.panel('P_x').map((x, k) => Math.abs(x - gt[k].P[0])), 'mm', undefined, pd('P_x', 0));
+      R.panel('P_y', S.panel('P_y').map((x, k) => Math.abs(x - gt[k].P[1])), 'mm', undefined, pd('P_y', 1));
+    },
+  },
+  peaucellier: {
+    revs: () => 1,
+    check(S, R) {
+      const {O, Q, len: L, omega, thetaMid, thetaAmp} = S.params;
+      const pairs = {OA: ['crank@O', 'crank@A'], QB: ['armB@Q', 'armB@B'], QD: ['armD@Q', 'armD@D'], AB: ['linkAB@A', 'linkAB@B'], AD: ['linkAD@A', 'linkAD@D'], BP: ['linkBP@B', 'linkBP@P'], DP: ['linkDP@D', 'linkDP@P']};
+      for (const [k, [p, q]] of Object.entries(pairs))
+        R.param(`len ${k}`, S.P(p).map((x, i) => Math.abs(dist(x, S.P(q)[i]) - L[k])), 'mm', undefined,
+          (i) => `${p} - ${q} is drawn ${f1(dist(S.P(p)[i], S.P(q)[i]))} mm apart, SIM.params.len.${k} = ${L[k]}`);
+      R.param('ground pivots vs params', [dist(S.P('frame@O')[0], O), dist(S.P('frame@Q')[0], Q)], 'mm', undefined,
+        () => `frame markers O, Q are at ${fp(S.P('frame@O')[0])}, ${fp(S.P('frame@Q')[0])}; SIM.params says ${fp(O)}, ${fp(Q)}`);
+      const pc = peaucellierCheck(L, O, Q);
+      R.design('inversor geometry (max rel. error)', pc.value, 0.01, () => pc.detail);
+      const th = S.times.map((t) => thetaMid + thetaAmp * Math.sin(omega * t));
+      R.param('input angle (deg)', S.times.map((t, k) => angDiffDeg(ang(S.P('crank@O')[k], S.P('crank@A')[k]), th[k])), 'deg');
+      const Aof = (x) => [O[0] + L.OA * Math.cos(x), O[1] + L.OA * Math.sin(x)];
+      const sB = crossSide(Q, Aof(th[0]), S.P('armB@B')[0]);
+      const solve = (x) => {
+        const A = Aof(x), B = circ(Q, L.QB, A, L.AB, sB), D = circ(Q, L.QD, A, L.AD, -sB);
+        if (!B || !D || dist(A, Q) < 1e-9) return null;
+        const c1 = circ(B, L.BP, D, L.DP, 1), c2 = circ(B, L.BP, D, L.DP, -1);
+        if (!c1) return null;
+        return {A, B, D, P: dist(c1, A) > dist(c2, A) ? c1 : c2};
+      };
+      const Nd = 720, sweep = Array.from({length: Nd}, (_, i) => thetaMid + thetaAmp * Math.sin((i * TAU) / Nd));
+      const bad = sweep.find((x) => !solve(x));
+      if (bad != null) {
+        R.design('linkage assembles over the crank swing', 1, 0.5,
+          `with your SIM.params, at crank angle ${f1(deg(((bad % TAU) + TAU) % TAU))} deg the inversor cannot close: |A - Q| = ${f1(dist(Aof(bad), Q))} mm, but arms QB=${L.QB}, QD=${L.QD} and rhombus sides AB=${L.AB}, AD=${L.AD} can only reach ${f1(Math.max(Math.abs(L.QB - L.AB), Math.abs(L.QD - L.AD)))}..${f1(Math.min(L.QB + L.AB, L.QD + L.AD))} mm`);
+        return;
+      }
+      const gt = th.map(solve);
+      for (const [j, mk] of [['B', 'armB@B'], ['D', 'armD@D'], ['P', 'linkBP@P']])
+        R.gt(`${j} vs solution`, gt.map((g, k) => dist(g[j], S.P(mk)[k])), 'mm', undefined,
+          (k) => `at t=${S.times[k].toFixed(3)} s (crank ${f1(deg(th[k]))} deg) ${mk} is drawn at ${fp(S.P(mk)[k])}; solving the linkage from your SIM.params (keeping the assembly branch drawn at t=${S.times[0].toFixed(3)} s) puts ${j} at ${fp(gt[k][j])}`);
+      R.panel('crank_deg', S.panel('crank_deg').map((x, k) => panelAngDiff(x, deg(th[k]))), 'deg');
+      const pd = (q, i) => (k) => `at t=${S.times[k].toFixed(3)} s the panel ${q} reads ${S.panel(q)[k]}, the point P from your SIM.params is at ${f1(gt[k].P[i])} mm (and drawn at ${f1(S.P('linkBP@P')[k][i])} mm)`;
+      R.panel('P_x', S.panel('P_x').map((x, k) => Math.abs(x - gt[k].P[0])), 'mm', undefined, pd('P_x', 0));
+      R.panel('P_y', S.panel('P_y').map((x, k) => Math.abs(x - gt[k].P[1])), 'mm', undefined, pd('P_y', 1));
+    },
+  },
 };
+
+// generic published-proportion check (phase 7): same minimax verdict and consensus-scale diagnosis as the Jansen holy numbers
+export function propMinimax(vals, H) {
+  const r = Object.keys(H).map((k) => vals[k] / H[k]);
+  if (!r.every((x) => Number.isFinite(x) && x > 0)) return 1;
+  const lo = Math.min(...r), hi = Math.max(...r);
+  return (hi - lo) / (hi + lo);
+}
+export function propDetail(vals, H, name, table, label = {}) {
+  const ks = Object.keys(H), s = holyScale(vals, H);
+  const lab = (k) => label[k] || `len.${k}`;
+  const bad = ks.filter((k) => !(Math.abs(vals[k] / s - H[k]) / H[k] <= 0.03));
+  const out = bad.map((k) => {
+    const sw = ks.find((j) => j !== k && Math.abs(vals[k] / s - H[j]) / H[j] <= 0.03 && Math.abs(vals[j] / s - H[k]) / H[k] <= 0.03);
+    return `${lab(k)} = ${f1(vals[k])} mm, expected ${f1(H[k] * s)} mm${sw ? ` (looks swapped with ${lab(sw)})` : ''}`;
+  });
+  return `best-fit uniform scale = ${s.toFixed(3)} x the classical ${name} proportions (${table}). Links that do not match at this scale: ${out.length ? out.join('; ') : '(none individually at this scale)'}`;
+}
+// Peaucellier–Lipkin: rhombus AB = AD = BP = DP, arms QB = QD, crank OA = |OQ| (then P moves on a straight line perpendicular to OQ).
+// value = max relative violation; detail names every violated relation and (only here) the value it should have.
+export function peaucellierCheck(L, O, Q) {
+  const OQ = dist(O, Q), rh = ['AB', 'AD', 'BP', 'DP'].map((k) => L[k]);
+  const med = (a) => a.slice().sort((x, y) => x - y)[Math.floor((a.length - 1) / 2)];
+  const s = med(rh), arm = (L.QB + L.QD) / 2;
+  const viol = [];
+  for (const k of ['AB', 'AD', 'BP', 'DP']) { const e = Math.abs(L[k] - s) / s; if (e > 0) viol.push({e, msg: `len.${k} = ${f1(L[k])} mm does not fit the inversor geometry — all four rhombus sides AB, AD, BP, DP must be equal (expected ${f1(s)} mm)`}); }
+  { const e = Math.abs(L.QB - L.QD) / arm; if (e > 0) viol.push({e, msg: `len.QB = ${f1(L.QB)} mm and len.QD = ${f1(L.QD)} mm do not fit the inversor geometry — the two long arms from Q must be equal (expected ${f1(arm)} mm each)`}); }
+  { const e = Math.abs(L.OA - OQ) / OQ; if (e > 0) viol.push({e, msg: `len.OA = ${f1(L.OA)} mm does not fit the inversor geometry — the crank must be exactly as long as the distance between the fixed pivots O and Q (expected ${f1(OQ)} mm)`}); }
+  { const e = arm > s ? 0 : (s - arm) / s + 0.01; if (e > 0) viol.push({e, msg: `len.QB, len.QD do not fit the inversor geometry — the long arms (${f1(arm)} mm) must be longer than the rhombus sides (${f1(s)} mm)`}); }
+  const value = viol.length ? Math.max(...viol.map((v) => v.e)) : 0;
+  return {value, detail: viol.filter((v) => v.e > 0.01).map((v) => v.msg).join('; ') || 'all relations within tolerance'};
+}
 
 // cycloidal rise-dwell-return-dwell law (and simple-harmonic variant for diagnosis); psi = cam rotation since start of rise
 function camLaw(h, b1, b2, b3) {

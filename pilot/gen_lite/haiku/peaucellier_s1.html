@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Peaucellier Linkage Simulator</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#0f1419;color:#e6edf3;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+canvas{display:block;position:fixed;left:0;top:0}
+#panel{position:fixed;left:12px;top:12px;background:rgba(15,20,25,.8);padding:10px 14px;border-radius:8px;border:1px solid #2b3642;font-size:14px;line-height:1.7;max-width:calc(100vw - 24px)}
+#panel b{display:inline-block;min-width:110px;font-weight:600;color:#9fb3c8}
+#note{position:fixed;right:12px;bottom:10px;font-size:12px;color:#7d8a99}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div><b>Crank angle</b><span data-q="crank_deg">0.0</span> deg</div>
+  <div><b>P x</b><span data-q="P_x">0.00</span> mm</div>
+  <div><b>P y</b><span data-q="P_y">0.00</span> mm</div>
+</div>
+<div id="note">Peaucellier-Lipkin linkage: P traces a straight line</div>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- parameters (mm, rad, rad/s) ----------
+const L = 100;            // AB = AD = BP = DP (rhombus side)
+const M = 150;            // QB = QD (long arms)
+const S = 120;            // OA = OQ  (A moves on a circle through the inversor centre Q)
+const O = [0, 0];
+const Q = [S, 0];
+const OMEGA = 1.2;        // rad/s
+const THETA_MID = 120 * Math.PI / 180;   // crank points 120 deg from +X
+const THETA_AMP = 50 * Math.PI / 180;    // swing 70..170 deg: A stays away from Q, rhombus never folds
+const PERIOD = 2 * Math.PI / OMEGA;
+
+// ---------- kinematics (closed form, pure) ----------
+function solve(th) {
+  const A = [O[0] + S * Math.cos(th), O[1] + S * Math.sin(th)];
+  const dx = A[0] - Q[0], dy = A[1] - Q[1];
+  const d = Math.hypot(dx, dy);
+  const ux = dx / d, uy = dy / d;
+  const c = Math.min(1, Math.max(-1, (d * d + M * M - L * L) / (2 * d * M)));
+  const al = Math.acos(c), ca = Math.cos(al), sa = Math.sin(al);
+  // B = Q + M * rot(+al) u ; D = Q + M * rot(-al) u
+  const B = [Q[0] + M * (ux * ca - uy * sa), Q[1] + M * (ux * sa + uy * ca)];
+  const D = [Q[0] + M * (ux * ca + uy * sa), Q[1] + M * (-ux * sa + uy * ca)];
+  // rhombus A-B-P-D: P is opposite A
+  const P = [B[0] + D[0] - A[0], B[1] + D[1] - A[1]];
+  return { O, Q, A, B, D, P };
+}
+
+// ---------- scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f1419);
+
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+const TGT = new THREE.Vector3(75, 0, 12);
+const VIEW = new THREE.Vector3(0.12, -0.25, 0.96).normalize();
+
+function fit() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist = Math.max(230 / (tanV * camera.aspect), 200 / tanV);
+  camera.position.copy(TGT).addScaledVector(VIEW, dist);
+  camera.lookAt(TGT);
+  camera.updateProjectionMatrix();
+}
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+sun.position.set(300, -200, 500);
+scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x202830, 0.5));
+
+const grid = new THREE.GridHelper(600, 60, 0x30363d, 0x21262d);
+grid.rotation.x = Math.PI / 2;
+grid.position.set(75, 0, -16);
+scene.add(grid);
+
+// ---------- parts ----------
+// Each part is a rigid link from point `from` to point `to`, mounted on layer z.
+// Pivot pins run along the z = 0 axis, so every marker sits exactly on the pivot axis.
+const PARTS = [
+  { name: 'frame',  from: 'O', to: 'Q', len: S, z: -8, color: 0x8b949e },
+  { name: 'crank',  from: 'O', to: 'A', len: S, z: 4,  color: 0xf0883e },
+  { name: 'armB',   from: 'Q', to: 'B', len: M, z: 10, color: 0x58a6ff },
+  { name: 'armD',   from: 'Q', to: 'D', len: M, z: 16, color: 0x388bfd },
+  { name: 'linkAB', from: 'A', to: 'B', len: L, z: 22, color: 0x3fb950 },
+  { name: 'linkAD', from: 'A', to: 'D', len: L, z: 22, color: 0x2ea043 },
+  { name: 'linkBP', from: 'B', to: 'P', len: L, z: 28, color: 0xbc8cff },
+  { name: 'linkDP', from: 'D', to: 'P', len: L, z: 28, color: 0xa371f7 },
+];
+
+const pinMat = new THREE.MeshStandardMaterial({ color: 0xc9d1d9, metalness: 0.6, roughness: 0.3 });
+const capGeo = new THREE.CylinderGeometry(6, 6, 4, 24);
+
+for (const pt of PARTS) {
+  const g = new THREE.Object3D();
+  g.name = pt.name;
+  scene.add(g);
+  pt.g = g;
+
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(pt.len, 9, 4),
+    new THREE.MeshStandardMaterial({ color: pt.color, metalness: 0.35, roughness: 0.45 })
+  );
+  bar.position.set(pt.len / 2, 0, pt.z);
+  g.add(bar);
+
+  for (const x of [0, pt.len]) {
+    const cap = new THREE.Mesh(capGeo, pinMat);
+    cap.rotation.x = Math.PI / 2;
+    cap.position.set(x, 0, pt.z);
+    g.add(cap);
+    const h = Math.abs(pt.z);
+    if (h > 0.01) {
+      const standoff = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, h, 14), pinMat);
+      standoff.rotation.x = Math.PI / 2;
+      standoff.position.set(x, 0, pt.z / 2);
+      g.add(standoff);
+    }
+  }
+
+  const mFrom = new THREE.Object3D();
+  mFrom.name = `${pt.name}@${pt.from}`;
+  mFrom.position.set(0, 0, 0);
+  g.add(mFrom);
+
+  const mTo = new THREE.Object3D();
+  mTo.name = `${pt.name}@${pt.to}`;
+  mTo.position.set(pt.len, 0, 0);
+  g.add(mTo);
+  pt.mTo = mTo;
+}
+
+// Static guide: locus of P over the whole swing (a straight line).
+{
+  const N = 240;
+  const arr = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const th = THETA_MID + THETA_AMP * Math.sin(2 * Math.PI * i / N);
+    const p = solve(th).P;
+    arr[i * 3] = p[0]; arr[i * 3 + 1] = p[1]; arr[i * 3 + 2] = 0;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  const trace = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffd33d }));
+  trace.name = 'trace';
+  scene.add(trace);
+}
+
+// ---------- panel ----------
+const qs = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  P_x: document.querySelector('[data-q="P_x"]'),
+  P_y: document.querySelector('[data-q="P_y"]'),
+};
+
+// ---------- render (pure function of t) ----------
+function render(t) {
+  const th = THETA_MID + THETA_AMP * Math.sin(OMEGA * t);
+  const p = solve(th);
+
+  for (const pt of PARTS) {
+    const a = p[pt.from], b = p[pt.to];
+    pt.g.position.set(a[0], a[1], 0);
+    pt.g.rotation.set(0, 0, Math.atan2(b[1] - a[1], b[0] - a[0]));
+    pt.mTo.position.set(Math.hypot(b[0] - a[0], b[1] - a[1]), 0, 0);
+  }
+
+  let deg = ((th * 180 / Math.PI) % 360 + 360) % 360;
+  let degS = deg.toFixed(1);
+  if (parseFloat(degS) >= 360) degS = '0.0';
+  qs.crank_deg.textContent = degS;
+  qs.P_x.textContent = p.P[0].toFixed(2);
+  qs.P_y.textContent = p.P[1].toFixed(2);
+
+  renderer.render(scene, camera);
+}
+
+// ---------- expose ----------
+fit();
+window.addEventListener('resize', fit);
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: {
+    O: [O[0], O[1]],
+    Q: [Q[0], Q[1]],
+    len: { OA: S, QB: M, QD: M, AB: L, AD: L, BP: L, DP: L },
+    omega: OMEGA,
+    thetaMid: THETA_MID,
+    thetaAmp: THETA_AMP,
+  },
+  render,
+};
+
+render(0);
+window.SIM_READY = true;
+
+// ---------- live loop ----------
+if (!window.location.search.includes('capture')) {
+  const t0 = performance.now();
+  const tick = () => {
+    SIM.render((performance.now() - t0) / 1000);
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>

@@ -129,6 +129,49 @@ Points: O2, O4, O6 = ground pivots, A = crank-coupler 1 joint, B = coupler 1-ter
       {q: 'output_deg', desc: 'output rocker angle, direction O6->D from world +X, degrees in [0, 360)'},
     ],
   },
+  // ---- phase 7 additions (published design knowledge other than Jansen) ----
+  lambda: {
+    title: "Chebyshev lambda linkage (straight-line mechanism)",
+    prose: `Chebyshev's lambda linkage: a four-bar linkage with Chebyshev's classical link proportions, whose coupler is extended to a tracing point P that moves along an approximately straight line for a large part of each crank revolution. The input crank turns continuously at constant speed.
+Points: O2 = crank ground pivot, O4 = rocker ground pivot, A = crank-coupler joint, B = coupler-rocker joint, P = tracing point on the coupler.`,
+    parts: () => ({frame: ['O2', 'O4'], crank: ['O2', 'A'], coupler: ['A', 'B', 'P'], rocker: ['O4', 'B']}),
+    partsDoc: `- frame: O2, O4
+- crank: O2, A
+- coupler: A, B, P
+- rocker: O4, B`,
+    params: `{ O2: [x, y], O4: [x, y] (mm),
+  len: { O2A, O4B, AB, AP } (mm, the distance between the two named points),
+  omega: crank angular velocity in rad/s (counter-clockwise positive),
+  theta0: crank angle (direction O2->A from world +X, rad) at t = 0 }`,
+    panel: [
+      {q: 'crank_deg', desc: 'crank angle, direction O2->A from world +X, degrees in [0, 360)'},
+      {q: 'P_x', desc: 'x coordinate of the tracing point P in mm'},
+      {q: 'P_y', desc: 'y coordinate of the tracing point P in mm'},
+    ],
+  },
+  peaucellier: {
+    title: 'Peaucellier–Lipkin linkage (exact straight-line mechanism)',
+    prose: `The Peaucellier–Lipkin linkage (Peaucellier inversor) driven by an input crank, arranged so that the output point P moves along an exactly straight line. The crank cannot turn a full revolution in this mechanism, so it swings back and forth: crank angle = thetaMid + thetaAmp * sin(omega * t). Choose the swing so that the linkage can be assembled over the whole swing.
+Points: O = crank ground pivot, Q = the inversor's fixed centre (second ground pivot), A = crank end (the inversor's input vertex), B and D = the two side vertices of the rhombus, P = output vertex of the rhombus (opposite A). The two long arms run from Q to B and from Q to D; the rhombus is A-B-P-D.`,
+    parts: () => ({frame: ['O', 'Q'], crank: ['O', 'A'], armB: ['Q', 'B'], armD: ['Q', 'D'], linkAB: ['A', 'B'], linkAD: ['A', 'D'], linkBP: ['B', 'P'], linkDP: ['D', 'P']}),
+    partsDoc: `- frame: O, Q
+- crank: O, A
+- armB: Q, B
+- armD: Q, D
+- linkAB: A, B
+- linkAD: A, D
+- linkBP: B, P
+- linkDP: D, P`,
+    params: `{ O: [x, y], Q: [x, y] (mm),
+  len: { OA, QB, QD, AB, AD, BP, DP } (mm, the distance between the two named points),
+  omega: angular frequency of the crank swing in rad/s,
+  thetaMid: mid-swing crank angle (direction O->A from world +X, rad), thetaAmp: swing amplitude (rad) }`,
+    panel: [
+      {q: 'crank_deg', desc: 'crank angle, direction O->A from world +X, degrees in [0, 360)'},
+      {q: 'P_x', desc: 'x coordinate of the output point P in mm'},
+      {q: 'P_y', desc: 'y coordinate of the output point P in mm'},
+    ],
+  },
 };
 
 export const LITE_CONTRACT = `## Output contract (follow exactly — the page is checked automatically)

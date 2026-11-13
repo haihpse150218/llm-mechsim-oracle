@@ -1,0 +1,1 @@
+CHANGED: Reset the link proportions to a classical-style lambda set with crank O2A=40, coupler AB=100, rocker O4B=60, ground O2O4=100 and AP=60 (ratios 1 : 2.5 : 1.5 : 2.5, AP 1.5 x crank), updating O2/O4 positions and len.O4B/len.AP in PARAMS; the kinematic solver and the drawn geometry read the same PARAMS, so they stay consistent.

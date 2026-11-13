@@ -1,0 +1,1 @@
+CHANGED: Set the coupler length len.AB from 80 mm to 100 mm (2.5 units, equal to the ground O2O4) to match the classical Chebyshev lambda proportions flagged by the DESIGN check; the AP tracing-point length was left at 60 mm and is unverified.

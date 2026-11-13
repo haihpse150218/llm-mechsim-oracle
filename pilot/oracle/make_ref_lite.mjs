@@ -166,6 +166,25 @@ if (!location.search.includes('capture')) { const t0 = performance.now(); const 
 </script></body></html>
 `;
 
+// ---- phase 7 ----
+MECHS.lambda = {
+  params: {O2: [0, 0], O4: [80, 0], len: {O2A: 40, O4B: 100, AB: 100, AP: 200}, omega: Math.PI / 2, theta0: 0},
+  code: `
+const O2=P.O2,O4=P.O4,L=P.len;
+function solve(t){const th=P.theta0+P.omega*t,A=pol(O2,L.O2A,th),B=circ(A,L.AB,O4,L.O4B,1),u=[(B[0]-A[0])/L.AB,(B[1]-A[1])/L.AB],Pt=[A[0]+L.AP*u[0],A[1]+L.AP*u[1]];
+ return {frame:{O2,O4},crank:{O2,A},coupler:{A,B,P:Pt},rocker:{O4,B}};}
+function panel(t,s){const p=s.coupler.P;return {crank_deg:wrapDeg((P.theta0+P.omega*t)*180/Math.PI),P_x:p[0],P_y:p[1]};}`,
+};
+MECHS.peaucellier = {
+  // OA = |OQ| = 50, arms 150, rhombus 60; |QA| = 100 cos(theta/2) must stay in (90, 210) -> swing +-40 deg
+  params: {O: [0, 0], Q: [-50, 0], len: {OA: 50, QB: 150, QD: 150, AB: 60, AD: 60, BP: 60, DP: 60}, omega: Math.PI / 2, thetaMid: 0, thetaAmp: (40 * Math.PI) / 180},
+  code: `
+const O=P.O,Q=P.Q,L=P.len;
+function solve(t){const th=P.thetaMid+P.thetaAmp*Math.sin(P.omega*t),A=pol(O,L.OA,th),B=circ(Q,L.QB,A,L.AB,1),D=circ(Q,L.QD,A,L.AD,-1),Pt=[B[0]+D[0]-A[0],B[1]+D[1]-A[1]];
+ return {frame:{O,Q},crank:{O,A},armB:{Q,B},armD:{Q,D},linkAB:{A,B},linkAD:{A,D},linkBP:{B,P:Pt},linkDP:{D,P:Pt}};}
+function panel(t,s){const p=s.linkBP.P;return {crank_deg:wrapDeg((P.thetaMid+P.thetaAmp*Math.sin(P.omega*t))*180/Math.PI),P_x:p[0],P_y:p[1]};}`,
+};
+
 const dir = path.join(ROOT, 'reference_lite');
 fs.mkdirSync(dir, {recursive: true});
 for (const [id, m] of Object.entries(MECHS)) fs.writeFileSync(path.join(dir, `${id}_ref.html`), page(id, m));
