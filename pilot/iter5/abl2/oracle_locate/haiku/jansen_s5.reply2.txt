@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from [28, 0] to [15, 0] (15 mm from the crank axle O) to match the published Jansen ground proportion and let the loops close at all crank angles; link lengths were left unchanged because the triangle X-Y-V (50, 55.8, 7.8) only closes with XY = 50, so the reported ZY/XY swap is not valid.

@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X to (-7.8, 15) mm relative to the crank axle O (the holy-number ground position instead of (-20, 0)), and made every joint pick the same side of its reference line as in the t=0 canonical assembly so the upper and leg triangles stay rigid and never jump to their mirror image.

@@ -1,0 +1,1 @@
+CHANGED: Set len.YV from 15 to 7.8 mm, the published Jansen holy number for the upper-triangle side Y-V (the only spec length not in the holy set), leaving the other lengths and the fixed pivot X unchanged.

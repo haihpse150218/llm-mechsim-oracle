@@ -1,0 +1,1 @@
+CHANGED: Changed planet teeth Zp from 30 to 25 and ring teeth Zr from 80 to 70 (keeping Zr = Zs + 2Zp) so that Zs + Zr = 90 is divisible by 3, allowing three equally spaced planets to mesh; also updated the carrier/pitch radius comments and the initial ratio text to 4.50 to match the new Zs/Zr.

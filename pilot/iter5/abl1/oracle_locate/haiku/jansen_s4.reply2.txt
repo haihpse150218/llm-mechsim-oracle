@@ -1,0 +1,1 @@
+NO_CHANGE: The len values match the Jansen holy numbers as I recall them and every joint is an exact circle intersection of its stated lengths, so the report's swap diagnosis conflicts with my reading, and I could not verify a corrected fixed-pivot position X without running the page, which the task forbids.

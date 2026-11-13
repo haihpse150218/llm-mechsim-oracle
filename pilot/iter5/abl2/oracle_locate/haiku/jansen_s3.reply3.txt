@@ -1,0 +1,1 @@
+CHANGED: Replaced the left-of-link branch rule in circ() (which flipped Y, W, V, U, T to the wrong side of the linkage as the crank turned) with fixed side picks (Y upper, W lower, V and U outer, T lowest), and left the fixed pivot X unchanged, so the holy-numbers placement of X is still unverified.

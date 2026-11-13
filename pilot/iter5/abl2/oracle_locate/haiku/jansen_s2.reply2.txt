@@ -1,0 +1,1 @@
+CHANGED: Moved the ground pivot X from 35 mm to the holy-number ground length 7.8 mm on the -X side of the crank axle O, and replaced the Newton tracking solver (which diverged and lost the branch) with a closed-form circle-intersection solve of the ten constraints, with the branch fixed from the reference pose (Y above, W below, V/U outer, T lowest).

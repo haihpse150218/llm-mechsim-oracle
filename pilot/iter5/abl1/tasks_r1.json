@@ -1,0 +1,82 @@
+[
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/haiku/jansen_s3.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/haiku/jansen_s4.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/haiku/jansen_s5.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/jansen_s5.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/jansen_s5.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "planetary",
+    "file": "iter5/abl1/oracle_locate/haiku/planetary_s5.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/planetary_s5.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/planetary_s5.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "watt6",
+    "file": "iter5/abl1/oracle_locate/haiku/watt6_s4.html",
+    "history": [
+      "iter5/abl1/oracle_locate/haiku/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/haiku/watt6_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/sonnet/jansen_s3.html",
+    "history": [
+      "iter5/abl1/oracle_locate/sonnet/jansen_s3.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/sonnet/jansen_s3.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "sonnet",
+    "mech": "jansen",
+    "file": "iter5/abl1/oracle_locate/sonnet/jansen_s4.html",
+    "history": [
+      "iter5/abl1/oracle_locate/sonnet/jansen_s4.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/sonnet/jansen_s4.reply1.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "sonnet",
+    "mech": "watt6",
+    "file": "iter5/abl1/oracle_locate/sonnet/watt6_s4.html",
+    "history": [
+      "iter5/abl1/oracle_locate/sonnet/watt6_s4.fb1.md"
+    ],
+    "reply": "iter5/abl1/oracle_locate/sonnet/watt6_s4.reply1.txt"
+  }
+]

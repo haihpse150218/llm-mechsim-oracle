@@ -1,0 +1,1 @@
+CHANGED: Changed planet teeth Zp 30 to 31 and ring teeth Zr 80 to 82 so Zs+Zr = 102 is divisible by 3 and the three equally spaced planets can mesh (Zr = Zs + 2Zp kept), with derived radii and comments updated.

@@ -1,0 +1,1 @@
+CHANGED: Fixed part rotation in pose() (local coords are already in the p0->p1 frame, so rotation must be the absolute link angle, not minus a0) and corrected swapped holy numbers (XV=39.3, YV=55.8, UT=65.7, WT=49).

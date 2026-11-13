@@ -1,0 +1,1 @@
+CHANGED: Set len.ZY=50, len.XV=39.3, len.WU=36.7, len.WT=49 to match Jansen's published holy numbers.

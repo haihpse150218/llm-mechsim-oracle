@@ -1,0 +1,1 @@
+CHANGED: moved fixed pivot X to (-7.8, -24) mm relative to crank axle O, and flipped the branch choices for Y (circ(X,XY,Z,ZY)) and U (circ(W,WU,V,VU)) so the assembly matches Y above, W below, U outer, T lowest.
