@@ -21,12 +21,16 @@ Mọi con số trong văn bản đều được đối chiếu với REPORT.md, 
 
 ## TODO trước khi nộp (cũng được đánh dấu `\todo{}` màu đỏ trong văn bản)
 1. Tên tác giả, đơn vị, email (`main.tex`); funding, đóng góp tác giả (`declarations.tex`).
-2. **Mã định danh chính xác của model** (Sonnet/Haiku) và ngày chạy (`design.tex`).
+2. ~~Mã định danh model và ngày chạy~~ — xong: `claude-sonnet-5-5`, `claude-haiku-5-5`, 8–13/11/2026 (lấy từ transcript của subagent Claude Code; mỗi model chỉ có đúng một phiên bản). Trợ lý lập trình và viết là `claude-opus-5-5`, đã khai trong mục "Use of LLMs". **Tác giả cần đọc lại câu khai báo này.**
 3. URL repo công khai và DOI Zenodo (`introduction.tex`, `declarations.tex`).
 4. Model hãng khác (Threats; hiện bị chặn vì chưa có API key).
 5. Chuyên gia cơ khí rà bộ DESIGN rules (Threats).
 6. Hoàn thiện `llm3d.bib`: danh sách tác giả đầy đủ, venue cuối cùng; thay nguồn Wikipedia của lambda bằng giáo trình; thêm nguồn chính thức cho holy numbers.
 7. Kiểm venue/DOI của 18 mục chỉ có arXiv trong `references.bib`.
-8. Hình: (1) Jansen đúng/sai — quỹ đạo chân + khung hình; (2) pipeline oracle; (3) vòng sửa và các nhánh phản hồi. Chưa vẽ; văn bản hiện chỉ dùng bảng. Hình phải đọc được khi in đen trắng.
+8. ~~Hình~~ — xong, đều đọc được khi in đen trắng:
+   - Hình 1 `figures/oracle.tex` (TikZ): pipeline của oracle.
+   - Hình 2 `figures/loop.tex` (TikZ): vòng sửa và các nhánh phản hồi.
+   - Hình 3 `figures/jansen.pdf`: quỹ đạo chân của bộ số công bố so với file `sonnet/jansen_s1` (hoán đổi VU/WU và UT/WT). Hình này sinh bằng `python figures/make_fig_jansen.py`, dùng đúng cách giải và nhánh lắp của oracle.
+   Sau khi sửa `draft/`, chạy `node sync_overleaf.mjs` để chép sang `overleaf/`.
 9. Đọc toàn văn Pan et al., ConvCodeWorld, Olausson et al. để chắc đoạn so sánh trong Discussion/Related đúng.
 10. Biên dịch, sửa lỗi LaTeX, kiểm bảng `table*` trong bố cục 2 cột.

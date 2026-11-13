@@ -1,0 +1,35 @@
+%% Figure: the executable oracle (single column). Requires tikz with positioning, arrows.meta, fit.
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize, node distance=3.2mm,
+  box/.style={draw, rounded corners=1.5pt, align=center, inner sep=2.2pt, minimum height=6mm},
+  data/.style={box, fill=black!6},
+  fam/.style={draw, align=center, inner sep=1.6pt, minimum width=11.5mm, minimum height=9mm, font=\tiny},
+  arr/.style={-{Stealth[length=1.6mm]}, semithick}]
+\node[data, text width=34mm] (spec) {prose description\\ + output contract (names only)};
+\node[box, right=4mm of spec, text width=18mm] (llm) {LLM generator};
+\node[data, below=of spec, text width=34mm] (sim) {\texttt{sim.html}: three.js parts, markers \texttt{part@point}, panel, \texttt{window.SIM}};
+\node[box, below=of sim, text width=34mm] (pw) {headless Chrome (Playwright):\\ \texttt{render(t)} at 120 instants};
+\node[data, below=of pw, text width=34mm] (obs) {marker positions, panel text,\\ declared \texttt{SIM.params}};
+\node[box, right=4mm of obs, text width=18mm] (solve) {kinematic solver\\ (from \texttt{SIM.params})};
+\node[fam, below=6mm of obs.south west, anchor=north west, xshift=-1mm] (meta) {META\\ contract,\\ invariants};
+\node[fam, right=0.8mm of meta] (param) {PARAM\\ drawn vs\\ declared};
+\node[fam, right=0.8mm of param] (design) {DESIGN\\ rules per\\ type};
+\node[fam, right=0.8mm of design] (gt) {GT\\ drawn vs\\ solved};
+\node[fam, right=0.8mm of gt] (panel) {PANEL\\ text vs\\ solved};
+\node[box, below=5mm of design, text width=56mm] (out) {verdict PASS/FAIL + diagnostics: \emph{where} (part, link, marker, time) and \emph{correct value}};
+\draw[arr] (spec) -- (llm);
+\draw[arr] (llm) |- (sim);
+\draw[arr] (sim) -- (pw);
+\draw[arr] (pw) -- (obs);
+\draw[arr] (obs) -- (solve);
+\draw[arr] (obs.south) -- ++(0,-2mm) -| (meta.north);
+\draw[arr] (obs.south) -- ++(0,-2mm) -| (param.north);
+\draw[arr] (obs.south) -- ++(0,-2mm) -| (design.north);
+\draw[arr] (solve.south) -- ++(0,-1.4mm) -| (gt.north);
+\draw[arr] (solve.south) -- ++(0,-1.4mm) -| (panel.north);
+\foreach \f in {meta,param,design,gt,panel} \draw[arr] (\f.south) -- (\f.south |- out.north);
+\end{tikzpicture}
+\caption{The executable oracle. The generator chooses all dimensions; the oracle samples the page's pure \texttt{render(t)}, compares what is drawn with what the page declares, applies per-type design rules, and solves the kinematics from the declared parameters, so no per-task reference is written by hand.}\label{fig:oracle}
+\end{figure}
