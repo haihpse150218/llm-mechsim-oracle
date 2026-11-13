@@ -23,8 +23,8 @@ Mọi con số trong văn bản đều được đối chiếu với REPORT.md, 
 1. Tên tác giả, đơn vị, email (`main.tex`); funding, đóng góp tác giả (`declarations.tex`).
 2. ~~Mã định danh model và ngày chạy~~ — xong: `claude-sonnet-5-5`, `claude-haiku-5-5`, 8–13/11/2026 (lấy từ transcript của subagent Claude Code; mỗi model chỉ có đúng một phiên bản). Trợ lý lập trình và viết là `claude-opus-5-5`, đã khai trong mục "Use of LLMs". **Tác giả cần đọc lại câu khai báo này.**
 3. ~~URL repo công khai~~: xong, https://github.com/haihpse150218/llm-mechsim-oracle (13/11). Repo được tách từ thư mục này bằng `git subtree split`, giữ nguyên lịch sử. Muốn cập nhật repo thì chạy lại `git subtree split --prefix="List Paper/q4-pipeline/ideas/llm-mechsim-oracle" -b mechsim-export` rồi push `mechsim-export:main`. DOI Zenodo: 10.5281/zenodo.24187717 (v1.0-submission), bản ghi chung cho mọi phiên bản: 10.5281/zenodo.24187716; đã điền vào bài. Giấy phép: mã theo MIT, dữ liệu và văn bản theo CC BY 4.0. Muốn có DOI mới thì tạo release mới trên GitHub.
-4. Model hãng khác (Threats; hiện bị chặn vì chưa có API key).
-5. Chuyên gia cơ khí rà bộ DESIGN rules (Threats).
+4. ~~Model hãng khác~~: đã làm phần sinh (pha 8, DeepSeek v4-pro / flash, Jansen + lambda, n=5), ghi trong Design, Results ("Another vendor") và Threats. Phần sửa lặp với hãng khác không chạy (tốn tiền) và được nêu là hạn chế.
+5. ~~Chuyên gia cơ khí rà bộ DESIGN rules~~: không làm; đã nêu là hạn chế trong Threats.
 6–7. ~~Hoàn thiện bib~~ — xong ngày 13/11, chi tiết trong `../bib_check.md`.
    - Đã kiểm 14 mục được trích có vấn đề:
      - 4 mục nay đã có venue: Self-Debug (ICLR 2024), InteractScience (ICML 2026), CodeHallucination (TSE 2026), SGA (Findings of EMNLP 2026).
