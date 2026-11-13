@@ -1,0 +1,1070 @@
+{
+ "runs": [
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "haiku/jansen_s3",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "haiku/jansen_s4",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "haiku/jansen_s5",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "haiku/planetary_s5",
+   "model": "haiku",
+   "mech": "planetary",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 0,
+   "none": 1,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "haiku/watt6_s4",
+   "model": "haiku",
+   "mech": "watt6",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 1,
+   "none": 1,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "sonnet/jansen_s3",
+   "model": "sonnet",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "sonnet/jansen_s4",
+   "model": "sonnet",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep1",
+   "file": "sonnet/watt6_s4",
+   "model": "sonnet",
+   "mech": "watt6",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 1,
+   "none": 1,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/jansen_s3",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/jansen_s4",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/jansen_s5",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/planetary_s5",
+   "model": "haiku",
+   "mech": "planetary",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 0,
+   "none": 1,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/watt6_s4",
+   "model": "haiku",
+   "mech": "watt6",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 1,
+   "none": 1,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "sonnet/jansen_s3",
+   "model": "sonnet",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "sonnet/jansen_s4",
+   "model": "sonnet",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "sonnet/watt6_s4",
+   "model": "sonnet",
+   "mech": "watt6",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 1,
+   "none": 1,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "sonnet/four_bar_s2",
+   "model": "sonnet",
+   "mech": "four_bar",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 1,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "sonnet/jansen_s1",
+   "model": "sonnet",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "sonnet/jansen_s2",
+   "model": "sonnet",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/jansen_s1",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/jansen_s2",
+   "model": "haiku",
+   "mech": "jansen",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_coarse": 0,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 0
+  },
+  {
+   "phase": 5,
+   "rep": "rep2",
+   "file": "haiku/planetary_s1",
+   "model": "haiku",
+   "mech": "planetary",
+   "kind": "assembly",
+   "oracle_spec": 1,
+   "oracle_coarse": 1,
+   "vlm": 0,
+   "none": 0,
+   "oracle_locate": 1
+  },
+  {
+   "phase": 7,
+   "rep": "rep1",
+   "file": "haiku/lambda_s1",
+   "model": "haiku",
+   "mech": "lambda",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0,
+   "vlm": null
+  },
+  {
+   "phase": 7,
+   "rep": "rep1",
+   "file": "haiku/lambda_s2",
+   "model": "haiku",
+   "mech": "lambda",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0,
+   "vlm": null
+  },
+  {
+   "phase": 7,
+   "rep": "rep1",
+   "file": "haiku/lambda_s3",
+   "model": "haiku",
+   "mech": "lambda",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0,
+   "vlm": null
+  },
+  {
+   "phase": 7,
+   "rep": "rep1",
+   "file": "haiku/lambda_s4",
+   "model": "haiku",
+   "mech": "lambda",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0,
+   "vlm": null
+  },
+  {
+   "phase": 7,
+   "rep": "rep1",
+   "file": "haiku/lambda_s5",
+   "model": "haiku",
+   "mech": "lambda",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0,
+   "vlm": null
+  },
+  {
+   "phase": 7,
+   "rep": "rep1",
+   "file": "sonnet/lambda_s3",
+   "model": "sonnet",
+   "mech": "lambda",
+   "kind": "design",
+   "oracle_spec": 1,
+   "oracle_locate": 1,
+   "oracle_coarse": 1,
+   "none": 1,
+   "vlm": null
+  }
+ ],
+ "p56_all": {
+  "n": 22,
+  "pass": {
+   "oracle_spec": 22,
+   "oracle_locate": 14,
+   "oracle_coarse": 10,
+   "vlm": 5,
+   "none": 6
+  },
+  "cochran": {
+   "Q": 44.46511627906977,
+   "df": 4,
+   "p": 5.135937310258023e-9
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 8,
+    "c": 0,
+    "p": 0.0078125,
+    "holm": 0.046875
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 12,
+    "c": 0,
+    "p": 0.00048828125,
+    "holm": 0.00390625
+   },
+   {
+    "A": "oracle_spec",
+    "B": "vlm",
+    "b": 17,
+    "c": 0,
+    "p": 0.0000152587890625,
+    "holm": 0.000152587890625
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 16,
+    "c": 0,
+    "p": 0.000030517578125,
+    "holm": 0.000274658203125
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 4,
+    "c": 0,
+    "p": 0.125,
+    "holm": 0.375
+   },
+   {
+    "A": "oracle_locate",
+    "B": "vlm",
+    "b": 9,
+    "c": 0,
+    "p": 0.00390625,
+    "holm": 0.02734375
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 8,
+    "c": 0,
+    "p": 0.0078125,
+    "holm": 0.046875
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "vlm",
+    "b": 5,
+    "c": 0,
+    "p": 0.0625,
+    "holm": 0.25
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 4,
+    "c": 0,
+    "p": 0.125,
+    "holm": 0.375
+   },
+   {
+    "A": "vlm",
+    "B": "none",
+    "b": 1,
+    "c": 2,
+    "p": 0.9999999999999999,
+    "holm": 0.9999999999999999
+   }
+  ]
+ },
+ "p56_assembly": {
+  "n": 8,
+  "pass": {
+   "oracle_spec": 8,
+   "oracle_locate": 8,
+   "oracle_coarse": 8,
+   "vlm": 5,
+   "none": 6
+  },
+  "cochran": {
+   "Q": 8.88888888888889,
+   "df": 4,
+   "p": 0.06393753271044966
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_spec",
+    "B": "vlm",
+    "b": 3,
+    "c": 0,
+    "p": 0.25,
+    "holm": 1
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 1
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_locate",
+    "B": "vlm",
+    "b": 3,
+    "c": 0,
+    "p": 0.25,
+    "holm": 1
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 1
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "vlm",
+    "b": 3,
+    "c": 0,
+    "p": 0.25,
+    "holm": 1
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 1
+   },
+   {
+    "A": "vlm",
+    "B": "none",
+    "b": 1,
+    "c": 2,
+    "p": 0.9999999999999999,
+    "holm": 1
+   }
+  ]
+ },
+ "p56_jansen": {
+  "n": 14,
+  "pass": {
+   "oracle_spec": 14,
+   "oracle_locate": 6,
+   "oracle_coarse": 2,
+   "vlm": 0,
+   "none": 0
+  },
+  "cochran": {
+   "Q": 40.94117647058823,
+   "df": 4,
+   "p": 2.7642698135077785e-8
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 8,
+    "c": 0,
+    "p": 0.0078125,
+    "holm": 0.0546875
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 12,
+    "c": 0,
+    "p": 0.00048828125,
+    "holm": 0.00390625
+   },
+   {
+    "A": "oracle_spec",
+    "B": "vlm",
+    "b": 14,
+    "c": 0,
+    "p": 0.0001220703125,
+    "holm": 0.001220703125
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 14,
+    "c": 0,
+    "p": 0.0001220703125,
+    "holm": 0.001220703125
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 4,
+    "c": 0,
+    "p": 0.125,
+    "holm": 0.5
+   },
+   {
+    "A": "oracle_locate",
+    "B": "vlm",
+    "b": 6,
+    "c": 0,
+    "p": 0.03125,
+    "holm": 0.1875
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 6,
+    "c": 0,
+    "p": 0.03125,
+    "holm": 0.1875
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "vlm",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 1
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 1
+   },
+   {
+    "A": "vlm",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   }
+  ]
+ },
+ "p7_lambda": {
+  "n": 6,
+  "pass": {
+   "oracle_spec": 6,
+   "oracle_locate": 1,
+   "oracle_coarse": 1,
+   "none": 1
+  },
+  "cochran": {
+   "Q": 15,
+   "df": 3,
+   "p": 0.0018166489665723336
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 5,
+    "c": 0,
+    "p": 0.0625,
+    "holm": 0.375
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 5,
+    "c": 0,
+    "p": 0.0625,
+    "holm": 0.375
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 5,
+    "c": 0,
+    "p": 0.0625,
+    "holm": 0.375
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   }
+  ]
+ },
+ "design_haiku": {
+  "n": 13,
+  "pass": {
+   "oracle_spec": 13,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0
+  },
+  "cochran": {
+   "Q": 39,
+   "df": 3,
+   "p": 1.735665190483342e-8
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 13,
+    "c": 0,
+    "p": 0.000244140625,
+    "holm": 0.00146484375
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 13,
+    "c": 0,
+    "p": 0.000244140625,
+    "holm": 0.00146484375
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 13,
+    "c": 0,
+    "p": 0.000244140625,
+    "holm": 0.00146484375
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   }
+  ]
+ },
+ "design_sonnet": {
+  "n": 7,
+  "pass": {
+   "oracle_spec": 7,
+   "oracle_locate": 7,
+   "oracle_coarse": 3,
+   "none": 1
+  },
+  "cochran": {
+   "Q": 14.727272727272727,
+   "df": 3,
+   "p": 0.002065187190916257
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 4,
+    "c": 0,
+    "p": 0.125,
+    "holm": 0.5
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 6,
+    "c": 0,
+    "p": 0.03125,
+    "holm": 0.1875
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 4,
+    "c": 0,
+    "p": 0.125,
+    "holm": 0.5
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 6,
+    "c": 0,
+    "p": 0.03125,
+    "holm": 0.1875
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 1
+   }
+  ]
+ },
+ "model_interaction": {
+  "oracle_spec": {
+   "sonnet": [
+    7,
+    7
+   ],
+   "haiku": [
+    13,
+    13
+   ],
+   "p": 1
+  },
+  "oracle_locate": {
+   "sonnet": [
+    7,
+    7
+   ],
+   "haiku": [
+    0,
+    13
+   ],
+   "p": 0.000012899896800825618
+  },
+  "oracle_coarse": {
+   "sonnet": [
+    3,
+    7
+   ],
+   "haiku": [
+    0,
+    13
+   ],
+   "p": 0.030701754385964987
+  },
+  "none": {
+   "sonnet": [
+    1,
+    7
+   ],
+   "haiku": [
+    0,
+    13
+   ],
+   "p": 0.35000000000000087
+  }
+ },
+ "uniq_all": {
+  "n": 20,
+  "pass": {
+   "oracle_spec": 20,
+   "oracle_locate": 10,
+   "oracle_coarse": 8,
+   "none": 4
+  },
+  "cochran": {
+   "Q": 33.36,
+   "df": 3,
+   "p": 2.7039523340324047e-7
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 10,
+    "c": 0,
+    "p": 0.001953125,
+    "holm": 0.0078125
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 12,
+    "c": 0,
+    "p": 0.00048828125,
+    "holm": 0.00244140625
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 16,
+    "c": 0,
+    "p": 0.000030517578125,
+    "holm": 0.00018310546875
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 2,
+    "c": 0,
+    "p": 0.5,
+    "holm": 0.5
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 6,
+    "c": 0,
+    "p": 0.03125,
+    "holm": 0.09375
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 4,
+    "c": 0,
+    "p": 0.125,
+    "holm": 0.25
+   }
+  ]
+ },
+ "uniq_design_haiku": {
+  "n": 10,
+  "pass": {
+   "oracle_spec": 10,
+   "oracle_locate": 0,
+   "oracle_coarse": 0,
+   "none": 0
+  },
+  "cochran": {
+   "Q": 30,
+   "df": 3,
+   "p": 0.000001380057031293262
+  },
+  "pairs": [
+   {
+    "A": "oracle_spec",
+    "B": "oracle_locate",
+    "b": 10,
+    "c": 0,
+    "p": 0.001953125,
+    "holm": 0.01171875
+   },
+   {
+    "A": "oracle_spec",
+    "B": "oracle_coarse",
+    "b": 10,
+    "c": 0,
+    "p": 0.001953125,
+    "holm": 0.01171875
+   },
+   {
+    "A": "oracle_spec",
+    "B": "none",
+    "b": 10,
+    "c": 0,
+    "p": 0.001953125,
+    "holm": 0.01171875
+   },
+   {
+    "A": "oracle_locate",
+    "B": "oracle_coarse",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_locate",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   },
+   {
+    "A": "oracle_coarse",
+    "B": "none",
+    "b": 0,
+    "c": 0,
+    "p": 1,
+    "holm": 1
+   }
+  ]
+ },
+ "rq1": {
+  "nat": {
+   "pha 1, spec chi tiết": [
+    0,
+    8
+   ],
+   "pha 2, spec-lite": [
+    7,
+    16
+   ],
+   "pha 5, spec-lite (60 sim)": [
+    14,
+    60
+   ],
+   "pha 5, ngoài Jansen": [
+    5,
+    50
+   ],
+   "pha 7, lambda": [
+    6,
+    10
+   ],
+   "pha 7, peaucellier": [
+    0,
+    10
+   ]
+  },
+  "detailed_vs_lite_p": 0.05378730092688883,
+  "lambda_haiku_vs_sonnet_p": 0.04761904761904747
+ },
+ "rq2": {
+  "n": 24,
+  "oracle_vs_vlm_panel": [
+   4,
+   0
+  ],
+  "panel_vs_nopanel": [
+   8,
+   2
+  ],
+  "oracle_vs_vlm_nopanel": [
+   10,
+   0
+  ]
+ }
+}
