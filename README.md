@@ -45,6 +45,10 @@ cd ../overleaf && pdflatex main && bibtex main && pdflatex main && pdflatex main
 
 The generation, VLM review and repair steps were performed by LLM sub-agents; their inputs (task files, prompts, feedback) and outputs (HTML files, replies) are all stored, so every verdict and statistic can be recomputed without calling a model.
 
+## Licence
+
+Code: MIT ([`LICENSE`](LICENSE)). Data, figures, manuscript and other non-code content: CC BY 4.0 ([`LICENSE-DATA.md`](LICENSE-DATA.md)). Please cite the paper when you use them.
+
 ## Third-party code
 
 `pilot/vendor/` contains three.js (MIT License, © three.js authors). `paper/overleaf/sn-jnl.cls` and `sn-mathphys-num.bst` are from the Springer Nature LaTeX template.
