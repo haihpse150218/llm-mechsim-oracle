@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chebyshev Lambda Linkage — 3D Simulator</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    overflow: hidden; background: #0b0e14;
+  }
+  canvas { display: block; }
+
+  #panel {
+    position: fixed;
+    left: 18px; top: 18px;
+    min-width: 218px;
+    padding: 14px 16px 12px;
+    border-radius: 12px;
+    background: rgba(16, 21, 30, 0.82);
+    border: 1px solid rgba(120, 160, 220, 0.22);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+    color: #dfe8f5;
+    font: 13px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+    pointer-events: none;
+  }
+  #panel h1 {
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #8fb4e0;
+  }
+  #panel .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 2px 0;
+  }
+  #panel .lbl { color: #93a4bd; }
+  #panel .val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    color: #ffffff;
+    letter-spacing: 0.01em;
+  }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+
+<div id="panel">
+  <h1>Chebyshev λ Linkage</h1>
+  <div class="row"><span class="lbl">Crank angle</span><span class="val" data-q="crank_deg">0.0°</span></div>
+  <div class="row"><span class="lbl">P&nbsp;x</span><span class="val" data-q="P_x">0.00 mm</span></div>
+  <div class="row"><span class="lbl">P&nbsp;y</span><span class="val" data-q="P_y">0.00 mm</span></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ================================================================
+   Chebyshev lambda (λ) linkage
+   ----------------------------------------------------------------
+   Link proportions (classical Chebyshev set, scaled so that the
+   input crank measures 30 mm):
+
+       O2A : AB : O4B : O2O4  =  1 : 2.5 : 2.5 : 2
+       AP  = 2 * AB   (the tracing point P lies on the coupler
+                       line beyond B, with BP = AB)
+
+   Everything lives in the world XY plane; +Z points toward the
+   viewer; 1 scene unit = 1 mm; CCW about +Z is positive.
+   ================================================================ */
+
+const O2P   = [-30, 0];   // crank ground pivot   (mm)
+const O4P   = [ 30, 0];   // rocker ground pivot  (mm)
+const L_O2A = 30;         // crank length         (mm)
+const L_O4B = 75;         // rocker length        (mm)
+const L_AB  = 75;         // coupler length A..B  (mm)
+const L_AP  = 150;        // coupler length A..P  (mm)  => BP = AB
+const OMEGA = 1.15;       // rad/s, counter-clockwise
+const THETA0 = Math.PI * 0.5;
+
+const params = {
+  O2: O2P.slice(),
+  O4: O4P.slice(),
+  len: { O2A: L_O2A, O4B: L_O4B, AB: L_AB, AP: L_AP },
+  omega: OMEGA,
+  theta0: THETA0
+};
+
+/* ---------------- renderer / scene / camera ---------------- */
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e14);
+
+const TARGET = new THREE.Vector3(20, 58, 0);
+
+const camera = new THREE.PerspectiveCamera(
+  45, window.innerWidth / window.innerHeight, 1, 6000
+);
+camera.position.set(TARGET.x + 70, TARGET.y + 55, TARGET.z + 320);
+camera.lookAt(TARGET);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+
+/* ---------------- lighting ---------------- */
+
+scene.add(new THREE.HemisphereLight(0xbcd6ff, 0x161b24, 1.25));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+keyLight.position.set(260, 420, 520);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0x86aaff, 1.1);
+fillLight.position.set(-380, -160, 320);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffb27f, 0.85);
+rimLight.position.set(120, -320, 180);
+scene.add(rimLight);
+
+/* ---------------- materials ---------------- */
+
+const matFrame = new THREE.MeshStandardMaterial({
+  color: 0x45566d, metalness: 0.30, roughness: 0.48
+});
+const matCrank = new THREE.MeshStandardMaterial({
+  color: 0xe8703a, metalness: 0.25, roughness: 0.42
+});
+const matCoupler = new THREE.MeshStandardMaterial({
+  color: 0x4a90d9, metalness: 0.28, roughness: 0.40
+});
+const matRocker = new THREE.MeshStandardMaterial({
+  color: 0x46c07a, metalness: 0.25, roughness: 0.42
+});
+const matPin = new THREE.MeshStandardMaterial({
+  color: 0xd9dee7, metalness: 0.70, roughness: 0.28
+});
+
+/* ---------------- layer (Z) layout ----------------
+   frame  : -15 .. +15
+   crank  :  10 .. +22      rocker : 10 .. +22
+   coupler:  24 .. +36
+   -------------------------------------------------- */
+
+/* =========================== FRAME =========================== */
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+
+const baseBar = new THREE.Mesh(new THREE.BoxGeometry(84, 22, 16), matFrame);
+frame.add(baseBar);
+
+for (const g of [O2P, O4P]) {
+  const boss = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 30, 36), matFrame);
+  boss.rotation.x = Math.PI / 2;
+  boss.position.set(g[0], g[1], 0);
+  frame.add(boss);
+
+  const axle = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 62, 24), matPin);
+  axle.rotation.x = Math.PI / 2;
+  axle.position.set(g[0], g[1], 0);
+  frame.add(axle);
+}
+
+const frameO2 = new THREE.Object3D();
+frameO2.name = 'frame@O2';
+frameO2.position.set(O2P[0], O2P[1], 0);
+frame.add(frameO2);
+
+const frameO4 = new THREE.Object3D();
+frameO4.name = 'frame@O4';
+frameO4.position.set(O4P[0], O4P[1], 0);
+frame.add(frameO4);
+
+/* =========================== CRANK =========================== */
+const crank = new THREE.Object3D();
+crank.name = 'crank';
+
+const crankArm = new THREE.Mesh(
+  new THREE.BoxGeometry(L_O2A, 18, 12), matCrank
+);
+crankArm.position.set(L_O2A / 2, 0, 16);
+crank.add(crankArm);
+
+const crankHub = new THREE.Mesh(
+  new THREE.CylinderGeometry(11, 11, 24, 32), matCrank
+);
+crankHub.rotation.x = Math.PI / 2;
+crankHub.position.set(0, 0, 16);
+crank.add(crankHub);
+
+const crankPin = new THREE.Mesh(
+  new THREE.CylinderGeometry(7, 7, 34, 24), matPin
+);
+crankPin.rotation.x = Math.PI / 2;
+crankPin.position.set(L_O2A, 0, 22);
+crank.add(crankPin);
+
+const crankO2 = new THREE.Object3D();
+crankO2.name = 'crank@O2';
+crankO2.position.set(0, 0, 0);
+crank.add(crankO2);
+
+const crankA = new THREE.Object3D();
+crankA.name = 'crank@A';
+crankA.position.set(L_O2A, 0, 0);
+crank.add(crankA);
+
+/* ========================== COUPLER ========================== */
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';
+
+const couplerArm = new THREE.Mesh(
+  new THREE.BoxGeometry(L_AP, 18, 12), matCoupler
+);
+couplerArm.position.set(L_AP / 2, 0, 30);
+coupler.add(couplerArm);
+
+const couplerHubA = new THREE.Mesh(
+  new THREE.CylinderGeometry(11, 11, 12, 32), matCoupler
+);
+couplerHubA.rotation.x = Math.PI / 2;
+couplerHubA.position.set(0, 0, 30);
+coupler.add(couplerHubA);
+
+const couplerHubB = new THREE.Mesh(
+  new THREE.CylinderGeometry(12, 12, 26, 32), matCoupler
+);
+couplerHubB.rotation.x = Math.PI / 2;
+couplerHubB.position.set(L_AB, 0, 28);
+coupler.add(couplerHubB);
+
+const couplerA = new THREE.Object3D();
+couplerA.name = 'coupler@A';
+couplerA.position.set(0, 0, 0);
+coupler.add(couplerA);
+
+const couplerB = new THREE.Object3D();
+couplerB.name = 'coupler@B';
+couplerB.position.set(L_AB, 0, 0);
+coupler.add(couplerB);
+
+const couplerP = new THREE.Object3D();
+couplerP.name = 'coupler@P';
+couplerP.position.set(L_AP, 0, 0);
+coupler.add(couplerP);
+
+/* ========================== ROCKER =========================== */
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';
+
+const rockerArm = new THREE.Mesh(
+  new THREE.BoxGeometry(L_O4B, 18, 12), matRocker
+);
+rockerArm.position.set(L_O4B / 2, 0, 16);
+rocker.add(rockerArm);
+
+const rockerHub = new THREE.Mesh(
+  new THREE.CylinderGeometry(11, 11, 24, 32), matRocker
+);
+rockerHub.rotation.x = Math.PI / 2;
+rockerHub.position.set(0, 0, 16);
+rocker.add(rockerHub);
+
+const rockerPin = new THREE.Mesh(
+  new THREE.CylinderGeometry(6, 6, 22, 24), matPin
+);
+rockerPin.rotation.x = Math.PI / 2;
+rockerPin.position.set(L_O4B, 0, 16);
+rocker.add(rockerPin);
+
+const rockerO4 = new THREE.Object3D();
+rockerO4.name = 'rocker@O4';
+rockerO4.position.set(0, 0, 0);
+rocker.add(rockerO4);
+
+const rockerB = new THREE.Object3D();
+rockerB.name = 'rocker@B';
+rockerB.position.set(L_O4B, 0, 0);
+rocker.add(rockerB);
+
+/* ---------------- assemble ---------------- */
+
+scene.add(frame);
+scene.add(crank);
+scene.add(coupler);
+scene.add(rocker);
+
+/* ---------------- panel elements ---------------- */
+
+const elCrankDeg = document.querySelector('[data-q="crank_deg"]');
+const elPx       = document.querySelector('[data-q="P_x"]');
+const elPy       = document.querySelector('[data-q="P_y"]');
+
+/* ---------------- closed-form kinematics ---------------- */
+
+/**
+ * Pure geometric solve for a given crank angle (radians, CCW from +X).
+ * Returns the world coordinates of A, B and P in mm.
+ */
+function solvePose(theta) {
+  // --- crank end A -------------------------------------------------
+  const ax = O2P[0] + L_O2A * Math.cos(theta);
+  const ay = O2P[1] + L_O2A * Math.sin(theta);
+
+  // --- rocker end B : intersection of two circles ----------------
+  //     circle(A, AB)  ∩  circle(O4, O4B)     (upper assembly branch)
+  const dx = ax - O4P[0];
+  const dy = ay - O4P[1];
+  const d  = Math.hypot(dx, dy);
+  const ux = dx / d;
+  const uy = dy / d;
+  const nx = -uy;              // +90° rotation of the unit vector
+  const ny =  ux;
+
+  const mx = (ax + O4P[0]) * 0.5;
+  const my = (ay + O4P[1]) * 0.5;
+
+  const h = Math.sqrt(Math.max(0, L_AB * L_AB - 0.25 * d * d));
+
+  const bx = mx - h * nx;
+  const by = my - h * ny;
+
+  // --- tracing point P on the coupler line beyond B ---------------
+  const k  = L_AP / L_AB;      // == 2
+  const px = ax + k * (bx - ax);
+  const py = ay + k * (by - ay);
+
+  return { ax, ay, bx, by, px, py };
+}
+
+/* ---------------- render (pure function of t) ---------------- */
+
+const RAD2DEG = 180 / Math.PI;
+
+function render(t) {
+  const theta = THETA0 + OMEGA * t;
+  const s = solvePose(theta);
+
+  // frame is fixed
+  frame.position.set(0, 0, 0);
+  frame.rotation.set(0, 0, 0);
+
+  // crank : pivots on O2, its local +X axis points from O2 to A
+  crank.position.set(O2P[0], O2P[1], 0);
+  crank.rotation.set(0, 0, theta);
+
+  // coupler : starts at A, its local +X axis points from A to B
+  coupler.position.set(s.ax, s.ay, 0);
+  coupler.rotation.set(0, 0, Math.atan2(s.by - s.ay, s.bx - s.ax));
+
+  // rocker : pivots on O4, its local +X axis points from O4 to B
+  rocker.position.set(O4P[0], O4P[1], 0);
+  rocker.rotation.set(0, 0, Math.atan2(s.by - O4P[1], s.bx - O4P[0]));
+
+  // panel
+  let deg = (theta * RAD2DEG) % 360;
+  if (deg < 0) deg += 360;
+  let degRounded = Math.round(deg * 10) / 10;
+  if (degRounded >= 360) degRounded = 0;
+
+  elCrankDeg.textContent = degRounded.toFixed(1) + '\u00B0';
+  elPx.textContent = s.px.toFixed(2) + ' mm';
+  elPy.textContent = s.py.toFixed(2) + ' mm';
+
+  renderer.render(scene, camera);
+}
+
+/* ---------------- public API ---------------- */
+
+window.SIM = {
+  scene: scene,
+  camera: camera,
+  renderer: renderer,
+  period: (2 * Math.PI) / OMEGA,
+  params: {
+    O2: O2P.slice(),
+    O4: O4P.slice(),
+    len: { O2A: L_O2A, O4B: L_O4B, AB: L_AB, AP: L_AP },
+    omega: OMEGA,
+    theta0: THETA0
+  },
+  render: render
+};
+
+// pose the machine for t = 0 before announcing readiness
+render(0);
+
+window.SIM_READY = true;
+
+/* ---------------- live viewing ---------------- */
+
+const captureMode = window.location.search.indexOf('capture') !== -1;
+
+if (!captureMode) {
+  let t0 = null;
+  const loop = (now) => {
+    if (t0 === null) t0 = now;
+    window.SIM.render((now - t0) / 1000);
+    window.requestAnimationFrame(loop);
+  };
+  window.requestAnimationFrame(loop);
+}
+
+/* ---------------- resize ---------------- */
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

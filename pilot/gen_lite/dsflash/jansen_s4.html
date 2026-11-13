@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strandbeest Leg — Jansen Linkage Simulator</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0b1016; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  canvas { display:block; }
+  #panel {
+    position:fixed; top:14px; left:14px; min-width:210px;
+    background:rgba(16,22,30,0.86); color:#dbe6f3;
+    padding:12px 16px; border-radius:10px; font-size:13px;
+    border:1px solid #263547; box-shadow:0 8px 24px rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    user-select:none;
+  }
+  #panel .row { display:flex; justify-content:space-between; gap:22px; padding:3px 0; }
+  #panel .k { color:#89a1bd; }
+  #panel .v { color:#74e6b4; font-weight:600; }
+  #panel .title { color:#e8b05a; font-weight:700; letter-spacing:0.5px; margin-bottom:6px; font-size:12px; text-transform:uppercase; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div class="title">Jansen Linkage</div>
+  <div class="row"><span class="k">crank</span><span class="v" data-q="crank_deg">0</span></div>
+  <div class="row"><span class="k">foot x</span><span class="v" data-q="foot_x">0</span></div>
+  <div class="row"><span class="k">foot y</span><span class="v" data-q="foot_y">0</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+/* =====================================================================
+   Theo Jansen's "holy numbers" — link lengths of the Strandbeest leg
+   ===================================================================== */
+const LEN = {
+  OZ: 38.0,   // crank
+  ZY: 41.5,   // upper crank rod
+  XY: 39.3,   // upper triangle side (X-Y)
+  ZW: 40.1,   // lower crank rod
+  XW: 55.8,   // link from fixed pivot X to lower joint W
+  XV: 39.4,   // upper triangle side (X-V)
+  YV: 36.7,   // upper triangle side (Y-V)
+  VU: 65.7,   // link from apex V to knee U
+  WU: 49.0,   // leg triangle side (W-U)
+  UT: 50.0,   // leg triangle side (U-T)
+  WT: 61.9    // leg triangle side (W-T)
+};
+
+const O = [0, 0];            // crank axle (fixed) at world origin
+const OMEGA = 1.4;           // rad / s, counter-clockwise positive
+const THETA0 = 0;            // crank phase at t = 0
+
+/* =====================================================================
+   2-D circle / circle intersection
+   ===================================================================== */
+function ci(p1, r1, p2, r2, side) {
+  const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+  const d2 = dx * dx + dy * dy;
+  const d = Math.sqrt(d2);
+  if (d < 1e-9) return null;
+  const sum = r1 + r2, dif = Math.abs(r1 - r2);
+  if (d > sum + 1e-6 || d < dif - 1e-6) return null;
+  const a = (d2 + r1 * r1 - r2 * r2) / (2 * d);
+  let h2 = r1 * r1 - a * a;
+  if (h2 < 0) h2 = 0;
+  const h = Math.sqrt(h2);
+  const ux = dx / d, uy = dy / d;
+  const mx = p1[0] + a * ux, my = p1[1] + a * uy;
+  const s = side ? 1 : -1;
+  return [mx - s * h * uy, my + s * h * ux];
+}
+
+/* Solve the whole linkage at crank angle theta.
+   mask bits select the assembly branch of each joint. */
+function solveAt(O, X, theta, mask) {
+  const c = Math.cos(theta), s = Math.sin(theta);
+  const Z = [O[0] + LEN.OZ * c, O[1] + LEN.OZ * s];
+
+  const Y = ci(X, LEN.XY, Z, LEN.ZY, (mask >> 0) & 1);
+  if (!Y) return null;
+  const W = ci(X, LEN.XW, Z, LEN.ZW, (mask >> 1) & 1);
+  if (!W) return null;
+  const V = ci(X, LEN.XV, Y, LEN.YV, (mask >> 2) & 1);
+  if (!V) return null;
+  const U = ci(V, LEN.VU, W, LEN.WU, (mask >> 3) & 1);
+  if (!U) return null;
+  const T = ci(W, LEN.WT, U, LEN.UT, (mask >> 4) & 1);
+  if (!T) return null;
+
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+/* =====================================================================
+   Deterministic search for the frame placement / branch that yields the
+   flattest, most walk-like foot trajectory (done once, before rendering).
+   ===================================================================== */
+function pathMetrics(O, X, mask, N) {
+  const pts = [];
+  for (let i = 0; i < N; i++) {
+    const st = solveAt(O, X, i * 2 * Math.PI / N, mask);
+    if (!st) return null;
+    pts.push(st.T);
+  }
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const p of pts) {
+    if (p[0] < x0) x0 = p[0];
+    if (p[0] > x1) x1 = p[0];
+    if (p[1] < y0) y0 = p[1];
+    if (p[1] > y1) y1 = p[1];
+  }
+  const Wd = x1 - x0, H = y1 - y0;
+  const lim = y0 + 0.16 * H;
+  let n = 0, b0 = Infinity, b1 = -Infinity, c0 = Infinity, c1 = -Infinity;
+  for (const p of pts) {
+    if (p[1] <= lim) {
+      n++;
+      if (p[0] < b0) b0 = p[0];
+      if (p[0] > b1) b1 = p[0];
+      if (p[1] < c0) c0 = p[1];
+      if (p[1] > c1) c1 = p[1];
+    }
+  }
+  const bW = n > 0 ? b1 - b0 : 0;
+  const bH = n > 0 ? c1 - c0 : 0;
+  return { Wd, H, bW, bH, n, y0 };
+}
+
+function scoreMetrics(m) {
+  if (!m) return -1e9;
+  let s = m.bW - 4.0 * m.bH;
+  if (m.Wd < 30) s -= (30 - m.Wd) * 3;
+  if (m.n < 2) s -= 200;
+  if (m.H < 8) s -= (8 - m.H) * 5;
+  if (m.H > 140) s -= (m.H - 140) * 3;
+  const depth = -m.y0;                       // how far the foot drops below the axle
+  if (depth < 40) s -= (40 - depth) * 2.5;
+  return s;
+}
+
+function chooseConfiguration() {
+  const cands = [];
+  for (let dx = -32; dx <= 32; dx += 4) {
+    for (let dy = -32; dy <= 32; dy += 4) {
+      for (let m = 0; m < 32; m++) {
+        const met = pathMetrics(O, [dx, dy], m, 32);
+        if (!met) continue;
+        cands.push({ X: [dx, dy], mask: m, score: scoreMetrics(met) });
+      }
+    }
+  }
+  cands.sort((a, b) => b.score - a.score);
+
+  for (let i = 0; i < Math.min(cands.length, 48); i++) {
+    const c = cands[i];
+    let ok = true;
+    for (let k = 0; k < 720; k++) {
+      if (!solveAt(O, c.X, k * Math.PI / 360, c.mask)) { ok = false; break; }
+    }
+    if (ok) return c;
+  }
+  return { X: [0, -17], mask: 0 };
+}
+
+const chosen = chooseConfiguration();
+const XPOS = [chosen.X[0], chosen.X[1]];
+const MASK = chosen.mask;
+
+/* Reference pose (local frame of every rigid part) */
+let REF_THETA = 0;
+let refPts = solveAt(O, XPOS, REF_THETA, MASK);
+if (!refPts) {
+  for (let i = 1; i < 720; i++) {
+    const th = i * Math.PI / 360;
+    const s = solveAt(O, XPOS, th, MASK);
+    if (s) { refPts = s; REF_THETA = th; break; }
+  }
+}
+if (!refPts) refPts = { O, X: XPOS, Z: [LEN.OZ, 0], Y: [0, 0], W: [0, 0], V: [0, 0], U: [0, 0], T: [0, 0] };
+
+/* =====================================================================
+   three.js scene
+   ===================================================================== */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b1016);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 2, 30000);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+/* ------------------------- lighting ------------------------- */
+scene.add(new THREE.HemisphereLight(0xa9c7ff, 0x241a10, 1.6));
+
+const keyLight = new THREE.DirectionalLight(0xfff2dc, 2.6);
+keyLight.position.set(1.4, -1.1, 2.2);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0x88aaff, 1.2);
+fillLight.position.set(-1.8, 0.6, 1.0);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffc880, 0.9);
+rimLight.position.set(-0.4, 1.8, -1.4);
+scene.add(rimLight);
+
+/* ------------------------- materials ------------------------- */
+const matFrame = new THREE.MeshStandardMaterial({ color: 0x6f7f92, metalness: 0.75, roughness: 0.42 });
+const matCrank = new THREE.MeshStandardMaterial({ color: 0xe0a63c, metalness: 0.55, roughness: 0.38 });
+const matRod   = new THREE.MeshStandardMaterial({ color: 0xd8c39a, metalness: 0.25, roughness: 0.62 });
+const matRod2  = new THREE.MeshStandardMaterial({ color: 0xcbb388, metalness: 0.25, roughness: 0.62 });
+const matTriA  = new THREE.MeshStandardMaterial({ color: 0xc9954f, metalness: 0.30, roughness: 0.60, side: THREE.DoubleSide });
+const matTriB  = new THREE.MeshStandardMaterial({ color: 0xb07f3f, metalness: 0.30, roughness: 0.60, side: THREE.DoubleSide });
+const matPin   = new THREE.MeshStandardMaterial({ color: 0xe7eef7, metalness: 0.92, roughness: 0.22 });
+
+/* ------------------------- part table ------------------------- */
+const PARTS = [
+  { name: 'frame',         pts: ['O', 'X'],     z: 0   },
+  { name: 'crank',         pts: ['O', 'Z'],     z: 7   },
+  { name: 'rodUpper',      pts: ['Z', 'Y'],     z: 16  },
+  { name: 'rodLower',      pts: ['Z', 'W'],     z: -9  },
+  { name: 'upperTriangle', pts: ['X', 'Y', 'V'],z: 25  },
+  { name: 'linkXW',        pts: ['X', 'W'],     z: -20 },
+  { name: 'linkVU',        pts: ['V', 'U'],     z: 34  },
+  { name: 'legTriangle',   pts: ['W', 'U', 'T'],z: 43  }
+];
+
+const partObjects = {};
+
+for (const def of PARTS) {
+  const obj = new THREE.Object3D();
+  obj.name = def.name;
+  scene.add(obj);
+  partObjects[def.name] = obj;
+
+  for (const pn of def.pts) {
+    const mk = new THREE.Object3D();
+    mk.name = def.name + '@' + pn;
+    const p = refPts[pn];
+    mk.position.set(p[0], p[1], def.z);
+    obj.add(mk);
+  }
+}
+
+/* ------------------------- mesh helpers ------------------------- */
+function addBar(parent, A, B, w, z, mat) {
+  const dx = B[0] - A[0], dy = B[1] - A[1];
+  const len = Math.max(Math.hypot(dx, dy), 0.001);
+  const geo = new THREE.BoxGeometry(len, w, 9);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set((A[0] + B[0]) * 0.5, (A[1] + B[1]) * 0.5, z);
+  mesh.rotation.z = Math.atan2(dy, dx);
+  parent.add(mesh);
+}
+
+function addPin(parent, P, z, r) {
+  const geo = new THREE.CylinderGeometry(r, r, 18, 20);
+  geo.rotateX(Math.PI * 0.5);
+  const mesh = new THREE.Mesh(geo, matPin);
+  mesh.position.set(P[0], P[1], z);
+  parent.add(mesh);
+}
+
+function addTriangleMesh(parent, A, B, C, z, mat) {
+  const sh = new THREE.Shape();
+  sh.moveTo(A[0], A[1]);
+  sh.lineTo(B[0], B[1]);
+  sh.lineTo(C[0], C[1]);
+  sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 9, bevelEnabled: false, curveSegments: 1 });
+  geo.translate(0, 0, -4.5);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.z = z;
+  parent.add(mesh);
+}
+
+/* ------------------------- build the mechanism ------------------------- */
+const P = refPts;
+
+// frame
+addBar(partObjects.frame, P.O, P.X, 16, 0, matFrame);
+addPin(partObjects.frame, P.O, 0, 10);
+addPin(partObjects.frame, P.X, 0, 10);
+
+// crank
+addBar(partObjects.crank, P.O, P.Z, 10, 7, matCrank);
+addPin(partObjects.crank, P.O, 7, 8);
+addPin(partObjects.crank, P.Z, 7, 5.5);
+
+// upper crank rod
+addBar(partObjects.rodUpper, P.Z, P.Y, 8, 16, matRod);
+addPin(partObjects.rodUpper, P.Z, 16, 5);
+addPin(partObjects.rodUpper, P.Y, 16, 5);
+
+// lower crank rod
+addBar(partObjects.rodLower, P.Z, P.W, 8, -9, matRod);
+addPin(partObjects.rodLower, P.Z, -9, 5);
+addPin(partObjects.rodLower, P.W, -9, 5);
+
+// upper triangle
+addTriangleMesh(partObjects.upperTriangle, P.X, P.Y, P.V, 25, matTriA);
+addPin(partObjects.upperTriangle, P.X, 25, 5.5);
+addPin(partObjects.upperTriangle, P.Y, 25, 5);
+addPin(partObjects.upperTriangle, P.V, 25, 5);
+
+// link X-W
+addBar(partObjects.linkXW, P.X, P.W, 8, -20, matRod2);
+addPin(partObjects.linkXW, P.X, -20, 5);
+addPin(partObjects.linkXW, P.W, -20, 5);
+
+// link V-U
+addBar(partObjects.linkVU, P.V, P.U, 8, 34, matRod);
+addPin(partObjects.linkVU, P.V, 34, 5);
+addPin(partObjects.linkVU, P.U, 34, 5);
+
+// leg triangle
+addTriangleMesh(partObjects.legTriangle, P.W, P.U, P.T, 43, matTriB);
+addPin(partObjects.legTriangle, P.W, 43, 5.5);
+addPin(partObjects.legTriangle, P.U, 43, 5);
+addPin(partObjects.legTriangle, P.T, 43, 4.5);
+
+/* =====================================================================
+   Camera framing
+   ===================================================================== */
+let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+for (let i = 0; i < 96; i++) {
+  const st = solveAt(O, XPOS, i * 2 * Math.PI / 96, MASK);
+  if (!st) continue;
+  for (const k of ['O', 'X', 'Z', 'Y', 'W', 'V', 'U', 'T']) {
+    const p = st[k];
+    if (p[0] < bx0) bx0 = p[0];
+    if (p[0] > bx1) bx1 = p[0];
+    if (p[1] < by0) by0 = p[1];
+    if (p[1] > by1) by1 = p[1];
+  }
+}
+if (!isFinite(bx0)) { bx0 = -80; bx1 = 80; by0 = -160; by1 = 40; }
+
+const cx = (bx0 + bx1) * 0.5;
+const cy = (by0 + by1) * 0.5;
+const S = Math.max(bx1 - bx0, by1 - by0, 60);
+
+camera.position.set(cx + S * 0.38, cy - S * 0.50, S * 1.95);
+camera.lookAt(cx, cy, 0);
+camera.updateProjectionMatrix();
+
+/* =====================================================================
+   Rigid-body posing
+   ===================================================================== */
+const ZAXIS = new THREE.Vector3(0, 0, 1);
+
+function setPartTransform(obj, refA, refB, curA, curB) {
+  const a0 = Math.atan2(refB[1] - refA[1], refB[0] - refA[0]);
+  const a1 = Math.atan2(curB[1] - curA[1], curB[0] - curA[0]);
+  const rot = a1 - a0;
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const tx = curA[0] - (c * refA[0] - s * refA[1]);
+  const ty = curA[1] - (s * refA[0] + c * refA[1]);
+  obj.position.set(tx, ty, 0);
+  obj.quaternion.setFromAxisAngle(ZAXIS, rot);
+}
+
+/* =====================================================================
+   Panel
+   ===================================================================== */
+const elCrank = document.querySelector('[data-q="crank_deg"]');
+const elFootX = document.querySelector('[data-q="foot_x"]');
+const elFootY = document.querySelector('[data-q="foot_y"]');
+
+/* =====================================================================
+   SIM object
+   ===================================================================== */
+const params = {
+  O: [O[0], O[1]],
+  X: [XPOS[0], XPOS[1]],
+  len: Object.assign({}, LEN),
+  omega: OMEGA,
+  theta0: THETA0
+};
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  let st = solveAt(O, XPOS, theta, MASK);
+  if (!st) st = solveAt(O, XPOS, REF_THETA, MASK);
+  if (!st) st = refPts;
+
+  setPartTransform(partObjects.crank,         refPts.O, refPts.Z, st.O, st.Z);
+  setPartTransform(partObjects.rodUpper,      refPts.Z, refPts.Y, st.Z, st.Y);
+  setPartTransform(partObjects.rodLower,      refPts.Z, refPts.W, st.Z, st.W);
+  setPartTransform(partObjects.upperTriangle, refPts.X, refPts.Y, st.X, st.Y);
+  setPartTransform(partObjects.linkXW,        refPts.X, refPts.W, st.X, st.W);
+  setPartTransform(partObjects.linkVU,        refPts.V, refPts.U, st.V, st.U);
+  setPartTransform(partObjects.legTriangle,   refPts.W, refPts.U, st.W, st.U);
+
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+
+  elCrank.textContent = deg.toFixed(2) + '\u00B0';
+  elFootX.textContent = st.T[0].toFixed(2) + ' mm';
+  elFootY.textContent = st.T[1].toFixed(2) + ' mm';
+
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: 2 * Math.PI / params.omega,
+  params,
+  render
+};
+window.SIM_READY = true;
+
+/* =====================================================================
+   Resize + animation loop
+   ===================================================================== */
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', onResize);
+
+const capture = location.search.indexOf('capture') !== -1;
+
+if (capture) {
+  render(0);
+} else {
+  let t0 = null;
+  function frame(now) {
+    if (t0 === null) t0 = now;
+    render((now - t0) / 1000);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Strandbeest Leg — Theo Jansen Linkage</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #0b0e13; }
+  canvas { display: block; }
+  #panel {
+    position: fixed; top: 14px; left: 14px; z-index: 10;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px; color: #cfe3ff;
+    background: rgba(9, 15, 24, 0.80);
+    border: 1px solid rgba(90, 140, 200, 0.35);
+    border-radius: 10px; padding: 12px 16px;
+    line-height: 1.7;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    min-width: 190px;
+  }
+  #panel .label { color: #7f9bb8; }
+  #panel .val   { color: #eaf4ff; font-weight: 600; }
+  #panel .head  { color: #9fd0ff; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 4px; text-transform: uppercase; font-size: 11px; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div class="head">Strandbeest leg</div>
+  <div><span class="label">crank</span> <span data-q="crank_deg" class="val">0.0°</span></div>
+  <div><span class="label">foot x</span> <span data-q="foot_x" class="val">0.00</span> <span class="label">mm</span></div>
+  <div><span class="label">foot y</span> <span data-q="foot_y" class="val">0.00</span> <span class="label">mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   Jansen "holy numbers" linkage
+   ============================================================ */
+const O = [0, 0];
+const X = [-38, -7.8];
+
+const LEN = {
+  OZ: 15,
+  ZY: 41.5,
+  XY: 39.3,
+  ZW: 40.1,
+  XW: 55.8,
+  XV: 39.4,
+  YV: 36.7,
+  VU: 65.7,
+  WU: 49,
+  UT: 50,
+  WT: 61.9
+};
+
+const OMEGA = (2 * Math.PI) / 3;          // 3 seconds per revolution
+const THETA0 = (225 * Math.PI) / 180;     // start pose
+
+const params = {
+  O: [O[0], O[1]],
+  X: [X[0], X[1]],
+  len: { ...LEN },
+  omega: OMEGA,
+  theta0: THETA0
+};
+
+/* ---- circle-circle intersection, branch chosen by s ---- */
+function circleIntersect(c1, r1, c2, r2, s) {
+  const dx = c2[0] - c1[0];
+  const dy = c2[1] - c1[1];
+  const d = Math.hypot(dx, dy);
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  let h2 = r1 * r1 - a * a;
+  if (h2 < 0) h2 = 0;
+  const h = Math.sqrt(h2);
+  const xm = c1[0] + (a * dx) / d;
+  const ym = c1[1] + (a * dy) / d;
+  const nx = -dy / d;
+  const ny = dx / d;
+  return [xm + s * h * nx, ym + s * h * ny];
+}
+
+function solve(theta) {
+  const Z = [LEN.OZ * Math.cos(theta), LEN.OZ * Math.sin(theta)];
+  const Y = circleIntersect(Z, LEN.ZY, X, LEN.XY, -1);
+  const W = circleIntersect(Z, LEN.ZW, X, LEN.XW, +1);
+  const V = circleIntersect(X, LEN.XV, Y, LEN.YV, +1);
+  const U = circleIntersect(V, LEN.VU, W, LEN.WU, -1);
+  const T = circleIntersect(W, LEN.WT, U, LEN.UT, +1);
+  return { O, X, Z, Y, V, W, U, T };
+}
+
+/* ============================================================
+   three.js scene
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0f16);
+
+const camera = new THREE.PerspectiveCamera(
+  42,
+  window.innerWidth / window.innerHeight,
+  1,
+  5000
+);
+camera.position.set(65, 18, 245);
+camera.lookAt(-28, -32, 0);
+
+/* lights */
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a2233, 0.95));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+keyLight.position.set(140, 200, 280);
+keyLight.target.position.set(-30, -30, 0);
+scene.add(keyLight, keyLight.target);
+
+const fillLight = new THREE.DirectionalLight(0x7fb2ff, 0.8);
+fillLight.position.set(-200, -60, 180);
+fillLight.target.position.set(-30, -30, 0);
+scene.add(fillLight, fillLight.target);
+
+const rimLight = new THREE.DirectionalLight(0xffd9a0, 0.7);
+rimLight.position.set(0, -180, -220);
+rimLight.target.position.set(-30, -30, 0);
+scene.add(rimLight, rimLight.target);
+
+/* subtle technical backdrop */
+{
+  const grid = new THREE.GridHelper(600, 60, 0x1d3550, 0x142333);
+  grid.rotation.x = Math.PI / 2;
+  grid.position.z = -55;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.55;
+  scene.add(grid);
+}
+
+/* reference pose */
+const ref = solve(THETA0);
+
+/* ============================================================
+   helpers for building the rigid parts
+   ============================================================ */
+const zAxis = new THREE.Vector3(0, 0, 1);
+
+function makePart(name) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  scene.add(g);
+  return g;
+}
+
+function addRod(parent, a, b, w, d, color) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  const geo = new THREE.BoxGeometry(Math.max(len, 0.001), w, d);
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.38,
+    metalness: 0.42
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0);
+  mesh.rotation.z = Math.atan2(dy, dx);
+  parent.add(mesh);
+  return mesh;
+}
+
+function addJointSphere(parent, p, r, color) {
+  const geo = new THREE.SphereGeometry(r, 18, 14);
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.25,
+    metalness: 0.7
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(p[0], p[1], 0);
+  parent.add(mesh);
+  return mesh;
+}
+
+function addCylinderZ(parent, p, r, h, color) {
+  const geo = new THREE.CylinderGeometry(r, r, h, 24);
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(p[0], p[1], 0);
+  mesh.rotation.x = Math.PI / 2;
+  parent.add(mesh);
+  return mesh;
+}
+
+function addMarker(parent, name, p) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(p[0], p[1], 0);
+  parent.add(o);
+  return o;
+}
+
+/* colours */
+const COL = {
+  frame: 0x4b5563,
+  crank: 0xff5d5d,
+  rodUpper: 0x5da9ff,
+  rodLower: 0x53d68b,
+  upperTriangle: 0xb07cff,
+  linkXW: 0x38c7c7,
+  linkVU: 0xffa94d,
+  legTriangle: 0xffd93d
+};
+
+/* ============================================================
+   build parts (in the reference pose)
+   ============================================================ */
+
+/* --- frame --- */
+const frame = makePart('frame');
+addRod(frame, ref.O, ref.X, 9, 7, COL.frame);
+addCylinderZ(frame, ref.O, 9, 12, 0x2b3340);
+addCylinderZ(frame, ref.X, 7, 10, 0x2b3340);
+addMarker(frame, 'frame@O', ref.O);
+addMarker(frame, 'frame@X', ref.X);
+
+/* --- crank --- */
+const crank = makePart('crank');
+{
+  const wheelGeo = new THREE.CylinderGeometry(21, 21, 5, 40);
+  const wheelMat = new THREE.MeshStandardMaterial({
+    color: 0xd94a4a,
+    roughness: 0.45,
+    metalness: 0.4
+  });
+  const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+  wheel.position.set(ref.O[0], ref.O[1], 0);
+  wheel.rotation.x = Math.PI / 2;
+  crank.add(wheel);
+}
+addRod(crank, ref.O, ref.Z, 7, 6, COL.crank);
+addJointSphere(crank, ref.O, 7, 0x8a2c2c);
+addJointSphere(crank, ref.Z, 5, 0xffb0b0);
+addMarker(crank, 'crank@O', ref.O);
+addMarker(crank, 'crank@Z', ref.Z);
+
+/* --- rodUpper --- */
+const rodUpper = makePart('rodUpper');
+addRod(rodUpper, ref.Z, ref.Y, 5.5, 5, COL.rodUpper);
+addJointSphere(rodUpper, ref.Z, 4.5, 0xbcd9ff);
+addJointSphere(rodUpper, ref.Y, 4.5, 0xbcd9ff);
+addMarker(rodUpper, 'rodUpper@Z', ref.Z);
+addMarker(rodUpper, 'rodUpper@Y', ref.Y);
+
+/* --- rodLower --- */
+const rodLower = makePart('rodLower');
+addRod(rodLower, ref.Z, ref.W, 5.5, 5, COL.rodLower);
+addJointSphere(rodLower, ref.Z, 4.5, 0xbef5d6);
+addJointSphere(rodLower, ref.W, 4.5, 0xbef5d6);
+addMarker(rodLower, 'rodLower@Z', ref.Z);
+addMarker(rodLower, 'rodLower@W', ref.W);
+
+/* --- upperTriangle --- */
+const upperTriangle = makePart('upperTriangle');
+addRod(upperTriangle, ref.X, ref.Y, 5, 5, COL.upperTriangle);
+addRod(upperTriangle, ref.Y, ref.V, 5, 5, COL.upperTriangle);
+addRod(upperTriangle, ref.X, ref.V, 5, 5, COL.upperTriangle);
+addJointSphere(upperTriangle, ref.X, 4.5, 0xe0ccff);
+addJointSphere(upperTriangle, ref.Y, 4.5, 0xe0ccff);
+addJointSphere(upperTriangle, ref.V, 5, 0xe0ccff);
+addMarker(upperTriangle, 'upperTriangle@X', ref.X);
+addMarker(upperTriangle, 'upperTriangle@Y', ref.Y);
+addMarker(upperTriangle, 'upperTriangle@V', ref.V);
+
+/* --- linkXW --- */
+const linkXW = makePart('linkXW');
+addRod(linkXW, ref.X, ref.W, 5.5, 5, COL.linkXW);
+addJointSphere(linkXW, ref.X, 4.5, 0xbff5f5);
+addJointSphere(linkXW, ref.W, 4.5, 0xbff5f5);
+addMarker(linkXW, 'linkXW@X', ref.X);
+addMarker(linkXW, 'linkXW@W', ref.W);
+
+/* --- linkVU --- */
+const linkVU = makePart('linkVU');
+addRod(linkVU, ref.V, ref.U, 5.5, 5, COL.linkVU);
+addJointSphere(linkVU, ref.V, 4.5, 0xffe0b3);
+addJointSphere(linkVU, ref.U, 4.5, 0xffe0b3);
+addMarker(linkVU, 'linkVU@V', ref.V);
+addMarker(linkVU, 'linkVU@U', ref.U);
+
+/* --- legTriangle --- */
+const legTriangle = makePart('legTriangle');
+addRod(legTriangle, ref.W, ref.U, 5, 5, COL.legTriangle);
+addRod(legTriangle, ref.U, ref.T, 5, 5, COL.legTriangle);
+addRod(legTriangle, ref.W, ref.T, 5, 5, COL.legTriangle);
+addJointSphere(legTriangle, ref.W, 5, 0xfff0a8);
+addJointSphere(legTriangle, ref.U, 4.5, 0xfff0a8);
+addJointSphere(legTriangle, ref.T, 5.5, 0xfff0a8);
+addMarker(legTriangle, 'legTriangle@W', ref.W);
+addMarker(legTriangle, 'legTriangle@U', ref.U);
+addMarker(legTriangle, 'legTriangle@T', ref.T);
+{
+  const padGeo = new THREE.BoxGeometry(14, 4, 10);
+  const padMat = new THREE.MeshStandardMaterial({
+    color: 0xffb84d,
+    roughness: 0.6,
+    metalness: 0.2
+  });
+  const pad = new THREE.Mesh(padGeo, padMat);
+  pad.position.set(ref.T[0], ref.T[1] - 3, 0);
+  legTriangle.add(pad);
+}
+
+/* ============================================================
+   rigid transform of a part from reference pose to current pose
+   ============================================================ */
+function setPartTransform(obj, a0, b0, a1, b1) {
+  const ang0 = Math.atan2(b0[1] - a0[1], b0[0] - a0[0]);
+  const ang1 = Math.atan2(b1[1] - a1[1], b1[0] - a1[0]);
+  const da = ang1 - ang0;
+  const c = Math.cos(da);
+  const s = Math.sin(da);
+  const rx = c * a0[0] - s * a0[1];
+  const ry = s * a0[0] + c * a0[1];
+  obj.position.set(a1[0] - rx, a1[1] - ry, 0);
+  obj.quaternion.setFromAxisAngle(zAxis, da);
+}
+
+/* ============================================================
+   panel elements
+   ============================================================ */
+const panelEls = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  foot_x: document.querySelector('[data-q="foot_x"]'),
+  foot_y: document.querySelector('[data-q="foot_y"]')
+};
+
+/* ============================================================
+   draw the full foot path once (static, pure decoration)
+   ============================================================ */
+{
+  const pts = [];
+  const N = 720;
+  for (let i = 0; i <= N; i++) {
+    const th = (i / N) * Math.PI * 2;
+    const P = solve(th);
+    pts.push(new THREE.Vector3(P.T[0], P.T[1], -1.5));
+  }
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineBasicMaterial({
+    color: 0x5f9fd6,
+    transparent: true,
+    opacity: 0.65
+  });
+  const pathLine = new THREE.Line(geo, mat);
+  scene.add(pathLine);
+}
+
+/* ============================================================
+   render(t) — pure function of t
+   ============================================================ */
+function render(t) {
+  const theta = THETA0 + OMEGA * t;
+  const cur = solve(theta);
+
+  /* frame is fixed — nothing to do */
+
+  setPartTransform(crank,         ref.O, ref.Z, cur.O, cur.Z);
+  setPartTransform(rodUpper,      ref.Z, ref.Y, cur.Z, cur.Y);
+  setPartTransform(rodLower,      ref.Z, ref.W, cur.Z, cur.W);
+  setPartTransform(upperTriangle, ref.X, ref.Y, cur.X, cur.Y);
+  setPartTransform(linkXW,        ref.X, ref.W, cur.X, cur.W);
+  setPartTransform(linkVU,        ref.V, ref.U, cur.V, cur.U);
+  setPartTransform(legTriangle,   ref.W, ref.U, cur.W, cur.U);
+
+  /* panel */
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  panelEls.crank_deg.textContent = deg.toFixed(1) + '°';
+  panelEls.foot_x.textContent = cur.T[0].toFixed(2);
+  panelEls.foot_y.textContent = cur.T[1].toFixed(2);
+
+  renderer.render(scene, camera);
+}
+
+/* ============================================================
+   expose SIM
+   ============================================================ */
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: (2 * Math.PI) / OMEGA,
+  params,
+  render
+};
+window.SIM_READY = true;
+
+/* initial frame */
+render(0);
+
+/* ============================================================
+   live loop
+   ============================================================ */
+if (!location.search.includes('capture')) {
+  let start = null;
+  function loop(now) {
+    if (start === null) start = now;
+    render((now - start) / 1000);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+/* resize */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

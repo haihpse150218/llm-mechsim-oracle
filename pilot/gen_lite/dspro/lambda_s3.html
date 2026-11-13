@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chebyshev Lambda Linkage Simulator</title>
+<style>
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+  }
+  canvas {
+    display: block;
+  }
+  #panel {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    font-family: monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    pointer-events: none;
+    line-height: 1.5;
+  }
+  #panel .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+</style>
+</head>
+<body>
+<div id="panel">
+  <div class="row"><span>crank_deg</span><span data-q="crank_deg">0.000</span></div>
+  <div class="row"><span>P_x</span><span data-q="P_x">0.000</span></div>
+  <div class="row"><span>P_y</span><span data-q="P_y">0.000</span></div>
+</div>
+
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ---------- simulator parameters ---------- */
+const params = {
+  O2: [-100, 0],
+  O4: [100, 0],
+  len: {
+    O2A: 60,
+    O4B: 90,
+    AB: 200,
+    AP: 250
+  },
+  omega: 1.0,
+  theta0: 0
+};
+
+/* choose one of the two four-bar assembly branches */
+const SIGN = 1;
+
+function clamp(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+/* Solve linkage positions for a given input crank angle (rad). */
+function solvePositions(theta) {
+  const O2 = new THREE.Vector2(params.O2[0], params.O2[1]);
+  const O4 = new THREE.Vector2(params.O4[0], params.O4[1]);
+  const L2 = params.len.O2A;
+  const L3 = params.len.AB;
+  const L4 = params.len.O4B;
+  const AP = params.len.AP;
+
+  const A = new THREE.Vector2(
+    O2.x + L2 * Math.cos(theta),
+    O2.y + L2 * Math.sin(theta)
+  );
+
+  const p = new THREE.Vector2().subVectors(A, O4);
+  const pLen = p.length();
+
+  const cosBeta = clamp(
+    (L4 * L4 + pLen * pLen - L3 * L3) / (2 * L4 * pLen),
+    -1,
+    1
+  );
+  const beta = Math.acos(cosBeta);
+  const alpha = Math.atan2(p.y, p.x);
+  const rockerAngle = alpha + SIGN * beta;
+
+  const B = new THREE.Vector2(
+    O4.x + L4 * Math.cos(rockerAngle),
+    O4.y + L4 * Math.sin(rockerAngle)
+  );
+
+  const ABVec = new THREE.Vector2().subVectors(B, A);
+  const gamma = Math.atan2(ABVec.y, ABVec.x);
+  const P = new THREE.Vector2(
+    A.x + (AP / L3) * ABVec.x,
+    A.y + (AP / L3) * ABVec.y
+  );
+
+  return { A, B, P, gamma };
+}
+
+/* ---------- compute scene bounds for camera framing ---------- */
+let minX = Math.min(params.O2[0], params.O4[0]);
+let maxX = Math.max(params.O2[0], params.O4[0]);
+let minY = Math.min(params.O2[1], params.O4[1]);
+let maxY = Math.max(params.O2[1], params.O4[1]);
+
+for (let i = 0; i <= 360; i += 1) {
+  const th = i * Math.PI / 180;
+  const { A, B, P } = solvePositions(th);
+  minX = Math.min(minX, A.x, B.x, P.x);
+  maxX = Math.max(maxX, A.x, B.x, P.x);
+  minY = Math.min(minY, A.y, B.y, P.y);
+  maxY = Math.max(maxY, A.y, B.y, P.y);
+}
+
+const mid = new THREE.Vector3((minX + maxX) / 2, (minY + maxY) / 2, 0);
+const span = Math.max(maxX - minX, maxY - minY);
+const cameraZ = Math.max(400, span / (2 * Math.tan(Math.PI / 8)) + 100);
+
+/* ---------- three.js scene setup ---------- */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xe6e8eb);
+
+const camera = new THREE.PerspectiveCamera(
+  45,
+  window.innerWidth / window.innerHeight,
+  1,
+  5000
+);
+camera.position.set(mid.x, mid.y, cameraZ);
+camera.lookAt(mid);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+/* lights */
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+keyLight.position.set(200, 300, 500);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.45);
+fillLight.position.set(-300, -200, 400);
+scene.add(fillLight);
+
+/* materials */
+const materials = {
+  frame: new THREE.MeshStandardMaterial({ color: 0x777c85, roughness: 0.5, metalness: 0.35 }),
+  crank: new THREE.MeshStandardMaterial({ color: 0x2f7de1, roughness: 0.4, metalness: 0.4 }),
+  coupler: new THREE.MeshStandardMaterial({ color: 0xf47b20, roughness: 0.4, metalness: 0.4 }),
+  rocker: new THREE.MeshStandardMaterial({ color: 0x2aa44a, roughness: 0.4, metalness: 0.4 }),
+  joint: new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3, metalness: 0.7 }),
+  trace: new THREE.MeshStandardMaterial({ color: 0xd71920, roughness: 0.25, metalness: 0.2 })
+};
+
+function makeBox(length, width, thickness, material) {
+  const geo = new THREE.BoxGeometry(length, width, thickness);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.set(length / 2, 0, 0);
+  return mesh;
+}
+
+function makeCylinderAt(x, y, radius, thickness, material) {
+  const geo = new THREE.CylinderGeometry(radius, radius, thickness, 24);
+  geo.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.set(x, y, 0);
+  return mesh;
+}
+
+function addMarker(parent, name, x, y) {
+  const marker = new THREE.Object3D();
+  marker.name = name;
+  marker.position.set(x, y, 0);
+  parent.add(marker);
+  return marker;
+}
+
+/* ---------- parts ---------- */
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+
+const crank = new THREE.Object3D();
+crank.name = 'crank';
+
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';
+
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';
+
+/* frame */
+const groundVec = new THREE.Vector2(
+  params.O4[0] - params.O2[0],
+  params.O4[1] - params.O2[1]
+);
+const groundLen = groundVec.length();
+const groundAng = Math.atan2(groundVec.y, groundVec.x);
+
+const frameBar = new THREE.Mesh(
+  new THREE.BoxGeometry(groundLen, 14, 14),
+  materials.frame
+);
+frameBar.position.set(
+  (params.O2[0] + params.O4[0]) / 2,
+  (params.O2[1] + params.O4[1]) / 2,
+  0
+);
+frameBar.rotation.z = groundAng;
+frame.add(frameBar);
+
+frame.add(makeCylinderAt(params.O2[0], params.O2[1], 13, 16, materials.joint));
+frame.add(makeCylinderAt(params.O4[0], params.O4[1], 13, 16, materials.joint));
+
+addMarker(frame, 'frame@O2', params.O2[0], params.O2[1]);
+addMarker(frame, 'frame@O4', params.O4[0], params.O4[1]);
+
+/* crank */
+const L2 = params.len.O2A;
+crank.add(makeBox(L2, 10, 10, materials.crank));
+crank.add(makeCylinderAt(0, 0, 9, 12, materials.joint));
+crank.add(makeCylinderAt(L2, 0, 9, 12, materials.joint));
+
+addMarker(crank, 'crank@O2', 0, 0);
+addMarker(crank, 'crank@A', L2, 0);
+
+/* coupler (physical bar extends from A to P; B lies on the same line) */
+const L3 = params.len.AB;
+const AP = params.len.AP;
+coupler.add(makeBox(AP, 10, 10, materials.coupler));
+coupler.add(makeCylinderAt(0, 0, 9, 12, materials.joint));
+coupler.add(makeCylinderAt(L3, 0, 9, 12, materials.joint));
+coupler.add(makeCylinderAt(AP, 0, 6, 12, materials.trace));
+
+const traceBall = new THREE.Mesh(
+  new THREE.SphereGeometry(6, 18, 18),
+  materials.trace
+);
+traceBall.position.set(AP, 0, 0);
+coupler.add(traceBall);
+
+addMarker(coupler, 'coupler@A', 0, 0);
+addMarker(coupler, 'coupler@B', L3, 0);
+addMarker(coupler, 'coupler@P', AP, 0);
+
+/* rocker */
+const L4 = params.len.O4B;
+rocker.add(makeBox(L4, 10, 10, materials.rocker));
+rocker.add(makeCylinderAt(0, 0, 9, 12, materials.joint));
+rocker.add(makeCylinderAt(L4, 0, 9, 12, materials.joint));
+
+addMarker(rocker, 'rocker@O4', 0, 0);
+addMarker(rocker, 'rocker@B', L4, 0);
+
+scene.add(frame);
+scene.add(crank);
+scene.add(coupler);
+scene.add(rocker);
+
+/* ---------- panel update ---------- */
+function updatePanel(theta, P) {
+  const deg = ((theta * 180 / Math.PI) % 360 + 360) % 360;
+  document.querySelector('[data-q="crank_deg"]').textContent = deg.toFixed(3);
+  document.querySelector('[data-q="P_x"]').textContent = P.x.toFixed(3);
+  document.querySelector('[data-q="P_y"]').textContent = P.y.toFixed(3);
+}
+
+/* ---------- render function ---------- */
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const { A, B, P, gamma } = solvePositions(theta);
+
+  crank.position.set(params.O2[0], params.O2[1], 0);
+  crank.rotation.z = theta;
+
+  rocker.position.set(params.O4[0], params.O4[1], 0);
+  rocker.rotation.z = Math.atan2(B.y - params.O4[1], B.x - params.O4[0]);
+
+  coupler.position.set(A.x, A.y, 0);
+  coupler.rotation.z = gamma;
+
+  updatePanel(theta, P);
+
+  renderer.render(scene, camera);
+}
+
+/* ---------- public API ---------- */
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: 2 * Math.PI / params.omega,
+  params,
+  render
+};
+
+window.SIM_READY = true;
+
+/* live viewing unless capture mode is requested */
+if (!window.location.search.includes('capture')) {
+  let start = null;
+  function animate(now) {
+    if (start === null) start = now;
+    const t = (now - start) / 1000;
+    window.SIM.render(t);
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

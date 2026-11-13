@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Strandbeest Leg Simulator</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0c10;
+  }
+  canvas {
+    display: block;
+  }
+  #panel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    pointer-events: none;
+    background: rgba(10, 12, 16, 0.72);
+    color: #e8e8e8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .q {
+    display: flex;
+    gap: 24px;
+    justify-content: space-between;
+    margin: 4px 0;
+  }
+  .label {
+    opacity: 0.65;
+  }
+  [data-q] {
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div class="q"><span class="label">crank angle</span><span data-q="crank_deg">0.00°</span></div>
+  <div class="q"><span class="label">foot x</span><span data-q="foot_x">0.00 mm</span></div>
+  <div class="q"><span class="label">foot y</span><span data-q="foot_y">0.00 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0],
+  X: [-38, -7.8],
+  len: {
+    OZ: 15.0,
+    ZY: 50.0,
+    XY: 41.5,
+    ZW: 40.1,
+    XW: 39.3,
+    XV: 55.8,
+    YV: 39.4,
+    VU: 36.7,
+    WU: 65.7,
+    UT: 49.0,
+    WT: 61.9
+  },
+  omega: 1.0,
+  theta0: 0.0
+};
+
+const len = params.len;
+const O = { x: params.O[0], y: params.O[1] };
+const X = { x: params.X[0], y: params.X[1] };
+const OXlen = Math.hypot(X.x - O.x, X.y - O.y);
+const period = 2 * Math.PI / params.omega;
+
+/* ---------- 2D kinematics helpers ---------- */
+
+function add(a, b) {
+  return { x: a.x + b.x, y: a.y + b.y };
+}
+
+function sub(a, b) {
+  return { x: a.x - b.x, y: a.y - b.y };
+}
+
+function scale(a, s) {
+  return { x: a.x * s, y: a.y * s };
+}
+
+function norm(a) {
+  const l = Math.hypot(a.x, a.y);
+  return l > 1e-12 ? { x: a.x / l, y: a.y / l } : { x: 0, y: 0 };
+}
+
+function perpLeft(a) {
+  return { x: -a.y, y: a.x };
+}
+
+function intersect(A, B, rA, rB, sign) {
+  const dvec = sub(B, A);
+  const d = Math.hypot(dvec.x, dvec.y);
+  if (d < 1e-12) return A;
+
+  const a = (rA * rA - rB * rB + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, rA * rA - a * a));
+  const dir = scale(dvec, 1 / d);
+  const base = add(A, scale(dir, a));
+  const perp = perpLeft(dir);
+
+  return sign >= 0 ? add(base, scale(perp, h)) : sub(base, scale(perp, h));
+}
+
+function triangleCoords(a, b, c) {
+  const x = (b * b + a * a - c * c) / (2 * a);
+  const y = Math.sqrt(Math.max(0, b * b - x * x));
+  return { x, y };
+}
+
+/* ---------- Scene, camera, renderer ---------- */
+
+const viewportWidth = window.innerWidth > 0 ? window.innerWidth : 800;
+const viewportHeight = window.innerHeight > 0 ? window.innerHeight : 600;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x11151c);
+
+const camera = new THREE.PerspectiveCamera(45, viewportWidth / viewportHeight, 0.1, 2000);
+camera.position.set(0, -25, 420);
+camera.lookAt(5, -20, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(viewportWidth, viewportHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+keyLight.position.set(200, 300, 400);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.35);
+fillLight.position.set(-200, -120, 200);
+scene.add(fillLight);
+
+/* ---------- Part builders ---------- */
+
+function createPart(name) {
+  const part = new THREE.Object3D();
+  part.name = name;
+  scene.add(part);
+  return part;
+}
+
+function addMarker(part, partName, pointName, local) {
+  const marker = new THREE.Object3D();
+  marker.name = `${partName}@${pointName}`;
+  marker.position.set(local.x, local.y, 0);
+  part.add(marker);
+}
+
+function addBar(part, length, color, radius = 2.1) {
+  const geometry = new THREE.CylinderGeometry(radius, radius, length, 20);
+  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.1 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.z = -Math.PI / 2;
+  mesh.position.set(length / 2, 0, 0);
+  part.add(mesh);
+}
+
+function addTrianglePlate(part, points, color, thickness = 2) {
+  const shape = new THREE.Shape();
+  shape.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i += 1) {
+    shape.lineTo(points[i].x, points[i].y);
+  }
+  shape.closePath();
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: thickness,
+    bevelEnabled: false
+  });
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.6,
+    metalness: 0.1,
+    side: THREE.DoubleSide
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.z = -thickness / 2;
+  part.add(mesh);
+}
+
+/* ---------- Create parts and markers ---------- */
+
+const frame = createPart('frame');
+addBar(frame, OXlen, 0x8899aa, 3.0);
+addMarker(frame, 'frame', 'O', { x: 0, y: 0 });
+addMarker(frame, 'frame', 'X', { x: OXlen, y: 0 });
+
+const crank = createPart('crank');
+addBar(crank, len.OZ, 0xcc4444, 2.2);
+addMarker(crank, 'crank', 'O', { x: 0, y: 0 });
+addMarker(crank, 'crank', 'Z', { x: len.OZ, y: 0 });
+
+const rodUpper = createPart('rodUpper');
+addBar(rodUpper, len.ZY, 0x44aaff, 2.0);
+addMarker(rodUpper, 'rodUpper', 'Z', { x: 0, y: 0 });
+addMarker(rodUpper, 'rodUpper', 'Y', { x: len.ZY, y: 0 });
+
+const rodLower = createPart('rodLower');
+addBar(rodLower, len.ZW, 0x3a9fd8, 2.0);
+addMarker(rodLower, 'rodLower', 'Z', { x: 0, y: 0 });
+addMarker(rodLower, 'rodLower', 'W', { x: len.ZW, y: 0 });
+
+const linkXW = createPart('linkXW');
+addBar(linkXW, len.XW, 0xffaa44, 2.0);
+addMarker(linkXW, 'linkXW', 'X', { x: 0, y: 0 });
+addMarker(linkXW, 'linkXW', 'W', { x: len.XW, y: 0 });
+
+const upperTriangle = createPart('upperTriangle');
+const upperV = triangleCoords(len.XY, len.XV, len.YV);
+addTrianglePlate(upperTriangle, [
+  { x: 0, y: 0 },
+  { x: len.XY, y: 0 },
+  { x: upperV.x, y: -upperV.y }
+], 0x44cc88, 2);
+addMarker(upperTriangle, 'upperTriangle', 'X', { x: 0, y: 0 });
+addMarker(upperTriangle, 'upperTriangle', 'Y', { x: len.XY, y: 0 });
+addMarker(upperTriangle, 'upperTriangle', 'V', { x: upperV.x, y: -upperV.y });
+
+const linkVU = createPart('linkVU');
+addBar(linkVU, len.VU, 0xaa88ff, 2.0);
+addMarker(linkVU, 'linkVU', 'V', { x: 0, y: 0 });
+addMarker(linkVU, 'linkVU', 'U', { x: len.VU, y: 0 });
+
+const legTriangle = createPart('legTriangle');
+const legT = triangleCoords(len.WU, len.WT, len.UT);
+addTrianglePlate(legTriangle, [
+  { x: 0, y: 0 },
+  { x: len.WU, y: 0 },
+  { x: legT.x, y: -legT.y }
+], 0xff66aa, 2);
+addMarker(legTriangle, 'legTriangle', 'W', { x: 0, y: 0 });
+addMarker(legTriangle, 'legTriangle', 'U', { x: len.WU, y: 0 });
+addMarker(legTriangle, 'legTriangle', 'T', { x: legT.x, y: -legT.y });
+
+/* ---------- Posing helpers ---------- */
+
+function v3(p) {
+  return new THREE.Vector3(p.x, p.y, 0);
+}
+
+function poseBar(obj, p1, p2) {
+  const dir = new THREE.Vector3().subVectors(v3(p2), v3(p1));
+  if (dir.lengthSq() < 1e-12) return;
+  dir.normalize();
+  obj.position.copy(v3(p1));
+  obj.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
+}
+
+function poseTriangle(obj, p1, p2) {
+  const x = new THREE.Vector3().subVectors(v3(p2), v3(p1));
+  if (x.lengthSq() < 1e-12) return;
+  x.normalize();
+
+  const z = new THREE.Vector3(0, 0, 1);
+  const y = new THREE.Vector3().crossVectors(z, x).normalize();
+
+  const m = new THREE.Matrix4();
+  m.makeBasis(x, y, z);
+
+  obj.position.copy(v3(p1));
+  obj.quaternion.setFromRotationMatrix(m);
+}
+
+/* ---------- Panel ---------- */
+
+const panelEls = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  foot_x: document.querySelector('[data-q="foot_x"]'),
+  foot_y: document.querySelector('[data-q="foot_y"]')
+};
+
+function updatePanel(theta, T) {
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+
+  panelEls.crank_deg.textContent = deg.toFixed(2) + '°';
+  panelEls.foot_x.textContent = T.x.toFixed(2) + ' mm';
+  panelEls.foot_y.textContent = T.y.toFixed(2) + ' mm';
+}
+
+/* ---------- Pure render function ---------- */
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+
+  const Z = {
+    x: O.x + len.OZ * Math.cos(theta),
+    y: O.y + len.OZ * Math.sin(theta)
+  };
+
+  // Jansen linkage branch signs:
+  // Y: left of X->Z, W: right of X->Z, V: right of X->Y,
+  // U: right of W->V, T: right of W->U.
+  const Y = intersect(X, Z, len.XY, len.ZY, 1);
+  const W = intersect(X, Z, len.XW, len.ZW, -1);
+  const V = intersect(X, Y, len.XV, len.YV, -1);
+  const U = intersect(W, V, len.WU, len.VU, -1);
+  const T = intersect(W, U, len.WT, len.UT, -1);
+
+  poseBar(frame, O, X);
+  poseBar(crank, O, Z);
+  poseBar(rodUpper, Z, Y);
+  poseBar(rodLower, Z, W);
+  poseBar(linkXW, X, W);
+  poseBar(linkVU, V, U);
+
+  poseTriangle(upperTriangle, X, Y);
+  poseTriangle(legTriangle, W, U);
+
+  updatePanel(theta, T);
+  renderer.render(scene, camera);
+}
+
+/* ---------- Expose simulator API before first frame ---------- */
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period,
+  params,
+  render
+};
+
+window.SIM_READY = true;
+window.SIM.render(0);
+
+/* ---------- Live viewing loop ---------- */
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+
+  function loop(now) {
+    const elapsed = Math.max(0, (now - start) / 1000);
+    window.SIM.render(elapsed);
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

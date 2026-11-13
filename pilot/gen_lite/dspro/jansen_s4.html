@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Theo Jansen Leg Simulator</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #1a1c20;
+    }
+    #panel {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      font: 13px/1.5 'Courier New', monospace;
+      color: #e8f0ff;
+      background: rgba(0, 0, 0, 0.65);
+      padding: 10px 12px;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+    #panel span {
+      display: block;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <span data-q="crank_deg">0.000 deg</span>
+    <span data-q="foot_x">0.000 mm</span>
+    <span data-q="foot_y">0.000 mm</span>
+  </div>
+
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+  <script type="module">
+    import * as THREE from 'three';
+
+    const period = 5;
+    const params = {
+      O: [0, 0],
+      X: [-38, -7.8],
+      len: {
+        OZ: 15,
+        ZY: 41.5,
+        XY: 40.1,
+        ZW: 39.3,
+        XW: 36.7,
+        XV: 55.8,
+        YV: 39.4,
+        VU: 65.7,
+        WU: 50,
+        UT: 61.9,
+        WT: 49
+      },
+      omega: (2 * Math.PI) / period,
+      theta0: 0
+    };
+
+    function circleIntersect(Ax, Ay, rA, Bx, By, rB, side) {
+      const dx = Bx - Ax;
+      const dy = By - Ay;
+      const d = Math.hypot(dx, dy) || 1e-9;
+      const a = (rA * rA - rB * rB + d * d) / (2 * d);
+      const h2 = rA * rA - a * a;
+      const h = Math.sqrt(h2 > 0 ? h2 : 0);
+      return [
+        Ax + (a / d) * dx + side * (h / d) * dy,
+        Ay + (a / d) * dy - side * (h / d) * dx
+      ];
+    }
+
+    function computePoints(theta) {
+      const [Ox, Oy] = params.O;
+      const [Xx, Xy] = params.X;
+      const L = params.len;
+      const O = [Ox, Oy];
+      const X = [Xx, Xy];
+      const Z = [Ox + L.OZ * Math.cos(theta), Oy + L.OZ * Math.sin(theta)];
+
+      const Y = circleIntersect(Xx, Xy, L.XY, Z[0], Z[1], L.ZY, 1);
+      const V = circleIntersect(Xx, Xy, L.XV, Y[0], Y[1], L.YV, 1);
+      const W = circleIntersect(Xx, Xy, L.XW, Z[0], Z[1], L.ZW, 1);
+      const U = circleIntersect(V[0], V[1], L.VU, W[0], W[1], L.WU, 1);
+      const T = circleIntersect(W[0], W[1], L.WT, U[0], U[1], L.UT, 1);
+
+      return { O, X, Z, Y, V, W, U, T };
+    }
+
+    const ref = computePoints(0);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1c20);
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 1200);
+    camera.position.set(-16, -35, 280);
+    camera.lookAt(-16, -35, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    if (typeof THREE.SRGBColorSpace !== 'undefined') {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    }
+    document.body.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+
+    const light1 = new THREE.DirectionalLight(0xffffff, 1.7);
+    light1.position.set(120, 160, 260);
+    scene.add(light1);
+
+    const light2 = new THREE.DirectionalLight(0xffffff, 0.6);
+    light2.position.set(-120, -80, 180);
+    scene.add(light2);
+
+    const matFrame = new THREE.MeshStandardMaterial({ color: 0x667085, roughness: 0.5, metalness: 0.25 });
+    const matCrank = new THREE.MeshStandardMaterial({ color: 0xd94b2b, roughness: 0.35, metalness: 0.4 });
+    const matRodUpper = new THREE.MeshStandardMaterial({ color: 0x3a86c8, roughness: 0.4, metalness: 0.3 });
+    const matRodLower = new THREE.MeshStandardMaterial({ color: 0x3a86c8, roughness: 0.4, metalness: 0.3 });
+    const matUpper = new THREE.MeshStandardMaterial({ color: 0x35a187, roughness: 0.45, metalness: 0.2, side: THREE.DoubleSide });
+    const matLinkXW = new THREE.MeshStandardMaterial({ color: 0x9a6a3f, roughness: 0.45, metalness: 0.25 });
+    const matLinkVU = new THREE.MeshStandardMaterial({ color: 0x8a5db3, roughness: 0.4, metalness: 0.3 });
+    const matLeg = new THREE.MeshStandardMaterial({ color: 0xc17326, roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide });
+    const matJoint = new THREE.MeshStandardMaterial({ color: 0xb0b6c0, roughness: 0.35, metalness: 0.55 });
+    const matGround = new THREE.MeshStandardMaterial({ color: 0x2a2d34, roughness: 0.8 });
+
+    function addLink(parent, p1, p2, radius, material) {
+      const dx = p2[0] - p1[0];
+      const dy = p2[1] - p1[1];
+      const length = Math.hypot(dx, dy) || 1e-9;
+      const geo = new THREE.CylinderGeometry(radius, radius, length, 20);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, 0);
+      mesh.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(dx / length, dy / length, 0)
+      );
+      parent.add(mesh);
+    }
+
+    function addSphere(parent, p, radius, material) {
+      const geo = new THREE.SphereGeometry(radius, 20, 20);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(p[0], p[1], 0);
+      parent.add(mesh);
+    }
+
+    function addDisk(parent, p, radius, thickness, material) {
+      const geo = new THREE.CylinderGeometry(radius, radius, thickness, 32);
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(p[0], p[1], 0);
+      parent.add(mesh);
+    }
+
+    function addTrianglePlate(parent, pts, thickness, material) {
+      const shape = new THREE.Shape();
+      shape.moveTo(pts[0][0], pts[0][1]);
+      shape.lineTo(pts[1][0], pts[1][1]);
+      shape.lineTo(pts[2][0], pts[2][1]);
+      shape.closePath();
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(0, 0, -thickness / 2);
+      parent.add(mesh);
+    }
+
+    const partMetas = [];
+
+    function buildPart(name, origin, dir, pointNames, builder) {
+      const part = new THREE.Object3D();
+      part.name = name;
+      part.position.set(ref[origin][0], ref[origin][1], 0);
+
+      const local = {};
+      for (const pt of pointNames) {
+        local[pt] = [ref[pt][0] - ref[origin][0], ref[pt][1] - ref[origin][1]];
+        const marker = new THREE.Object3D();
+        marker.name = `${name}@${pt}`;
+        marker.position.set(local[pt][0], local[pt][1], 0);
+        part.add(marker);
+      }
+
+      builder(part, local);
+      scene.add(part);
+      partMetas.push({ part, origin, dir });
+    }
+
+    buildPart('frame', 'O', 'X', ['O', 'X'], (p, q) => {
+      addLink(p, q.O, q.X, 5, matFrame);
+      addSphere(p, q.O, 8, matFrame);
+      addSphere(p, q.X, 7, matFrame);
+
+      const groundGeo = new THREE.BoxGeometry(170, 1, 14);
+      const ground = new THREE.Mesh(groundGeo, matGround);
+      ground.position.set(-30, -85.5, -6);
+      p.add(ground);
+    });
+
+    buildPart('crank', 'O', 'Z', ['O', 'Z'], (p, q) => {
+      addDisk(p, q.O, 17, 8, matCrank);
+      addLink(p, q.O, q.Z, 3.8, matCrank);
+      addSphere(p, q.O, 6, matJoint);
+      addSphere(p, q.Z, 5, matJoint);
+    });
+
+    buildPart('rodUpper', 'Z', 'Y', ['Z', 'Y'], (p, q) => {
+      addLink(p, q.Z, q.Y, 3.5, matRodUpper);
+      addSphere(p, q.Z, 4.2, matJoint);
+      addSphere(p, q.Y, 4.2, matJoint);
+    });
+
+    buildPart('rodLower', 'Z', 'W', ['Z', 'W'], (p, q) => {
+      addLink(p, q.Z, q.W, 3.5, matRodLower);
+      addSphere(p, q.Z, 4.2, matJoint);
+      addSphere(p, q.W, 4.2, matJoint);
+    });
+
+    buildPart('upperTriangle', 'X', 'Y', ['X', 'Y', 'V'], (p, q) => {
+      addTrianglePlate(p, [q.X, q.Y, q.V], 7, matUpper);
+      addLink(p, q.X, q.Y, 3.2, matUpper);
+      addLink(p, q.X, q.V, 3.2, matUpper);
+      addLink(p, q.Y, q.V, 3.2, matUpper);
+      addSphere(p, q.X, 5, matJoint);
+      addSphere(p, q.Y, 5, matJoint);
+      addSphere(p, q.V, 5, matJoint);
+    });
+
+    buildPart('linkXW', 'X', 'W', ['X', 'W'], (p, q) => {
+      addLink(p, q.X, q.W, 3.6, matLinkXW);
+      addSphere(p, q.X, 4.2, matJoint);
+      addSphere(p, q.W, 4.2, matJoint);
+    });
+
+    buildPart('linkVU', 'V', 'U', ['V', 'U'], (p, q) => {
+      addLink(p, q.V, q.U, 3.6, matLinkVU);
+      addSphere(p, q.V, 4.2, matJoint);
+      addSphere(p, q.U, 4.2, matJoint);
+    });
+
+    buildPart('legTriangle', 'W', 'U', ['W', 'U', 'T'], (p, q) => {
+      addTrianglePlate(p, [q.W, q.U, q.T], 7, matLeg);
+      addLink(p, q.W, q.U, 3.2, matLeg);
+      addLink(p, q.W, q.T, 3.2, matLeg);
+      addLink(p, q.U, q.T, 3.2, matLeg);
+      addSphere(p, q.W, 5, matJoint);
+      addSphere(p, q.U, 5, matJoint);
+      addSphere(p, q.T, 6, matJoint);
+    });
+
+    function posePart(meta, pts) {
+      const refOrigin = ref[meta.origin];
+      const refDir = [ref[meta.dir][0] - refOrigin[0], ref[meta.dir][1] - refOrigin[1]];
+      const curOrigin = pts[meta.origin];
+      const curDir = [pts[meta.dir][0] - curOrigin[0], pts[meta.dir][1] - curOrigin[1]];
+      const refAng = Math.atan2(refDir[1], refDir[0]);
+      const curAng = Math.atan2(curDir[1], curDir[0]);
+      meta.part.position.set(curOrigin[0], curOrigin[1], 0);
+      meta.part.rotation.set(0, 0, curAng - refAng);
+    }
+
+    function updatePanel(pts, theta) {
+      const deg = (theta * 180) / Math.PI;
+      document.querySelector('[data-q="crank_deg"]').textContent = deg.toFixed(3) + ' deg';
+      document.querySelector('[data-q="foot_x"]').textContent = pts.T[0].toFixed(3) + ' mm';
+      document.querySelector('[data-q="foot_y"]').textContent = pts.T[1].toFixed(3) + ' mm';
+    }
+
+    function render(t) {
+      const twoPI = Math.PI * 2;
+      const raw = params.theta0 + params.omega * t;
+      const theta = ((raw % twoPI) + twoPI) % twoPI;
+      const pts = computePoints(theta);
+
+      for (const meta of partMetas) posePart(meta, pts);
+      updatePanel(pts, theta);
+      renderer.render(scene, camera);
+    }
+
+    window.SIM = {
+      scene,
+      camera,
+      renderer,
+      period,
+      params,
+      render
+    };
+    window.SIM_READY = true;
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    if (!location.search.includes('capture')) {
+      const start = performance.now();
+      function loop() {
+        render((performance.now() - start) / 1000);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    } else {
+      render(0);
+    }
+  </script>
+</body>
+</html>
