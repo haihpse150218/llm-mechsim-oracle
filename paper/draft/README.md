@@ -25,8 +25,15 @@ Mọi con số trong văn bản đều được đối chiếu với REPORT.md, 
 3. URL repo công khai và DOI Zenodo (`introduction.tex`, `declarations.tex`).
 4. Model hãng khác (Threats; hiện bị chặn vì chưa có API key).
 5. Chuyên gia cơ khí rà bộ DESIGN rules (Threats).
-6. Hoàn thiện `llm3d.bib`: danh sách tác giả đầy đủ, venue cuối cùng; thay nguồn Wikipedia của lambda bằng giáo trình; thêm nguồn chính thức cho holy numbers.
-7. Kiểm venue/DOI của 18 mục chỉ có arXiv trong `references.bib`.
+6–7. ~~Hoàn thiện bib~~ — xong ngày 13/11, chi tiết trong `../bib_check.md`.
+   - Đã kiểm 14 mục được trích có vấn đề:
+     - 4 mục nay đã có venue: Self-Debug (ICLR 2024), InteractScience (ICML 2026), CodeHallucination (TSE 2026), SGA (Findings of EMNLP 2026).
+     - WorldCoder: được nhận ở NeurIPS 2026, chưa có số trang.
+     - 7 mục vẫn chỉ là preprint; đã điền đủ tác giả và DOI arXiv.
+   - Đã đối chiếu DOI trên Crossref: TSE, SGA và bài lambda.
+   - Lambda giờ trích bài Miler et al., SV-JME 2022. Bài này xác nhận tay quay 100, nền 200, các khâu 250; việc khâu nào là coupler và khâu nào là đoạn kéo dài chỉ thể hiện trên hình, và bài không ghi AP = 5. Nếu cần nguồn giáo trình thì xem Artobolevsky hoặc Hartenberg & Denavit ở thư viện.
+   - Jansen giờ trích sách *The Great Pretender* (2007). 11 con số chưa được đối chiếu trên trang sách nào.
+   - Còn 36 khoá khác chưa kiểm lại lần hai.
 8. ~~Hình~~ — xong, đều đọc được khi in đen trắng:
    - Hình 1 `figures/oracle.tex` (TikZ): pipeline của oracle.
    - Hình 2 `figures/loop.tex` (TikZ): vòng sửa và các nhánh phản hồi.
