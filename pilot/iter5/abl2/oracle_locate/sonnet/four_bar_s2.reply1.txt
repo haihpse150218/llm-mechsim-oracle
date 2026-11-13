@@ -1,0 +1,1 @@
+CHANGED: Replaced the Object.assign(..., { position: new Vector3 }) on the frame hub cylinder (assigning to read-only Mesh.position, which threw at load) with setting hub.position.x directly.

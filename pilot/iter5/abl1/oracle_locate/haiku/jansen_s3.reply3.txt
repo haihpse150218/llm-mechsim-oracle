@@ -1,0 +1,1 @@
+CHANGED: Remapped the Jansen holy numbers so the crank OZ is the 15-unit link (with ZY=38, XY=41.5, ZW=39.3, XW=40.1, XV=55.8, YV=39.4, VU=36.7, WU=65.7, UT=49, WT=50) and the frame pivot X=(-7.8,15) is in the same units, all scaled uniformly by 38/15 to keep the leg's size.

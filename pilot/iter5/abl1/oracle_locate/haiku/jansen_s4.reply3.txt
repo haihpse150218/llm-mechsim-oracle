@@ -1,0 +1,1 @@
+NO_CHANGE: The report's suggested swaps (XY with ZW, XW with UT) would make the crank four-bar O-Z-Y-X non-Grashof (38 + 62.7 > 39.3 + 41.5), so the crank could no longer turn fully; the fixed-pivot placement cannot be localized without running the page, and the current 62.7 mm X offset is within 2% of the published 61.9 mm frame link, so the failure remains unresolved.

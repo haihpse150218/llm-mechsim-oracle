@@ -2,6 +2,7 @@
 //   oracle_spec   : oracle-gated, specific feedback (per-check diagnostics: which link/joint, expected vs drawn, when)
 //   oracle_coarse : oracle-gated, phase-3 style feedback (check name, measured value, tolerance)
 //   vlm           : VLM-in-the-loop (blind contact-sheet review each round; stop when the VLM says "correct")
+//   oracle_locate : ablation — oracle_spec diagnostics with the correct values removed (says WHERE, not WHAT)
 //   none          : self-refine (generic "re-check" prompt; stop when the repairer replies NO_CHANGE)
 // Every round is graded by the oracle for every arm (the grade is shown to the repairer only in oracle arms).
 //
@@ -18,7 +19,8 @@ import {execFileSync} from 'node:child_process';
 import {ROOT} from './serve.mjs';
 
 const K = 3; // max repair rounds
-const ARMS = ['oracle_spec', 'oracle_coarse', 'vlm', 'none'];
+// ARMS env (comma list) selects arms, e.g. ARMS=oracle_locate for the feedback-specificity ablation
+const ARMS = process.env.ARMS ? process.env.ARMS.split(',') : ['oracle_spec', 'oracle_coarse', 'vlm', 'none'];
 // phase 5: ITER_DIR=iter5/rep1 (relative to the pilot dir) with <ITER_DIR>/faulty.json = ["model/file", ...]
 const IT = process.env.ITER_DIR ? path.resolve(ROOT, process.env.ITER_DIR) : path.join(ROOT, 'iter');
 const FAULTY = fs.existsSync(path.join(IT, 'faulty.json')) ? JSON.parse(fs.readFileSync(path.join(IT, 'faulty.json'), 'utf8')) : [
@@ -62,6 +64,29 @@ function specific(r) {
     if (c.detail) lines.push(`  diagnosis: ${c.detail}`);
   }
   return lines.join('\n') + '\n';
+}
+// ablation: keep WHERE (which link/joint/marker/panel, drawn values, swapped-pair hints), drop WHAT (published/solved/expected values)
+export function locateDetail(d) {
+  if (!d) return d;
+  if (d.startsWith('best-fit uniform scale')) {
+    const items = d.replace(/^.*?Links that do not match at this scale:\s*/, '').split('; ').map((it) => {
+      let m;
+      if ((m = it.match(/^(len\.\w+) = [^,]*, expected [\d.]+ mm( \(looks swapped with len\.\w+\))?$/))) return m[1] + (m[2] || '');
+      if (it.startsWith('X - O')) return 'the fixed pivot X is misplaced relative to the crank centre O';
+      return it;
+    });
+    return `your SIM.params.len does not match the published Jansen proportions (uniform scale and mirroring allowed). Wrong: ${items.join('; ')}`;
+  }
+  return d
+    .replace(/; solving (.*?) puts (\w+) at \([^)]*\)$/, '; that is not where solving $1 puts $2')
+    .replace(/, the foot T from your SIM\.params is at [^(]*\(and drawn at [^)]*\)$/, ', which does not match the foot T solved from your SIM.params')
+    .replace(/, the solution from your params puts (\w+) at \([^)]*\)$/, ', which is not where the solution from your params puts $1')
+    .replace(/, expected [-\d.]+ deg$/, ', which is not the required carrier rotation')
+    .replace(/must turn at omega\*Zs\/\(Zs\+Zr\) = [\d.]+ rad\/s/, 'must turn at omega*Zs/(Zs+Zr)')
+    .replace(/, the law from your params gives [-\d.]+ mm$/, ', which does not follow the lift law from your params');
+}
+function locate(r) {
+  return specific({...r, checks: r.checks.map((c) => ({...c, detail: locateDetail(c.detail)}))});
 }
 const NONE = 'Review report: a reviewer suspects this simulator may contain errors but gave no details. Re-check it carefully against the specification and real-world knowledge of this machine, and fix anything that is wrong. If after careful checking you are confident nothing is wrong, make no change.\n';
 function vlmText(v) {
@@ -129,9 +154,9 @@ if (cmd === 'prep') {
     let stop = null, fb = null;
     if (round >= K) {
       stop = r.pass ? 'oracle pass (final)' : `budget (${K} rounds)`;
-    } else if (arm === 'oracle_spec' || arm === 'oracle_coarse') {
+    } else if (arm.startsWith('oracle_')) {
       if (r.pass) stop = 'oracle pass';
-      else fb = arm === 'oracle_spec' ? specific(r) : coarse(r);
+      else fb = arm === 'oracle_spec' ? specific(r) : arm === 'oracle_locate' ? locate(r) : coarse(r);
     } else if (arm === 'vlm') {
       const v = vlmReview(round, arm, src);
       if (v && v.verdict !== 'error') stop = 'vlm says correct';

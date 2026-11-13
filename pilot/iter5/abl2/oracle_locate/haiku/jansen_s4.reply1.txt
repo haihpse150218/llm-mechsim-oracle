@@ -1,0 +1,1 @@
+CHANGED: Reassigned the Jansen holy-number lengths to their correct named links (ZY 41.5, XY 40.1, ZW 39.3, XW 55.8, VU 65.7, WU 49, UT 50, WT 61.9, the same set of values as before but in the wrong slots) and moved the fixed pivot X to 7.8 mm from the crank axle O.

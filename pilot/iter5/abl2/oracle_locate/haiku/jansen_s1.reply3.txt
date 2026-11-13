@@ -1,0 +1,1 @@
+CHANGED: Moved the second fixed pivot X from (7.8, 0) to (-7.8, -15) relative to the crank axle O, using the published holy-number frame offsets (m = 7.8, n = 15), since the report flagged X as misplaced and the closure failure traced to that geometry.

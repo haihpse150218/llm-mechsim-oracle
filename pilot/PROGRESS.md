@@ -80,3 +80,12 @@ Kế hoạch: thêm cam (cần cam đĩa + cần đẩy con lăn tịnh tiến, 
   - Trạng thái 11-10 (phiên mới): rep2 r2 đã chấm; rep2 vlm/r2 (8 review) đang chạy; rep1 plan 2 → 10 tác vụ r3 đang chạy. Ghi chú: agent rep2 vlm/sonnet/jansen_s1 r2 đã chạy lệnh Python (vi phạm "không chạy lệnh").
   - [x] audit mesh↔marker: oracle/audit_mesh.mjs; mutant gamed PASS oracle nhưng audit bắt (drift 41); 109/109 file PASS có drift 0 → không PASS giả. results/audit_mesh.jsonl
   - [x] PHA 5 XONG (11-10): rep1+rep2 chấm đủ r3, summary tại iter5/rep*/summary.json, REPORT.md mục "Pha 5". Gộp (bỏ geneva_s2 oracle-invisible): spec 22/22, coarse 10/22, vlm 5/22, none 6/22; Jansen: 14/2/0/0 trên 14.
+
+## Pha 6 — ablation mức cụ thể của feedback (2026-11-13)
+Nhánh `oracle_locate` = diagnostics của oracle_spec nhưng bỏ giá trị đúng (bỏ bộ holy numbers + "expected", bỏ vị trí lời giải ở GT, giá trị đúng ở PANEL); giữ tên khâu/khớp/marker sai, giá trị đang vẽ, gợi ý "looks swapped with". Code: `locateDetail()` trong `oracle/iter_repair.mjs`, env `ARMS=oracle_locate`.
+Thiết kế: cùng 22 lượt file như pha 5 → `iter5/abl1` (8 file rep1), `iter5/abl2` (14 file rep2, bỏ geneva_s2). K=3, luật dừng như oracle_spec.
+RUNBOOK: `ITER_DIR=iter5/ablN ARMS=oracle_locate node oracle/iter_repair.mjs grade <r>` → `plan <r>` → `ITER_DIR=iter5/ablN node iter/taskfiles.mjs <r+1>` → agent (model theo dòng) "Read this file and follow its instructions exactly (it is your whole task): <task.md>".
+- [x] prep, grade 0, plan 0, taskfiles 1 (abl1 8 tác vụ, abl2 14 tác vụ)
+- [x] r1 (22 agent) → grade 1: abl1 4/8, abl2 8/14; plan 1 → r2: abl1 4, abl2 6 tác vụ (đang chạy)
+- [x] r2 (10 agent) → grade 2: abl1 5/8, abl2 9/14 (sonnet Jansen 6/6, haiku Jansen 0/8); r3: abl1 3, abl2 5 tác vụ (đang chạy)
+- [x] r3 (8 agent) → grade 3, plan 3 (dừng hết), summary: abl1 5/8, abl2 9/14 → locate 14/22 (ngoài Jansen 8/8, Jansen sonnet 6/6, haiku 0/8). Audit mesh 14 PASS: drift 0. REPORT.md mục "Pha 6". PHA 6 XONG.

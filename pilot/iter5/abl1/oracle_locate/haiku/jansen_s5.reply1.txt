@@ -1,0 +1,1 @@
+CHANGED: Set the crank OZ to 15 mm, the fixed pivot X to (38, 0) (ground length 38 from O), and YV to 7.8 mm to match Jansen's published holy-number proportions, which also should let the loops close at all crank angles.

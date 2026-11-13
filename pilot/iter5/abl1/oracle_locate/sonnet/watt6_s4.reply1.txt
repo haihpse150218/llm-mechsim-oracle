@@ -1,0 +1,1 @@
+CHANGED: Moved ground pivot O6 from (210,20) to (60,90) and set CD=80 so |C-O6| stays within ~59-127 mm and loop 2 closes (transmission angles ~45-130 deg) for all crank angles; recentered the camera.

@@ -1,0 +1,1 @@
+CHANGED: Swapped len XV/YV (39.3/55.8) and UT/WT (65.7/49) to the holy numbers, and fixed pose() so part rotation equals the current p0->p1 angle (local coords were already rotated by -a0, so the extra "- a0" was removed).

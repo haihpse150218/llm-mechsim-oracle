@@ -1,0 +1,1 @@
+CHANGED: Changed planet teeth Zp from 30 to 31 and ring teeth Zr from 80 to 82 (sun stays 20) so Zs+Zr=102 is divisible by 3, allowing three equally spaced planets to mesh; updated the dependent comments and the initial ratio display to 5.10.
