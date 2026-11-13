@@ -1,0 +1,10 @@
+{
+  "name": "llm-mechsim-oracle-pilot",
+  "private": true,
+  "type": "module",
+  "description": "Executable oracle for LLM-generated mechanism simulators: oracle, references, mutants, generated files, results and statistics.",
+  "engines": {"node": ">=20"},
+  "dependencies": {
+    "playwright": "1.58.2"
+  }
+}

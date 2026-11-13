@@ -6,7 +6,9 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEPS = process.env.TEARDOWN_DEPS || path.join(process.env.USERPROFILE || process.env.HOME, '.claude/skills/teardown/node_modules');
+// Playwright: $TEARDOWN_DEPS, else pilot/node_modules (after `npm install` in pilot/), else the teardown skill's copy.
+const LOCAL_DEPS = path.join(ROOT, 'node_modules');
+const DEPS = process.env.TEARDOWN_DEPS || (fs.existsSync(path.join(LOCAL_DEPS, 'playwright')) ? LOCAL_DEPS : path.join(process.env.USERPROFILE || process.env.HOME, '.claude/skills/teardown/node_modules'));
 const req = createRequire(path.join(DEPS, 'x.js'));
 const TYPES = {'.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.png': 'image/png', '.json': 'application/json', '.css': 'text/css'};
 
