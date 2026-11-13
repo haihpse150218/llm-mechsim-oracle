@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Chebyshev Lambda Linkage</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #panel {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      pointer-events: none;
+      line-height: 1.6;
+      user-select: none;
+    }
+    #panel .label { color: #aaa; }
+    #panel .value { color: #fff; font-weight: bold; }
+  </style>
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+  <div id="panel">
+    <div><span class="label">Crank angle:</span> <span data-q="crank_deg" class="value">0.00</span> °</div>
+    <div><span class="label">P x:</span> <span data-q="P_x" class="value">0.00</span> mm</div>
+    <div><span class="label">P y:</span> <span data-q="P_y" class="value">0.00</span> mm</div>
+  </div>
+  <script type="module">
+    import * as THREE from 'three';
+
+    // ---------- Parameters ----------
+    const S = 40;                 // mm per unit of classical proportion
+    const a = 1.0 * S;            // O2A
+    const b = 2.5 * S;            // AB
+    const c = 2.5 * S;            // O4B
+    const d = 2.0 * S;            // O2O4
+    const ap = 5.0 * S;           // AP (coupler extension)
+    const omega = 1.0;            // rad/s (CCW positive)
+    const theta0 = 0.0;           // rad at t = 0
+    const O2pos = [0, 0];
+    const O4pos = [d, 0];
+
+    // ---------- Scene ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f5f5);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 3000);
+    camera.position.set(160, 140, 550);
+    camera.lookAt(70, 80, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir1 = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir1.position.set(200, 300, 400);
+    scene.add(dir1);
+    const dir2 = new THREE.DirectionalLight(0xffffff, 0.4);
+    dir2.position.set(-200, -100, 200);
+    scene.add(dir2);
+
+    // Materials
+    const matFrame  = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.3, roughness: 0.6 });
+    const matCrank  = new THREE.MeshStandardMaterial({ color: 0x2a6fdb, metalness: 0.4, roughness: 0.5 });
+    const matCoupler= new THREE.MeshStandardMaterial({ color: 0xe67e22, metalness: 0.4, roughness: 0.5 });
+    const matRocker = new THREE.MeshStandardMaterial({ color: 0x27ae60, metalness: 0.4, roughness: 0.5 });
+    const matPin    = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.3 });
+    const matP      = new THREE.MeshStandardMaterial({ color: 0xff3333, metalness: 0.2, roughness: 0.8 });
+
+    // Helpers
+    function makePin(radius, height, material) {
+      const geo = new THREE.CylinderGeometry(radius, radius, height, 16);
+      geo.rotateX(Math.PI / 2);
+      return new THREE.Mesh(geo, material);
+    }
+
+    function addMarker(parent, name, x, y, z = 0) {
+      const m = new THREE.Object3D();
+      m.name = name;
+      m.position.set(x, y, z);
+      parent.add(m);
+      return m;
+    }
+
+    // ---------- Parts ----------
+    // Frame
+    const frame = new THREE.Object3D();
+    frame.name = "frame";
+    scene.add(frame);
+
+    const baseGeo = new THREE.BoxGeometry(d + 80, 30, 10);
+    const base = new THREE.Mesh(baseGeo, matFrame);
+    base.position.set(d / 2, -25, -10);
+    frame.add(base);
+
+    const railGeo = new THREE.BoxGeometry(d + 40, 10, 10);
+    const rail = new THREE.Mesh(railGeo, matFrame);
+    rail.position.set(d / 2, 0, -10);
+    frame.add(rail);
+
+    const pinO2 = makePin(14, 20, matPin);
+    pinO2.position.set(O2pos[0], O2pos[1], -5);
+    frame.add(pinO2);
+
+    const pinO4 = makePin(14, 20, matPin);
+    pinO4.position.set(O4pos[0], O4pos[1], -5);
+    frame.add(pinO4);
+
+    addMarker(frame, "frame@O2", O2pos[0], O2pos[1]);
+    addMarker(frame, "frame@O4", O4pos[0], O4pos[1]);
+
+    // Crank
+    const crank = new THREE.Object3D();
+    crank.name = "crank";
+    scene.add(crank);
+
+    const crankLink = new THREE.Mesh(new THREE.BoxGeometry(a, 10, 12), matCrank);
+    crankLink.position.set(a / 2, 0, 0);
+    crank.add(crankLink);
+
+    const pinA = makePin(8, 14, matPin);
+    pinA.position.set(a, 0, 0);
+    crank.add(pinA);
+
+    const hubO2 = makePin(15, 8, matCrank);
+    hubO2.position.set(0, 0, 0);
+    crank.add(hubO2);
+
+    addMarker(crank, "crank@O2", 0, 0);
+    addMarker(crank, "crank@A", a, 0);
+
+    // Coupler
+    const coupler = new THREE.Object3D();
+    coupler.name = "coupler";
+    scene.add(coupler);
+
+    const couplerMain = new THREE.Mesh(new THREE.BoxGeometry(b, 12, 12), matCoupler);
+    couplerMain.position.set(b / 2, 0, 0);
+    coupler.add(couplerMain);
+
+    const couplerExt = new THREE.Mesh(new THREE.BoxGeometry(ap - b, 6, 8), matCoupler);
+    couplerExt.position.set((b + ap) / 2, 0, 0);
+    coupler.add(couplerExt);
+
+    const pinB = makePin(10, 16, matPin);
+    pinB.position.set(b, 0, 0);
+    coupler.add(pinB);
+
+    const sphereP = new THREE.Mesh(new THREE.SphereGeometry(8, 16, 16), matP);
+    sphereP.position.set(ap, 0, 0);
+    coupler.add(sphereP);
+
+    addMarker(coupler, "coupler@A", 0, 0);
+    addMarker(coupler, "coupler@B", b, 0);
+    addMarker(coupler, "coupler@P", ap, 0);
+
+    // Rocker
+    const rocker = new THREE.Object3D();
+    rocker.name = "rocker";
+    scene.add(rocker);
+
+    const rockerLink = new THREE.Mesh(new THREE.BoxGeometry(c, 10, 12), matRocker);
+    rockerLink.position.set(c / 2, 0, 0);
+    rocker.add(rockerLink);
+
+    const hubO4 = makePin(15, 8, matRocker);
+    hubO4.position.set(0, 0, 0);
+    rocker.add(hubO4);
+
+    addMarker(rocker, "rocker@O4", 0, 0);
+    addMarker(rocker, "rocker@B", c, 0);
+
+    // ---------- Kinematics ----------
+    function solve(theta) {
+      const ax = O2pos[0] + a * Math.cos(theta);
+      const ay = O2pos[1] + a * Math.sin(theta);
+
+      const dx = O4pos[0] - ax;
+      const dy = O4pos[1] - ay;
+      const D = Math.hypot(dx, dy);
+      const ux = dx / D;
+      const uy = dy / D;
+
+      const aDist = (b * b - c * c + D * D) / (2 * D);
+      const h = Math.sqrt(Math.max(0, b * b - aDist * aDist));
+
+      const bx0 = ax + aDist * ux;
+      const by0 = ay + aDist * uy;
+      const nx = -uy;
+      const ny = ux;
+
+      const bx = bx0 + h * nx;
+      const by = by0 + h * ny;
+
+      const phi = Math.atan2(by - ay, bx - ax);
+      const px = ax + ap * Math.cos(phi);
+      const py = ay + ap * Math.sin(phi);
+
+      const psi = Math.atan2(by - O4pos[1], bx - O4pos[0]);
+
+      return {
+        A: [ax, ay],
+        B: [bx, by],
+        P: [px, py],
+        phi,
+        psi
+      };
+    }
+
+    // ---------- Render ----------
+    function render(t) {
+      const theta = theta0 + omega * t;
+      const sol = solve(theta);
+
+      crank.position.set(O2pos[0], O2pos[1], 0);
+      crank.rotation.z = theta;
+
+      coupler.position.set(sol.A[0], sol.A[1], 0);
+      coupler.rotation.z = sol.phi;
+
+      rocker.position.set(O4pos[0], O4pos[1], 0);
+      rocker.rotation.z = sol.psi;
+
+      let deg = (theta * 180 / Math.PI) % 360;
+      if (deg < 0) deg += 360;
+
+      document.querySelector('[data-q="crank_deg"]').textContent = deg.toFixed(6);
+      document.querySelector('[data-q="P_x"]').textContent = sol.P[0].toFixed(6);
+      document.querySelector('[data-q="P_y"]').textContent = sol.P[1].toFixed(6);
+
+      renderer.render(scene, camera);
+    }
+
+    // ---------- Expose SIM ----------
+    const period = 2 * Math.PI / Math.abs(omega);
+    const SIM = {
+      scene,
+      camera,
+      renderer,
+      period,
+      params: {
+        O2: O2pos,
+        O4: O4pos,
+        len: { O2A: a, O4B: c, AB: b, AP: ap },
+        omega,
+        theta0
+      },
+      render
+    };
+    window.SIM = SIM;
+    SIM.render(0);
+    window.SIM_READY = true;
+
+    // ---------- Live loop ----------
+    if (!window.location.search.includes('capture')) {
+      let startTime = null;
+      function animate(ts) {
+        if (startTime === null) startTime = ts;
+        const t = (ts - startTime) / 1000;
+        SIM.render(t);
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // ---------- Resize ----------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
