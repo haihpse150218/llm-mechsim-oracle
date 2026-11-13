@@ -1,0 +1,1 @@
+CHANGED: Reset the link proportions to the classical Chebyshev set (crank 40, coupler AB 80, rocker O4B 100, ground O2O4 80, tracing point AP 140, i.e. 1 : 2 : 2.5 : 2 with BP 1.5 past B), swapping the rocker and ground lengths and lengthening AP; derived by hand, not run.

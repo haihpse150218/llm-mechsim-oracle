@@ -1,0 +1,1 @@
+CHANGED: Moved tracing point P from AP beyond A (away from B) to AP from A toward B, matching the GT and panel solution, and moved the coupler bar, tip sphere and coupler@P marker to the same side; the classical-proportion design check (len.O4B, len.AP, |O2O4|) was not changed and remains unverified.

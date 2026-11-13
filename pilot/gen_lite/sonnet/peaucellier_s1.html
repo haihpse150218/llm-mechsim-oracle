@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Peaucellier-Lipkin linkage</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:monospace}
+canvas{display:block;width:100vw;height:100vh}
+#panel{position:fixed;left:12px;top:12px;background:rgba(0,0,0,.6);color:#e8eef6;padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.6}
+#panel b{color:#ffd36b}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel">Peaucellier-Lipkin linkage<br>
+crank angle: <b><span data-q="crank_deg">0</span> deg</b><br>
+P x: <b><span data-q="P_x">0</span> mm</b><br>
+P y: <b><span data-q="P_y">0</span> mm</b></div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0], Q: [100, 0],
+  len: { OA: 100, QB: 200, QD: 200, AB: 80, AD: 80, BP: 80, DP: 80 },
+  omega: 1.2,
+  thetaMid: 130 * Math.PI / 180,
+  thetaAmp: 40 * Math.PI / 180
+};
+const L = params.len;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+camera.position.set(110, -20, 780);
+camera.lookAt(110, 0, 0);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(200, 300, 500); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-300, -200, 300); scene.add(dl2);
+
+function mat(c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.3, roughness: 0.5 }); }
+function part(name, color) { const g = new THREE.Object3D(); g.name = name; g.userData.color = color; scene.add(g); return g; }
+function marker(g, pname, x, y) { const m = new THREE.Object3D(); m.name = g.name + '@' + pname; m.position.set(x, y, 0); g.add(m); return m; }
+function pin(g, x, y, z, r, c) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 8, 24), mat(c));
+  m.rotation.x = Math.PI / 2; m.position.set(x, y, z); g.add(m);
+}
+// bar along local +x from 0 to len
+function bar(g, len, z, w) {
+  const c = g.userData.color;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, w, 4), mat(c));
+  m.position.set(len / 2, 0, z); g.add(m);
+  pin(g, 0, 0, z, w * 0.7, c); pin(g, len, 0, z, w * 0.7, c);
+}
+
+const frame = part('frame', 0x667080);
+marker(frame, 'O', params.O[0], params.O[1]);
+marker(frame, 'Q', params.Q[0], params.Q[1]);
+{
+  const dx = params.Q[0] - params.O[0], dy = params.Q[1] - params.O[1];
+  const len = Math.hypot(dx, dy);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, 8, 3), mat(0x667080));
+  m.position.set((params.O[0] + params.Q[0]) / 2, (params.O[1] + params.Q[1]) / 2, -8);
+  m.rotation.z = Math.atan2(dy, dx); frame.add(m);
+  for (const p of [params.O, params.Q]) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 20, 24), mat(0x667080));
+    c.rotation.x = Math.PI / 2; c.position.set(p[0], p[1], -4); frame.add(c);
+  }
+}
+
+const crank = part('crank', 0xe06c4f);   bar(crank, L.OA, 0, 7);
+const armB = part('armB', 0x4f9de0);     bar(armB, L.QB, 6, 6);
+const armD = part('armD', 0x4fe0a0);     bar(armD, L.QD, 12, 6);
+const linkAB = part('linkAB', 0xe0c34f); bar(linkAB, L.AB, 18, 6);
+const linkAD = part('linkAD', 0xb06fe0); bar(linkAD, L.AD, 24, 6);
+const linkBP = part('linkBP', 0xe0c34f); bar(linkBP, L.BP, 30, 6);
+const linkDP = part('linkDP', 0xb06fe0); bar(linkDP, L.DP, 36, 6);
+
+marker(crank, 'O', 0, 0);   marker(crank, 'A', L.OA, 0);
+marker(armB, 'Q', 0, 0);    marker(armB, 'B', L.QB, 0);
+marker(armD, 'Q', 0, 0);    marker(armD, 'D', L.QD, 0);
+marker(linkAB, 'A', 0, 0);  marker(linkAB, 'B', L.AB, 0);
+marker(linkAD, 'A', 0, 0);  marker(linkAD, 'D', L.AD, 0);
+marker(linkBP, 'B', 0, 0);  marker(linkBP, 'P', L.BP, 0);
+marker(linkDP, 'D', 0, 0);  marker(linkDP, 'P', L.DP, 0);
+
+// trace line of P (static, straight line x = const) shown as a guide
+const pTip = new THREE.Mesh(new THREE.SphereGeometry(7, 20, 16), mat(0xffffff));
+linkBP.add(pTip); pTip.position.set(L.BP, 0, 0);
+
+function place(g, p1, p2) {
+  g.position.set(p1[0], p1[1], 0);
+  g.rotation.set(0, 0, Math.atan2(p2[1] - p1[1], p2[0] - p1[0]));
+}
+
+const q = {};
+document.querySelectorAll('[data-q]').forEach(e => q[e.dataset.q] = e);
+
+function solve(t) {
+  const th = params.thetaMid + params.thetaAmp * Math.sin(params.omega * t);
+  const O = params.O, Q = params.Q;
+  const A = [O[0] + L.OA * Math.cos(th), O[1] + L.OA * Math.sin(th)];
+  const ax = A[0] - Q[0], ay = A[1] - Q[1];
+  const a = Math.hypot(ax, ay);
+  const ux = ax / a, uy = ay / a;
+  const f = (L.QB * L.QB + a * a - L.AB * L.AB) / (2 * a);
+  const h = Math.sqrt(Math.max(0, L.QB * L.QB - f * f));
+  const B = [Q[0] + ux * f - uy * h, Q[1] + uy * f + ux * h];
+  const D = [Q[0] + ux * f + uy * h, Q[1] + uy * f - ux * h];
+  const P = [B[0] + D[0] - A[0], B[1] + D[1] - A[1]];
+  return { th, A, B, D, P };
+}
+
+function render(t) {
+  const s = solve(t);
+  const O = params.O, Q = params.Q;
+  place(crank, O, s.A);
+  place(armB, Q, s.B);
+  place(armD, Q, s.D);
+  place(linkAB, s.A, s.B);
+  place(linkAD, s.A, s.D);
+  place(linkBP, s.B, s.P);
+  place(linkDP, s.D, s.P);
+  let deg = (s.th * 180 / Math.PI) % 360; if (deg < 0) deg += 360;
+  q.crank_deg.textContent = deg.toFixed(2) + ' deg';
+  q.P_x.textContent = s.P[0].toFixed(3) + ' mm';
+  q.P_y.textContent = s.P[1].toFixed(3) + ' mm';
+  scene.updateMatrixWorld(true);
+  renderer.render(scene, camera);
+}
+
+window.SIM = { scene, camera, renderer, period: 2 * Math.PI / params.omega, params, render };
+render(0);
+window.SIM_READY = true;
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+if (!location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = () => { window.SIM.render((performance.now() - t0) / 1000); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>

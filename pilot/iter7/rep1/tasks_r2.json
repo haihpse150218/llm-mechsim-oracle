@@ -1,0 +1,123 @@
+[
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_locate/haiku/lambda_s1.html",
+    "history": [
+      "iter7/rep1/oracle_locate/haiku/lambda_s1.fb1.md",
+      "iter7/rep1/oracle_locate/haiku/lambda_s1.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_locate/haiku/lambda_s1.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_locate/haiku/lambda_s2.html",
+    "history": [
+      "iter7/rep1/oracle_locate/haiku/lambda_s2.fb1.md",
+      "iter7/rep1/oracle_locate/haiku/lambda_s2.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_locate/haiku/lambda_s2.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_locate/haiku/lambda_s3.html",
+    "history": [
+      "iter7/rep1/oracle_locate/haiku/lambda_s3.fb1.md",
+      "iter7/rep1/oracle_locate/haiku/lambda_s3.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_locate/haiku/lambda_s3.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_locate/haiku/lambda_s4.html",
+    "history": [
+      "iter7/rep1/oracle_locate/haiku/lambda_s4.fb1.md",
+      "iter7/rep1/oracle_locate/haiku/lambda_s4.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_locate/haiku/lambda_s4.reply2.txt"
+  },
+  {
+    "arm": "oracle_locate",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_locate/haiku/lambda_s5.html",
+    "history": [
+      "iter7/rep1/oracle_locate/haiku/lambda_s5.fb1.md",
+      "iter7/rep1/oracle_locate/haiku/lambda_s5.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_locate/haiku/lambda_s5.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_coarse/haiku/lambda_s1.html",
+    "history": [
+      "iter7/rep1/oracle_coarse/haiku/lambda_s1.fb1.md",
+      "iter7/rep1/oracle_coarse/haiku/lambda_s1.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_coarse/haiku/lambda_s1.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_coarse/haiku/lambda_s2.html",
+    "history": [
+      "iter7/rep1/oracle_coarse/haiku/lambda_s2.fb1.md",
+      "iter7/rep1/oracle_coarse/haiku/lambda_s2.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_coarse/haiku/lambda_s2.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_coarse/haiku/lambda_s3.html",
+    "history": [
+      "iter7/rep1/oracle_coarse/haiku/lambda_s3.fb1.md",
+      "iter7/rep1/oracle_coarse/haiku/lambda_s3.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_coarse/haiku/lambda_s3.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_coarse/haiku/lambda_s4.html",
+    "history": [
+      "iter7/rep1/oracle_coarse/haiku/lambda_s4.fb1.md",
+      "iter7/rep1/oracle_coarse/haiku/lambda_s4.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_coarse/haiku/lambda_s4.reply2.txt"
+  },
+  {
+    "arm": "oracle_coarse",
+    "model": "haiku",
+    "mech": "lambda",
+    "file": "iter7/rep1/oracle_coarse/haiku/lambda_s5.html",
+    "history": [
+      "iter7/rep1/oracle_coarse/haiku/lambda_s5.fb1.md",
+      "iter7/rep1/oracle_coarse/haiku/lambda_s5.fb2.md"
+    ],
+    "reply": "iter7/rep1/oracle_coarse/haiku/lambda_s5.reply2.txt"
+  },
+  {
+    "arm": "none",
+    "model": "sonnet",
+    "mech": "lambda",
+    "file": "iter7/rep1/none/sonnet/lambda_s3.html",
+    "history": [
+      "iter7/rep1/none/sonnet/lambda_s3.fb1.md",
+      "iter7/rep1/none/sonnet/lambda_s3.fb2.md"
+    ],
+    "reply": "iter7/rep1/none/sonnet/lambda_s3.reply2.txt"
+  }
+]

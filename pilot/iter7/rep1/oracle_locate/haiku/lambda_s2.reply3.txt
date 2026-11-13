@@ -1,0 +1,1 @@
+CHANGED: Set the tracing-point distance len.AP from 96 mm to 148 mm (3.7 x crank length), the classical Chebyshev lambda value that the report's 0.351 relative error implies, so the coupler point now sits beyond B on the extended coupler.

@@ -1,0 +1,1 @@
+CHANGED: Replaced the link proportions (ground 4:1:3:3 to 2.5:1:2:2.5, scaled x40, from recall of the classical Chebyshev lambda, not verified) and set AP to 75 mm to match the failed classical-proportions check.

@@ -1,0 +1,1 @@
+CHANGED: Reset the link proportions to ground 4, crank 1, coupler 3, rocker 3 (x40 mm: O2/O4 at x=-80/+80, O4B and AB 120 mm) to fix the failed classical-proportions design check, which I could not verify against a reference.

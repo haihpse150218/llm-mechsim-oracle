@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chebyshev lambda linkage simulator</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e1117; }
+  canvas { display: block; }
+  #panel {
+    position: fixed; left: 12px; top: 12px; padding: 10px 12px;
+    font: 13px/1.5 ui-monospace, Consolas, Menlo, monospace;
+    color: #e6edf3; background: rgba(0, 0, 0, 0.45); border-radius: 6px;
+    pointer-events: none; user-select: none;
+  }
+  #panel .lbl { color: #8b98a8; display: inline-block; min-width: 96px; }
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><span class="lbl">crank angle</span><span data-q="crank_deg">0.0 &deg;</span></div>
+  <div><span class="lbl">P x</span><span data-q="P_x">0.00 mm</span></div>
+  <div><span class="lbl">P y</span><span data-q="P_y">0.00 mm</span></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- Geometry (mm). Chebyshev lambda proportions 4 : 1 : 2.5 : 3 (frame : crank : coupler : rocker).
+const DEG = Math.PI / 180;
+const O2 = { x: 0, y: 0 };
+const O4 = { x: 160, y: 0 };
+const LEN = { O2A: 40, O4B: 120, AB: 100, AP: 160 };
+const OMEGA = 1.0;      // rad/s, counter-clockwise
+const THETA0 = 0.0;     // rad
+const PERIOD = 2 * Math.PI / OMEGA;
+
+// Pure function of the crank angle th. Returns the four-bar pose and tracer point P.
+// Branch: the intersection of the coupler/rocker circles with the larger y (B never crosses the frame line for these proportions).
+function solveTheta(th) {
+  const Ax = O2.x + LEN.O2A * Math.cos(th);
+  const Ay = O2.y + LEN.O2A * Math.sin(th);
+  const dx = O4.x - Ax, dy = O4.y - Ay;
+  const d = Math.hypot(dx, dy);
+  const l = (LEN.AB * LEN.AB - LEN.O4B * LEN.O4B + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, LEN.AB * LEN.AB - l * l));
+  const ux = dx / d, uy = dy / d;
+  const Mx = Ax + l * ux, My = Ay + l * uy;
+  const b1 = { x: Mx - h * uy, y: My + h * ux };
+  const b2 = { x: Mx + h * uy, y: My - h * ux };
+  const B = b1.y >= b2.y ? b1 : b2;
+  const k = LEN.AP / LEN.AB;
+  const P = { x: Ax + k * (B.x - Ax), y: Ay + k * (B.y - Ay) };
+  return {
+    th,
+    A: { x: Ax, y: Ay },
+    B,
+    P,
+    psi: Math.atan2(B.y - Ay, B.x - Ax),
+    phi: Math.atan2(B.y - O4.y, B.x - O4.x),
+  };
+}
+
+// ---- Renderer, scene, camera
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x0e1117, 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 5000);
+const CAM_TARGET = new THREE.Vector3(80, 20, 0);
+
+scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x202830, 0.9));
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(150, 300, 500);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x9db8ff, 0.5);
+fill.position.set(-300, -150, 300);
+scene.add(fill);
+
+function fitCamera() {
+  const aspect = window.innerWidth / window.innerHeight;
+  const dz = Math.max(700, 600 / aspect);
+  camera.aspect = aspect;
+  camera.position.set(CAM_TARGET.x, CAM_TARGET.y, dz);
+  camera.lookAt(CAM_TARGET);
+  camera.updateProjectionMatrix();
+}
+fitCamera();
+
+// ---- Materials
+const mat = (color, metal = 0.35, rough = 0.45) =>
+  new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
+const matFrame = mat(0x3b4452, 0.4, 0.6);
+const matCrank = mat(0xd9534f, 0.3, 0.4);
+const matCoupler = mat(0x3f8fd2, 0.3, 0.4);
+const matRocker = mat(0x5cb85c, 0.3, 0.4);
+const matSteel = mat(0xc9ced6, 0.8, 0.25);
+const matTracer = mat(0xffb020, 0.2, 0.3);
+
+// ---- Helpers: a bar along local +x from x0 to x1, and a pin along local +z
+function bar(group, x0, x1, width, thick, z, material) {
+  const geo = new THREE.BoxGeometry(x1 - x0, width, thick);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.set((x0 + x1) / 2, 0, z);
+  group.add(mesh);
+}
+function pin(group, x, y, z0, z1, r, material) {
+  const geo = new THREE.CylinderGeometry(r, r, z1 - z0, 28);
+  geo.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.set(x, y, (z0 + z1) / 2);
+  group.add(mesh);
+}
+function marker(group, name, x, y) {
+  const m = new THREE.Object3D();
+  m.name = name;
+  m.position.set(x, y, 0);
+  group.add(m);
+  return m;
+}
+
+// ---- Parts (each is one named Object3D; its local origin sits on its first pivot)
+const parts = {};
+function makePart(name, x, y) {
+  const g = new THREE.Object3D();
+  g.name = name;
+  g.position.set(x, y, 0);
+  scene.add(g);
+  parts[name] = g;
+  return g;
+}
+const frame = makePart('frame', 0, 0);
+const crank = makePart('crank', O2.x, O2.y);
+const coupler = makePart('coupler', 0, 0);
+const rocker = makePart('rocker', O4.x, O4.y);
+
+// frame: ground plate and two posts at O2 and O4
+bar(frame, -30, O4.x + 30, 16, 8, -10, matFrame);
+pin(frame, O2.x, O2.y, -14, 20, 7, matSteel);
+pin(frame, O4.x, O4.y, -14, 20, 7, matSteel);
+marker(frame, 'frame@O2', 0, 0);
+marker(frame, 'frame@O4', LEN.O2A * 0 + O4.x - O2.x, 0);
+
+// crank: O2 -> A
+bar(crank, 0, LEN.O2A, 14, 8, 0, matCrank);
+pin(crank, 0, 0, -4, 4, 9, matCrank);
+pin(crank, LEN.O2A, 0, -8, 18, 5, matSteel);
+marker(crank, 'crank@O2', 0, 0);
+marker(crank, 'crank@A', LEN.O2A, 0);
+
+// coupler: A -> B, extended to tracer P on the same line
+bar(coupler, 0, LEN.AP, 12, 8, 10, matCoupler);
+bar(coupler, 0, LEN.AB, 14, 8, 10, matCoupler);
+const tracer = new THREE.Mesh(new THREE.SphereGeometry(4.5, 20, 16), matTracer);
+tracer.position.set(LEN.AP, 0, 10);
+coupler.add(tracer);
+marker(coupler, 'coupler@A', 0, 0);
+marker(coupler, 'coupler@B', LEN.AB, 0);
+marker(coupler, 'coupler@P', LEN.AP, 0);
+
+// rocker: O4 -> B
+bar(rocker, 0, LEN.O4B, 12, 8, 0, matRocker);
+pin(rocker, 0, 0, -4, 4, 9, matRocker);
+pin(rocker, LEN.O4B, 0, -8, 18, 5, matSteel);
+marker(rocker, 'rocker@O4', 0, 0);
+marker(rocker, 'rocker@B', LEN.O4B, 0);
+
+// Path traced by P over one full crank revolution (static, depends only on the parameters)
+{
+  const pts = [];
+  for (let k = 0; k <= 360; k += 2) {
+    const s = solveTheta(k * DEG);
+    pts.push(new THREE.Vector3(s.P.x, s.P.y, 18));
+  }
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xffb020 })
+  );
+  frame.add(line);
+}
+
+// ---- Panel elements
+const el = {
+  crank: document.querySelector('[data-q="crank_deg"]'),
+  px: document.querySelector('[data-q="P_x"]'),
+  py: document.querySelector('[data-q="P_y"]'),
+};
+
+// ---- Pure pose-and-draw function of time t (seconds)
+function render(t) {
+  const s = solveTheta(THETA0 + OMEGA * t);
+
+  crank.rotation.z = s.th;
+  coupler.position.set(s.A.x, s.A.y, 0);
+  coupler.rotation.z = s.psi;
+  rocker.rotation.z = s.phi;
+
+  let deg = ((s.th / DEG) % 360 + 360) % 360;
+  let degText = deg.toFixed(1);
+  if (degText.startsWith('360')) degText = '0.0';
+  el.crank.textContent = degText + ' °';
+  el.px.textContent = s.P.x.toFixed(2) + ' mm';
+  el.py.textContent = s.P.y.toFixed(2) + ' mm';
+
+  renderer.render(scene, camera);
+}
+
+// ---- Expose the simulator
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: {
+    O2: [O2.x, O2.y],
+    O4: [O4.x, O4.y],
+    len: { O2A: LEN.O2A, O4B: LEN.O4B, AB: LEN.AB, AP: LEN.AP },
+    omega: OMEGA,
+    theta0: THETA0,
+  },
+  render,
+};
+render(0);
+window.SIM_READY = true;
+
+// ---- Live loop (skipped in capture mode)
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  fitCamera();
+  render(lastT);
+});
+let lastT = 0;
+if (!window.location.search.includes('capture')) {
+  const t0 = performance.now();
+  const loop = (now) => {
+    lastT = (now - t0) / 1000;
+    window.SIM.render(lastT);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

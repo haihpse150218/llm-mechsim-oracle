@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Peaucellier-Lipkin linkage</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1b1f27;font-family:sans-serif}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;background:rgba(0,0,0,.6);color:#eee;padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.6}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel"><b>Peaucellier-Lipkin</b><br>
+crank angle: <span data-q="crank_deg">0</span> deg<br>
+P x: <span data-q="P_x">0</span> mm<br>
+P y: <span data-q="P_y">0</span> mm</div>
+<script type="module">
+import * as THREE from 'three';
+const params = {
+  O:[40,0], Q:[0,0],
+  len:{OA:40,QB:100,QD:100,AB:40,AD:40,BP:40,DP:40},
+  omega:1.2, thetaMid:0, thetaAmp:0.6
+};
+const renderer = new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1f27);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth/window.innerHeight, 1, 3000);
+camera.position.set(65, -10, 330);
+camera.lookAt(65, 0, 0);
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+const dl = new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(80,120,250); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x8899ff,0.3); dl2.position.set(-100,-80,100); scene.add(dl2);
+
+function mat(c){return new THREE.MeshStandardMaterial({color:c,metalness:0.3,roughness:0.5});}
+function bar(len,w,th,z,color){
+  const g=new THREE.Group();
+  const m=new THREE.Mesh(new THREE.BoxGeometry(len,w,th),mat(color));
+  m.position.set(len/2,0,z); g.add(m);
+  for(const x of [0,len]){
+    const c=new THREE.Mesh(new THREE.CylinderGeometry(w*0.8,w*0.8,th+1,24),mat(color));
+    c.rotation.x=Math.PI/2; c.position.set(x,0,z); g.add(c);
+  }
+  return g;
+}
+function marker(parent,name,x,y){
+  const o=new THREE.Object3D(); o.name=name; o.position.set(x,y,0); parent.add(o); return o;
+}
+const parts={};
+function mk(name,p1,p2,len,z,color,w){
+  const g=new THREE.Object3D(); g.name=name;
+  g.add(bar(len,w||4,3,z,color));
+  marker(g,name+'@'+p1,0,0);
+  marker(g,name+'@'+p2,len,0);
+  scene.add(g); parts[name]=g; return g;
+}
+// frame
+const frame=new THREE.Object3D(); frame.name='frame';
+frame.add(new THREE.Mesh(new THREE.BoxGeometry(220,6,2),mat(0x555a66)));
+frame.children[0].position.set(65,-12,-6);
+for(const p of [params.O,params.Q]){
+  const c=new THREE.Mesh(new THREE.CylinderGeometry(6,6,10,24),mat(0x777d8a));
+  c.rotation.x=Math.PI/2; c.position.set(p[0],p[1],-2); frame.add(c);
+}
+marker(frame,'frame@O',params.O[0],params.O[1]);
+marker(frame,'frame@Q',params.Q[0],params.Q[1]);
+scene.add(frame);
+const L=params.len;
+mk('crank','O','A',L.OA,0,0xe8a33d,5);
+mk('armB','Q','B',L.QB,4,0x4aa3df);
+mk('armD','Q','D',L.QD,-4,0x4aa3df);
+mk('linkAB','A','B',L.AB,8,0x7bc96f);
+mk('linkAD','A','D',L.AD,-8,0x7bc96f);
+mk('linkBP','B','P',L.BP,12,0xd96b6b);
+mk('linkDP','D','P',L.DP,-12,0xd96b6b);
+
+function place(name,a,b){
+  const g=parts[name];
+  g.position.set(a[0],a[1],0);
+  g.rotation.set(0,0,Math.atan2(b[1]-a[1],b[0]-a[0]));
+}
+const qEl=n=>document.querySelector('[data-q="'+n+'"]');
+const elC=qEl('crank_deg'),elX=qEl('P_x'),elY=qEl('P_y');
+
+function solve(t){
+  const th=params.thetaMid+params.thetaAmp*Math.sin(params.omega*t);
+  const O=params.O,Q=params.Q;
+  const A=[O[0]+L.OA*Math.cos(th),O[1]+L.OA*Math.sin(th)];
+  const dx=A[0]-Q[0],dy=A[1]-Q[1];
+  const d=Math.hypot(dx,dy);
+  const ux=dx/d,uy=dy/d;
+  const m=(L.QB*L.QB-L.AB*L.AB+d*d)/(2*d);
+  const h=Math.sqrt(Math.max(0,L.QB*L.QB-m*m));
+  const B=[Q[0]+m*ux-h*uy,Q[1]+m*uy+h*ux];
+  const D=[Q[0]+m*ux+h*uy,Q[1]+m*uy-h*ux];
+  const P=[B[0]+D[0]-A[0],B[1]+D[1]-A[1]];
+  return {th,A,B,D,P,O,Q};
+}
+function render(t){
+  const s=solve(t);
+  place('crank',s.O,s.A);
+  place('armB',s.Q,s.B);
+  place('armD',s.Q,s.D);
+  place('linkAB',s.A,s.B);
+  place('linkAD',s.A,s.D);
+  place('linkBP',s.B,s.P);
+  place('linkDP',s.D,s.P);
+  let deg=(s.th*180/Math.PI)%360; if(deg<0)deg+=360;
+  elC.textContent=deg.toFixed(2)+' deg';
+  elX.textContent=s.P[0].toFixed(3)+' mm';
+  elY.textContent=s.P[1].toFixed(3)+' mm';
+  renderer.render(scene,camera);
+}
+window.addEventListener('resize',()=>{
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+window.SIM={scene,camera,renderer,period:2*Math.PI/params.omega,params,render};
+render(0);
+window.SIM_READY=true;
+if(!location.search.includes('capture')){
+  const t0=performance.now();
+  (function loop(){render((performance.now()-t0)/1000);requestAnimationFrame(loop);})();
+}
+</script>
+</body></html>

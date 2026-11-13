@@ -1,0 +1,1 @@
+CHANGED: Set len.AP from 100 to 400 (classical lambda: tracing point at twice the coupler length from A, i.e. B is the midpoint of AP) and pulled the camera back/recentred so the extended coupler stays in view.

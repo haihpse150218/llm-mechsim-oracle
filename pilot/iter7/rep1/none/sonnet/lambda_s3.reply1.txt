@@ -1,0 +1,1 @@
+CHANGED: Set coupler extension AP from 100 to 400 (Chebyshev lambda has BP = AB, so AP = 2*AB), added the B-to-P arm mesh, and recentred the camera to frame the larger motion range.

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chebyshev lambda linkage</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#0d1117;color:#e6edf3;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+canvas{display:block;position:fixed;left:0;top:0}
+#panel{position:fixed;left:16px;top:16px;background:rgba(13,17,23,.78);padding:12px 14px;border:1px solid #30363d;border-radius:8px;font:14px/1.6 ui-monospace,Consolas,monospace;z-index:2;max-width:calc(100vw - 32px)}
+#panel h1{font:600 15px system-ui,sans-serif;margin:0 0 6px}
+#panel .k{color:#8b949e}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Chebyshev lambda linkage</h1>
+  <div><span class="k">crank angle</span> <span data-q="crank_deg">0.0</span> deg</div>
+  <div><span class="k">P x</span> <span data-q="P_x">0.0</span> mm</div>
+  <div><span class="k">P y</span> <span data-q="P_y">0.0</span> mm</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+// ---- Mechanism parameters (mm). 1 scene unit = 1 mm. ----
+// Chebyshev lambda proportions: ground 2.5, crank 1, coupler 2, rocker 2 (scaled x40).
+const O2 = [-50, 0];          // crank ground pivot
+const O4 = [50, 0];           // rocker ground pivot
+const L = { O2A: 40, O4B: 80, AB: 80, AP: 60 };
+const omega = 2 * Math.PI / 6; // rad/s, counter-clockwise, one revolution every 6 s
+const theta0 = 0;              // crank angle at t = 0 (rad)
+const period = 2 * Math.PI / omega;
+const TAU = 2 * Math.PI;
+
+// ---- Kinematics (pure functions of the crank angle) ----
+// Intersection of circle(A, AB) and circle(O4, O4B); branch = the intersection with larger y
+// (elbow-up assembly, which is continuous for this Grashof crank-rocker).
+function solveB(A) {
+  const dx = O4[0] - A.x, dy = O4[1] - A.y;
+  const d = Math.hypot(dx, dy);
+  const r1 = L.AB, r2 = L.O4B;
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  const mx = A.x + a * dx / d, my = A.y + a * dy / d;
+  const px = -dy / d, py = dx / d;
+  const c1 = { x: mx + h * px, y: my + h * py };
+  const c2 = { x: mx - h * px, y: my - h * py };
+  return c1.y >= c2.y ? c1 : c2;
+}
+
+function pose(th) {
+  const A = { x: O2[0] + L.O2A * Math.cos(th), y: O2[1] + L.O2A * Math.sin(th) };
+  const B = solveB(A);
+  const k = L.AP / L.AB;                       // P lies on the coupler line, AP = 60 mm from A
+  const P = { x: A.x + k * (B.x - A.x), y: A.y + k * (B.y - A.y) };
+  return {
+    th, A, B, P,
+    phi: Math.atan2(B.y - A.y, B.x - A.x),     // coupler direction A->B
+    psi: Math.atan2(B.y - O4[1], B.x - O4[0])  // rocker direction O4->B
+  };
+}
+
+// ---- Renderer, scene, camera ----
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1117);
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 5000);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(120, -200, 300);
+scene.add(key);
+const fillLight = new THREE.DirectionalLight(0x8899ff, 0.5);
+fillLight.position.set(-200, 150, 150);
+scene.add(fillLight);
+
+function fit() {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  const vf = THREE.MathUtils.degToRad(camera.fov / 2);
+  const dV = 130 / Math.tan(vf);                       // vertical extent of machine
+  const dH = 120 / (Math.tan(vf) * camera.aspect);     // horizontal extent of machine
+  camera.position.set(0, -40, Math.max(dV, dH));
+  camera.lookAt(0, 0, 0);
+}
+
+// ---- Materials and helpers ----
+function mat(color) {
+  return new THREE.MeshStandardMaterial({ color, metalness: 0.3, roughness: 0.45 });
+}
+const COL = { frame: 0x7d8590, crank: 0xd29922, coupler: 0x3fb950, rocker: 0x58a6ff, pin: 0xc9d1d9, P: 0xff7b72 };
+const Z = { frame: -12, rocker: -4, crank: 4, coupler: 12 }; // layer heights so links clear each other
+
+function addBar(part, x0, x1, z, color) {
+  const len = Math.abs(x1 - x0);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, 9, 5), mat(color));
+  m.position.set((x0 + x1) / 2, 0, z);
+  part.add(m);
+  return m;
+}
+function addPin(part, x, y) {
+  const geo = new THREE.CylinderGeometry(3.2, 3.2, 30, 20);
+  geo.rotateX(Math.PI / 2);                    // axis along Z
+  const m = new THREE.Mesh(geo, mat(COL.pin));
+  m.position.set(x, y, 0);
+  part.add(m);
+  return m;
+}
+function addMarker(part, name, x, y) {
+  const o = new THREE.Object3D();
+  o.name = name;
+  o.position.set(x, y, 0);
+  part.add(o);
+  return o;
+}
+
+// ---- Parts (each is one Object3D named as the part) ----
+// frame: local frame == world frame
+const frame = new THREE.Object3D();
+frame.name = 'frame';
+scene.add(frame);
+addBar(frame, O2[0], O4[0], Z.frame, COL.frame);
+for (const x of [O2[0], O4[0]]) {
+  const ped = new THREE.Mesh(new THREE.BoxGeometry(12, 35, 5), mat(COL.frame));
+  ped.position.set(x, -17.5, Z.frame);
+  frame.add(ped);
+  addPin(frame, x, 0);
+}
+addMarker(frame, 'frame@O2', O2[0], O2[1]);
+addMarker(frame, 'frame@O4', O4[0], O4[1]);
+
+// crank: local origin at O2, local +X points to A
+const crank = new THREE.Object3D();
+crank.name = 'crank';
+scene.add(crank);
+addBar(crank, 0, L.O2A, Z.crank, COL.crank);
+addPin(crank, 0, 0);
+addPin(crank, L.O2A, 0);
+addMarker(crank, 'crank@O2', 0, 0);
+addMarker(crank, 'crank@A', L.O2A, 0);
+
+// coupler: local origin at A, local +X points to B, P at AP along the coupler
+const coupler = new THREE.Object3D();
+coupler.name = 'coupler';
+scene.add(coupler);
+addBar(coupler, 0, L.AB, Z.coupler, COL.coupler);
+addPin(coupler, 0, 0);
+addPin(coupler, L.AB, 0);
+const pMesh = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 16), mat(COL.P));
+pMesh.position.set(L.AP, 0, Z.coupler);
+coupler.add(pMesh);
+addMarker(coupler, 'coupler@A', 0, 0);
+addMarker(coupler, 'coupler@B', L.AB, 0);
+addMarker(coupler, 'coupler@P', L.AP, 0);
+
+// rocker: local origin at O4, local +X points to B
+const rocker = new THREE.Object3D();
+rocker.name = 'rocker';
+scene.add(rocker);
+addBar(rocker, 0, L.O4B, Z.rocker, COL.rocker);
+addPin(rocker, 0, 0);
+addPin(rocker, L.O4B, 0);
+addMarker(rocker, 'rocker@O4', 0, 0);
+addMarker(rocker, 'rocker@B', L.O4B, 0);
+
+// ---- Static trace of P over one revolution (does not depend on t) ----
+{
+  const pts = [];
+  for (let i = 0; i <= 360; i++) {
+    const p = pose(theta0 + i * TAU / 360);
+    pts.push(new THREE.Vector3(p.P.x, p.P.y, Z.coupler));
+  }
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xff7b72, transparent: true, opacity: 0.5 })
+  );
+  line.name = 'P_trace';
+  scene.add(line);
+}
+
+// ---- Panel ----
+const qCrank = document.querySelector('[data-q="crank_deg"]');
+const qPx = document.querySelector('[data-q="P_x"]');
+const qPy = document.querySelector('[data-q="P_y"]');
+
+// ---- render(t): pure function of t ----
+function render(t) {
+  const th = theta0 + omega * t;
+  const p = pose(th);
+
+  crank.position.set(O2[0], O2[1], 0);
+  crank.rotation.set(0, 0, th);
+
+  coupler.position.set(p.A.x, p.A.y, 0);
+  coupler.rotation.set(0, 0, p.phi);
+
+  rocker.position.set(O4[0], O4[1], 0);
+  rocker.rotation.set(0, 0, p.psi);
+
+  let deg = (th * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  qCrank.textContent = deg.toFixed(1);
+  qPx.textContent = p.P.x.toFixed(1);
+  qPy.textContent = p.P.y.toFixed(1);
+
+  renderer.render(scene, camera);
+}
+
+fit();
+window.addEventListener('resize', fit);
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period,
+  params: { O2, O4, len: { O2A: L.O2A, O4B: L.O4B, AB: L.AB, AP: L.AP }, omega, theta0 },
+  render
+};
+render(0);
+window.SIM_READY = true;
+
+// ---- Live loop unless capturing ----
+if (!window.location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = (now) => {
+    render((now - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

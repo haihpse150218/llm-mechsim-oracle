@@ -1,0 +1,1 @@
+CHANGED: Set the lambda link lengths to classical Chebyshev proportions at scale 40 (O2A 40, O4B 100, AB 100, AP 200) and moved the ground pivots to O2 = (-40, 0) and O4 = (40, 0) so the ground distance is 80 mm.

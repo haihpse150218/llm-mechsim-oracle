@@ -1,0 +1,1 @@
+CHANGED: Swapped the ground and rocker lengths to match the report (ground O2O4 now 80 mm by moving O2/O4 to x=-40/+40, rocker O4B now 100 mm), leaving crank 40, coupler AB 100 and AP 60 unchanged because the report gives no expected AP value.

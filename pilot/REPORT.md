@@ -400,3 +400,53 @@ Gộp 22 lượt, so với pha 5 (cùng file, cùng K):
 - File duy nhất đổi: `mutants/audit/four_bar_gamed.html` PASS → **FAIL [META]** (drift 41 mm) — đúng mục tiêu đóng lỗ hổng.
 - 7/7 mutant lite5 vẫn bị bắt; 6/6 tham chiếu lite vẫn PASS.
 - → Mọi số liệu pha 2–6 trong báo cáo này **không đổi** dưới oracle mới. Dữ liệu: `results/regrade_list.json` (verdict cũ), `results/regrade_v2.jsonl` (verdict mới).
+
+# Pha 7 — thêm cơ cấu có tri thức thiết kế công bố: Chebyshev lambda + Peaucellier–Lipkin (2026-11-13)
+
+## Mục tiêu
+Kết quả RQ4 (haiku cần *giá trị đúng*, sonnet chỉ cần *vị trí*) trước đây chỉ dựa trên Jansen. Pha này thêm 2 cơ cấu có tri thức thiết kế công bố, khác loại nhau:
+- **Chebyshev lambda**: tri thức là một bộ tỉ lệ số (giống holy numbers);
+- **Peaucellier–Lipkin**: tri thức là các ràng buộc bằng nhau (hình thoi đều, 2 tay dài bằng nhau, tay quay = |OQ|).
+
+## Ground truth (kiểm độc lập trước khi viết oracle)
+- Lambda: theo Wikipedia "Chebyshev lambda linkage" — tay quay a, rocker 2.5a, thanh truyền 2.5a + 2.5a (khớp rocker ở giữa, điểm vẽ P ở đầu mút), nền 2a. Mô phỏng: P nằm trong 0.63%·a so với dây cung suốt **200°** mỗi vòng (Wikipedia: "hơn nửa chu kỳ, dung sai 1%"). Cognate dễ nhầm: Chebyshev linkage 2:5:5:4, P ở trung điểm.
+- Peaucellier: P_x của tham chiếu hằng tới 1e-13 trên cả dải dao động.
+
+## Oracle
+- Mỗi cơ cấu có **một** kiểm DESIGN gộp ("classical proportions" / "inversor geometry"), giống holy numbers, để nhánh coarse thật sự thô.
+- Lambda dùng `propMinimax` (verdict) + `propDetail` (scale đồng thuận, kỳ vọng từng khâu, gợi ý hoán đổi). Peaucellier dùng `peaucellierCheck`. Thông điệp spec có dạng "len.X … — quan hệ phải thoả (expected N mm)"; nhánh locate bỏ phần sau "—", chỉ còn **khâu nào sai**. Nếu không bỏ, locate với Peaucellier sẽ gần như bằng spec.
+- Tham chiếu 2/2 PASS; mutant `mutants/lite7/` 8/8 bị bắt.
+- Hồi quy: chấm lại 661 verdict cũ → **661/661 y hệt**.
+
+## Kết quả 1 — lỗi tự nhiên (n = 5/ô)
+| | lambda | peaucellier |
+|---|---|---|
+| haiku | **5/5** | 0/5 |
+| sonnet | 1/5 | 0/5 |
+
+- Lambda: haiku dùng 5 bộ tỉ lệ khác nhau, không bộ nào là bộ cổ điển. Sonnet sai 1 lần: đặt P ở trung điểm thanh truyền (AP = AB/2).
+- **Kiểm chức năng xác nhận**: 4 file PASS đều có đoạn đi gần thẳng 200°; cả 6 file FAIL đều 0°. Vậy không có cognate hợp lệ nào bị đánh trượt oan.
+- Peaucellier 0/10, giống cam. Khi tri thức thiết kế là *quan hệ* phát biểu được bằng lời, cả hai model đều làm đúng; khi là *con số phải nhớ*, model nhỏ sai.
+
+## Kết quả 2 — sửa lặp K=3 trên 6 file lambda (iter7/rep1)
+| nhánh | r0→r3 | haiku (5) | sonnet (1) |
+|---|---|---|---|
+| oracle_spec | 0 → 6 → 6 → 6 | **5/5** (đều ở vòng 1) | 1/1 |
+| oracle_locate | 0 → 1 → 1 → 1 | **0/5** | 1/1 |
+| oracle_coarse | 0 → 1 → 1 → 1 | 0/5 | 1/1 |
+| none | 0 → 1 → 1 → 1 | 0/5 (dừng hết ở r1, NO_CHANGE) | 1/1 |
+
+- Audit mesh↔marker: drift 0 ở cả 29 file (9 PASS cuối + 20 file sinh).
+- Lượt sửa: 45 (29 CHANGED, 15 NO_CHANGE, 1 không trả lời — agent coarse haiku s3 ở r3 dừng và xin được cho biết tỉ lệ cổ điển; ghi NO_REPLY do người thí nghiệm viết).
+
+## Nhận xét
+1. **Lặp lại đúng kiểu kết quả của Jansen** trên một cơ cấu khác: haiku sửa được 5/5 khi có giá trị đúng và 0/5 ở mọi nhánh không có giá trị. Sonnet sửa được ở cả 4 nhánh, kể cả không có phản hồi (self-refine), vì nó nhớ đúng tỉ lệ lambda.
+2. **Locate giúp haiku được một nửa đường**: gợi ý "looks swapped with" giúp haiku đổi đúng các cặp khâu, nên ở s3, s5 chỉ còn sai một khâu là AP. Riêng AP phải lấy từ trí nhớ (5 lần tay quay, = 200 mm), và không lần nào haiku làm được.
+3. **Rò rỉ một phần qua con số sai số**: các nhánh locate và coarse vẫn in giá trị "measured" của kiểm minimax. Ba agent haiku đã suy ngược AP từ con số này (96, 148, 130, 170 mm), nhưng đều sai, vì không biết công thức (rmax−rmin)/(rmax+rmin). Rò rỉ này không giúp được haiku, nhưng nên nêu trong bài: con số sai số là một kênh thông tin giữa coarse và locate.
+4. **Cách haiku thất bại ở lambda khác với ở Jansen**: ở lambda, NO_CHANGE thường đi kèm thừa nhận "không chắc, cần tỉ lệ tham chiếu"; ở Jansen, haiku khẳng định sai rồi đổ lỗi cho checker. Vẫn có lỗi bịa: một agent viết "tỉ lệ 3:1:2.5:2 do spec nêu", trong khi spec không có con số nào; hai agent self-refine ước tính tay rằng P "gần thẳng" trong khi thực tế là 0°.
+5. **Gộp RQ4 trên lỗi tri thức thiết kế (Jansen pha 5–6 + lambda pha 7), riêng haiku**: spec 13/13, locate 0/13, coarse 0/13, none 0/13. Spec so với locate trên 13 cặp: McNemar chính xác p ≈ 2.4e-4. Lưu ý các cặp không hoàn toàn độc lập, vì abl1 và abl2 dùng chung file gốc.
+
+## Hạn chế
+- Lambda chỉ có 1 lần lặp; sonnet chỉ có 1 file lỗi, nên không kết luận được gì về sonnet ở lambda ngoài "nó nhớ đúng".
+- Peaucellier không cho lỗi tự nhiên nào, nên RQ4 với tri thức dạng *quan hệ* vẫn chưa kiểm được trên lỗi thật (chỉ có mutant).
+- Vẫn chỉ hai model cùng hãng.

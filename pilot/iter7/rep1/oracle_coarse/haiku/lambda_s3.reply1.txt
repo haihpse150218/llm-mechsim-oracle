@@ -1,0 +1,1 @@
+NO_CHANGE: The review fails the classical-proportions check (0.351 vs 0.03), but the spec gives no numeric Chebyshev proportions and I could not identify a verified replacement set, so I left the simulator unchanged; the current link ratios (ground 2.5 : crank 1 : coupler 2 : rocker 2) are a guess at the classical values.

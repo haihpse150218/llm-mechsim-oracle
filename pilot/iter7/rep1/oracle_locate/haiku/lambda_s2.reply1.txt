@@ -1,0 +1,1 @@
+CHANGED: Swapped the rocker length O4B (80 to 100) and the ground distance O2O4 (100 to 80) to match the 1:2.5:2.5:2 Chebyshev proportions; len.AP was left at 120 because its classical value could not be determined without running the page.

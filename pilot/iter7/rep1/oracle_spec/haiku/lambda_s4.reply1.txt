@@ -1,0 +1,1 @@
+CHANGED: Reset the link lengths to the classical Chebyshev proportions at scale 40 (frame O2O4 = 80 mm with O4 moved to x=80, rocker O4B = 100 mm, coupler AB = 100 mm, tracer AP = 200 mm), extended the frame bar to reach O4, and updated the geometry comment to match.

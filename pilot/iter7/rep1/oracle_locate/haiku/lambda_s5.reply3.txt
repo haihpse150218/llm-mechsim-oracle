@@ -1,0 +1,1 @@
+CHANGED: Set the tracing point distance AP from 60 mm to 130 mm so P sits on the coupler extension beyond B (the classical Chebyshev lambda proportion), extended the coupler bar to reach P, and enlarged the camera fit so P stays in view.

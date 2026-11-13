@@ -1,0 +1,1 @@
+CHANGED: Set link lengths to the classical Chebyshev lambda proportions at scale 40 (crank 40, ground 80, rocker O4B 100, coupler AB 100, AP 200), updated the coupler body to span to P, and made the camera frame the traced path instead of fixed extents.
