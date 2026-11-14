@@ -48,8 +48,8 @@ The two loops without an executable gate failed in characteristic ways. VLM-driv
 
 \paragraph{Is a repairer needed at all?} Because the full report states the correct values, we also ran a deterministic baseline without any model. It takes the values that the location + value report on the original file gives as ``expected'' and writes them into the page. Two variants were tried:
 \begin{itemize}
-\item \emph{Patching \texttt{SIM.params} at load time}: none of the 20 source files passed. The design check then passed, but every page had built its link geometry from the old lengths, so the drawing no longer matched the parameters.
-\item \emph{Rewriting the numeric literals in the page source}, the more favourable variant, so that the geometry is built from the corrected values: 11 of 28 file-runs passed (Table~\ref{tab:repair}).
+\item \emph{Patching \texttt{SIM.params} at load time}: 0 of 28 file-runs passed (20 source files). The design check then passed, but every page had built its link geometry from the old lengths, so the drawing no longer matched the parameters.
+\item \emph{Rewriting the numeric literals in the page source}, the more favourable variant, so that the geometry is built from the corrected values: 11 of 28 file-runs passed (9 of 20 source files; Table~\ref{tab:repair}).
 \end{itemize}
 The patch cannot touch assembly, tooth-count or runtime errors, for which the report names a violated condition but no value (0/8). On design-knowledge errors it fixed 11 of 20. The other nine still failed for three reasons. With the corrected lengths, some pages solved the linkage on a different assembly branch. In others, parts no longer met at shared joints. In the rest, a frame marker or the tracing point was drawn by separate code that the patch did not reach. The model given the same report fixed all 28. The LLM is therefore not a transcriber of numbers. It keeps the code, the drawing and the panel consistent with the corrected design, and it repairs faults for which no value exists.
 

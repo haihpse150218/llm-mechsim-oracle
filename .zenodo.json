@@ -4,7 +4,7 @@
   "description": "Data, code and manuscript sources for the paper \"Where and What: Executable Oracles as Acceptance Gates and Repair Feedback for LLM-Generated Mechanism Simulators\". Contains the executable oracle, specifications, reference simulators, seeded mutants, simulators generated and repaired by claude-sonnet-5-5 and claude-haiku-5-5 (plus a generation-only check with deepseek-v4-pro and deepseek-flash), VLM review inputs and replies, feedback texts, raw oracle results, statistics scripts and the LaTeX manuscript. Code: MIT License; data and text: CC BY 4.0 (see LICENSE-DATA.md).",
   "creators": [
     {
-      "name": "Hoang, Hai",
+      "name": "Hoang, Phi Hai",
       "affiliation": "FPT School of Business and Technology (FSB), FPT University"
     }
   ],
