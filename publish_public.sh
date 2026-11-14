@@ -11,8 +11,8 @@ EMAIL="59084874+haihpse150218@users.noreply.github.com"
 git subtree split --prefix="$PREFIX" -b mechsim-export >/dev/null
 git branch -f mechsim-public mechsim-export
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter "
-export GIT_AUTHOR_NAME='Phi Hai Hoang' GIT_AUTHOR_EMAIL='$EMAIL'
-export GIT_COMMITTER_NAME='Phi Hai Hoang' GIT_COMMITTER_EMAIL='$EMAIL'" \
+export GIT_AUTHOR_NAME='Hai Hoang' GIT_AUTHOR_EMAIL='$EMAIL'
+export GIT_COMMITTER_NAME='Hai Hoang' GIT_COMMITTER_EMAIL='$EMAIL'" \
   mechsim-public >/dev/null
 # Deterministic rewrite: unchanged old commits get the same hashes, so this is a fast-forward.
 git -c credential.username=haihpse150218 push https://github.com/haihpse150218/llm-mechsim-oracle.git mechsim-public:main

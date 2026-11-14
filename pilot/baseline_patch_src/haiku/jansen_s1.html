@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jansen Strandbeest leg</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#0e1116;}
+canvas{position:fixed;left:0;top:0;width:100%;height:100%;display:block;}
+#panel{position:fixed;left:16px;top:16px;background:rgba(10,14,20,.78);color:#e8edf3;font:14px/1.7 system-ui,sans-serif;padding:12px 14px;border-radius:8px;min-width:200px;}
+#panel b{font-weight:600;color:#8fb8ff;}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="panel">
+  <div><b>Jansen leg</b>, crank at constant speed</div>
+  <div>crank <span data-q="crank_deg">0.0</span> deg</div>
+  <div>foot x <span data-q="foot_x">0.0</span> mm</div>
+  <div>foot y <span data-q="foot_y">0.0</span> mm</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const TAU = Math.PI * 2;
+
+// Fixed frame pivots (mm). O = crank axle, X = second fixed pivot.
+const O = { x: 0, y: 0 };
+const X = { x: 38, y: -7.8 };
+
+// Jansen "holy numbers" (mm), distance between the named points.
+const LEN = { OZ: 15, ZY: 50, XY: 41.5, ZW: 61.9, XW: 39.3, XV: 40.1, YV: 55.8, VU: 39.4, WU: 36.7, UT: 65.7, WT: 49 };
+
+const OMEGA = Math.PI / 2;   // rad/s, counter-clockwise
+const THETA0 = 0;            // crank angle at t = 0
+const PERIOD = TAU / OMEGA;  // 4 s per crank revolution
+
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+// Intersection of circle(c1, r1) and circle(c2, r2): two points or null.
+function circleInt(c1, r1, c2, r2) {
+  const dx = c2.x - c1.x, dy = c2.y - c1.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 1e-9 || d > r1 + r2 || d < Math.abs(r1 - r2)) return null;
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+  const ux = dx / d, uy = dy / d;
+  const mx = c1.x + a * ux, my = c1.y + a * uy;
+  return [{ x: mx - h * uy, y: my + h * ux }, { x: mx + h * uy, y: my - h * ux }];
+}
+
+// Pick the solution nearest the previous one (continuation); without a
+// previous value use a fixed initial rule (max or min y).
+function choose(sols, prev, mode) {
+  if (!sols) return null;
+  if (prev) {
+    return sols.reduce((best, s) =>
+      (Math.hypot(s.x - prev.x, s.y - prev.y) < Math.hypot(best.x - prev.x, best.y - prev.y) ? s : best));
+  }
+  return sols.reduce((best, s) => ((mode === 'max' ? s.y > best.y : s.y < best.y) ? s : best));
+}
+
+// Solve the closed linkage for crank angle theta.
+function step(theta, prev) {
+  const Z = { x: O.x + LEN.OZ * Math.cos(theta), y: O.y + LEN.OZ * Math.sin(theta) };
+  const Y = choose(circleInt(Z, LEN.ZY, X, LEN.XY), prev && prev.Y, 'max') || (prev && prev.Y);
+  const W = choose(circleInt(Z, LEN.ZW, X, LEN.XW), prev && prev.W, 'min') || (prev && prev.W);
+  const V = choose(circleInt(Y, LEN.YV, X, LEN.XV), prev && prev.V, 'min') || (prev && prev.V);
+  const U = choose(circleInt(V, LEN.VU, W, LEN.WU), prev && prev.U, 'min') || (prev && prev.U);
+  const T = choose(circleInt(W, LEN.WT, U, LEN.UT), prev && prev.T, 'min') || (prev && prev.T);
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+const pose0 = step(THETA0, null);
+
+// Pure in t: rebuild the branch from theta0 up to the current crank angle
+// by small steps, so no state is carried between calls.
+function poseAt(t) {
+  let phi = (OMEGA * t) % TAU;
+  if (phi < 0) phi += TAU;
+  const n = Math.max(1, Math.ceil(phi / 0.005));
+  let pose = pose0;
+  for (let i = 1; i <= n; i++) pose = step(THETA0 + phi * i / n, pose);
+  return pose;
+}
+
+// ---------- scene ----------
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1116);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.0));
+const key = new THREE.DirectionalLight(0xffffff, 1.8);
+key.position.set(120, -160, 260);
+scene.add(key);
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+const grid = new THREE.GridHelper(600, 40, 0x2a3a4d, 0x1b2633);
+grid.rotation.x = Math.PI / 2;
+grid.position.z = -40;
+scene.add(grid);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 1, 3000);
+camera.position.set(25, -70, 270);
+camera.lookAt(25, -14, 0);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ---------- parts ----------
+const PART_DEFS = [
+  { name: 'frame',         p0: 'O', p1: 'X', pts: ['O', 'X'],      layer: -14, kind: 'bar', r: 4.5, color: 0x5b6470 },
+  { name: 'crank',         p0: 'O', p1: 'Z', pts: ['O', 'Z'],      layer: 2,   kind: 'bar', r: 4,   color: 0xf39c12 },
+  { name: 'rodUpper',      p0: 'Z', p1: 'Y', pts: ['Z', 'Y'],      layer: 5,   kind: 'bar', r: 3.2, color: 0x3498db },
+  { name: 'rodLower',      p0: 'Z', p1: 'W', pts: ['Z', 'W'],      layer: -1,  kind: 'bar', r: 3.2, color: 0x2ecc71 },
+  { name: 'upperTriangle', p0: 'X', p1: 'Y', pts: ['X', 'Y', 'V'], layer: -4,  kind: 'tri', color: 0x9b59b6 },
+  { name: 'linkXW',        p0: 'X', p1: 'W', pts: ['X', 'W'],      layer: -8,  kind: 'bar', r: 3.2, color: 0x95a5a6 },
+  { name: 'linkVU',        p0: 'V', p1: 'U', pts: ['V', 'U'],      layer: 8,   kind: 'bar', r: 3.2, color: 0xe74c3c },
+  { name: 'legTriangle',   p0: 'W', p1: 'U', pts: ['W', 'U', 'T'], layer: 12,  kind: 'tri', color: 0xf1c40f },
+];
+
+const DEPTH = 3;
+function extrudeOpts() {
+  return { depth: DEPTH, bevelEnabled: true, bevelThickness: 0.6, bevelSize: 0.6, bevelSegments: 2, curveSegments: 16 };
+}
+function barGeom(L, r) {
+  const s = new THREE.Shape();
+  s.moveTo(0, -r);
+  s.lineTo(L, -r);
+  s.absarc(L, 0, r, -Math.PI / 2, Math.PI / 2, false);
+  s.lineTo(0, r);
+  s.absarc(0, 0, r, Math.PI / 2, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(s, extrudeOpts());
+  g.translate(0, 0, -DEPTH / 2);
+  return g;
+}
+function triGeom(lp) {
+  const s = new THREE.Shape();
+  s.moveTo(lp[0].x, lp[0].y);
+  s.lineTo(lp[1].x, lp[1].y);
+  s.lineTo(lp[2].x, lp[2].y);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, extrudeOpts());
+  g.translate(0, 0, -DEPTH / 2);
+  return g;
+}
+const pinGeom = new THREE.CylinderGeometry(3, 3, 8, 16);
+const pinMat = new THREE.MeshStandardMaterial({ color: 0xdfe6ee, roughness: 0.3, metalness: 0.6 });
+
+const parts = [];
+for (const d of PART_DEFS) {
+  const p0 = pose0[d.p0], p1 = pose0[d.p1];
+  const a0 = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+  // local coordinates of a named point, relative to the part frame at t = 0
+  const loc = name => {
+    const dx = pose0[name].x - p0.x, dy = pose0[name].y - p0.y;
+    return { x: dx * Math.cos(a0) + dy * Math.sin(a0), y: -dx * Math.sin(a0) + dy * Math.cos(a0) };
+  };
+
+  const obj = new THREE.Object3D();
+  obj.name = d.name;
+  scene.add(obj);
+  const mat = new THREE.MeshStandardMaterial({ color: d.color, roughness: 0.45, metalness: 0.15 });
+
+  if (d.kind === 'bar') {
+    const L = dist(p0, p1);
+    const mesh = new THREE.Mesh(barGeom(L, d.r), mat);
+    mesh.position.z = d.layer;
+    obj.add(mesh);
+  } else {
+    const mesh = new THREE.Mesh(triGeom(d.pts.map(loc)), mat);
+    mesh.position.z = d.layer;
+    obj.add(mesh);
+  }
+
+  for (const name of d.pts) {
+    const lp = loc(name);
+    const pin = new THREE.Mesh(pinGeom, pinMat);
+    pin.rotation.x = Math.PI / 2;
+    pin.position.set(lp.x, lp.y, d.layer);
+    obj.add(pin);
+
+    const mk = new THREE.Object3D();
+    mk.name = `${d.name}@${name}`;
+    mk.position.set(lp.x, lp.y, 0);
+    obj.add(mk);
+  }
+
+  parts.push({ obj, p0: d.p0, p1: d.p1, a0 });
+}
+
+// ---------- panel ----------
+const q = name => document.querySelector(`[data-q="${name}"]`);
+
+// ---------- SIM API ----------
+function render(t) {
+  const pose = poseAt(t);
+  for (const g of parts) {
+    const a = pose[g.p0], b = pose[g.p1];
+    g.obj.position.set(a.x, a.y, 0);
+    g.obj.rotation.z = Math.atan2(b.y - a.y, b.x - a.x) - g.a0;
+  }
+  let th = (THETA0 + OMEGA * t) % TAU;
+  if (th < 0) th += TAU;
+  let deg = th * 180 / Math.PI;
+  if (deg >= 359.95) deg = 0;
+  q('crank_deg').textContent = deg.toFixed(1);
+  q('foot_x').textContent = pose.T.x.toFixed(1);
+  q('foot_y').textContent = pose.T.y.toFixed(1);
+  renderer.render(scene, camera);
+}
+
+window.SIM = {
+  scene,
+  camera,
+  renderer,
+  period: PERIOD,
+  params: {
+    O: [O.x, O.y],
+    X: [X.x, X.y],
+    len: { ...LEN },
+    omega: OMEGA,
+    theta0: THETA0,
+  },
+  render,
+};
+
+render(0);
+window.SIM_READY = true;
+
+// ---------- live loop ----------
+if (!location.search.includes('capture')) {
+  let start = null;
+  const frame = ts => {
+    if (start === null) start = ts;
+    render((ts - start) / 1000);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

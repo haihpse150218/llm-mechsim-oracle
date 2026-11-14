@@ -1,0 +1,11 @@
+{
+ "source": "iter7/rep1/oracle_spec/sonnet/lambda_s3.fb1.md",
+ "values": 1,
+ "patch": {
+  "len": {
+   "AP": 400
+  },
+  "sub": null,
+  "O4dist": null
+ }
+}

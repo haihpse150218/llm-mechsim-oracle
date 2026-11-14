@@ -16,7 +16,7 @@ We address four research questions:
 \item \textbf{RQ4} How specific must the oracle's feedback be, and does the answer depend on the repairing model?
 \end{itemize}
 
-We study eight mechanisms, 88 generated simulators, 39 seeded mutants and nearly 300 repair attempts by two models of different size from the same family. The main findings are:
+We study eight mechanisms, 88 generated simulators, 39 seeded mutants and nearly 300 repair attempts by two models of different size from the same family, plus a generation-only check of 20 simulators from two models of another vendor (DeepSeek). The main findings are:
 \begin{itemize}
 \item Free-form specifications lead to errors in 20 of 80 simulators; detailed specifications lead to none in 8. Errors concentrate in design knowledge that must be recalled (Jansen's link lengths, Chebyshev's lambda proportions) and in assembly conditions. Mechanisms whose design rule can be stated as a relation (a cam's motion law, the Peaucellier--Lipkin conditions) produced no errors.
 \item The oracle and the VLM catch different error classes. The oracle catches design-knowledge and invisible errors; the VLM catches geometry outside the oracle's contract. The VLM's detection of length errors depends largely on reading the numeric panel.

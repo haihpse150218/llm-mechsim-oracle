@@ -1,0 +1,14 @@
+{
+ "source": "iter5/rep2/oracle_spec/sonnet/jansen_s3.fb1.md",
+ "values": 4,
+ "patch": {
+  "len": {
+   "XV": 40.1,
+   "YV": 55.8,
+   "UT": 65.7,
+   "WT": 49
+  },
+  "sub": null,
+  "O4dist": null
+ }
+}

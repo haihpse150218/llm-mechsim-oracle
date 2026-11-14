@@ -1,0 +1,27 @@
+{
+ "source": "iter5/rep2/oracle_spec/haiku/jansen_s1.fb1.md",
+ "values": 11,
+ "patch": {
+  "len": {
+   "OZ": 15,
+   "ZY": 50,
+   "XY": 41.5,
+   "ZW": 61.9,
+   "XW": 39.3,
+   "YV": 55.8,
+   "VU": 39.4,
+   "WU": 36.7,
+   "UT": 65.7,
+   "WT": 49
+  },
+  "sub": {
+   "cur": [
+    15,
+    0
+   ],
+   "absx": 38,
+   "y": -7.8
+  },
+  "O4dist": null
+ }
+}
