@@ -1,0 +1,23 @@
+Dear Editors-in-Chief, Professor Hinchey and Professor Bohner,
+
+Please consider the enclosed manuscript, "Where and What: Executable Oracles as Acceptance Gates and Repair Feedback for LLM-Generated Mechanism Simulators", for publication in Innovations in Systems and Software Engineering as a regular research article.
+
+Large language models now write simulation software from short natural-language descriptions. Such programs run and look plausible, but they can still be physically wrong, and current pipelines often accept them after a vision-language model has looked at screenshots. The manuscript treats this as a verification and validation problem. It presents an executable test oracle for generated 3D mechanism simulators. The oracle samples the page's pure rendering function and checks structural invariants, declared dimensions, engineering design rules and the kinematic solution, without hand-written per-task specifications. It then uses the oracle as an acceptance gate and as feedback in iterative repair.
+
+The main findings are:
+- Under free-form specifications, 20 of 80 generated simulators were wrong, mostly in recalled design knowledge. A visual reviewer missed faults that cannot be seen in a rendering.
+- Oracle feedback that names the faulty element and its correct value repaired 28 of 28 faulty cases. The alternatives repaired fewer: location only 15, check and magnitude 11, self-refinement 7, and visual review in the loop 5 of 22.
+- How much information the feedback must carry depends on the repairing model.
+
+We believe the work fits the journal's interest in software verification for engineering and safety-relevant systems. Automatic acceptance gates for AI-generated simulation and digital-twin code are a question that NASA and other systems-engineering organisations are likely to face.
+
+All specifications, generated and repaired simulators, mutants, oracle code, feedback texts, raw results and analysis scripts are public under open licences. They are available at https://github.com/haihpse150218/llm-mechsim-oracle and archived at https://doi.org/10.5281/zenodo.24201916. The use of large language models in the study and in preparing the manuscript is described in the Methods section, as the journal requires.
+
+The manuscript is original, has not been published elsewhere and is not under consideration by another journal. The author has no competing interests and received no funding for this work. The LaTeX source (Springer Nature template, option iicol) and the compiled PDF are enclosed.
+
+Thank you for your consideration.
+
+Sincerely,
+Phi Hai Hoang
+FPT School of Business and Technology (FSB), FPT University, Ho Chi Minh City, Vietnam
+haihpaws@gmail.com
