@@ -1,0 +1,13 @@
+{
+ "source": "iter7/rep1/oracle_spec/haiku/lambda_s3.fb1.md",
+ "values": 4,
+ "patch": {
+  "len": {
+   "O4B": 100,
+   "AB": 100,
+   "AP": 200
+  },
+  "sub": null,
+  "O4dist": 80
+ }
+}

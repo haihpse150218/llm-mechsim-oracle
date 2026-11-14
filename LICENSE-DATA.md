@@ -1,6 +1,6 @@
 # Data and text licence
 
-Copyright (c) 2026 Phi Hai Hoang
+Copyright (c) 2026 Hai Hoang
 
 Except for the third-party files listed below, all non-code content of this repository is licensed under the
 **Creative Commons Attribution 4.0 International licence (CC BY 4.0)**:

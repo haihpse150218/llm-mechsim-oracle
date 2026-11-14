@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Jansen Strandbeest leg</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#15181d;font-family:monospace}
+canvas{display:block}
+#panel{position:fixed;left:12px;top:12px;color:#dde;background:rgba(0,0,0,.5);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.6}
+</style>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head><body>
+<div id="panel">
+<div>crank angle: <span data-q="crank_deg">0</span> deg</div>
+<div>foot x: <span data-q="foot_x">0</span> mm</div>
+<div>foot y: <span data-q="foot_y">0</span> mm</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+const params = {
+  O: [0, 0], X: [-38, -7.8],
+  len: { OZ: 15, ZY: 50, XY: 41.5, ZW: 61.9, XW: 40.1, XV: 40.1, YV: 55.8, VU: 39.4, WU: 36.7, UT: 65.7, WT: 49 },
+  omega: 2, theta0: 0
+};
+const L = params.len;
+
+// intersection of circles (A,rA),(B,rB); side = sign of cross(B-A, P-A)
+function ci(A, rA, B, rB, side) {
+  const dx = B[0]-A[0], dy = B[1]-A[1];
+  const d = Math.hypot(dx, dy);
+  const a = (rA*rA - rB*rB + d*d) / (2*d);
+  const h = Math.sqrt(Math.max(0, rA*rA - a*a));
+  const mx = A[0] + a*dx/d, my = A[1] + a*dy/d;
+  // perpendicular (left of A->B) = (-dy, dx)
+  const s = side > 0 ? 1 : -1;
+  return [mx - s*h*dy/d, my + s*h*dx/d];
+}
+function solve(theta) {
+  const O = params.O, X = params.X;
+  const Z = [O[0] + L.OZ*Math.cos(theta), O[1] + L.OZ*Math.sin(theta)];
+  const Y = ci(X, L.XY, Z, L.ZY, -1); // placeholder, fixed below
+  return { O, X, Z, Y };
+}
+// side convention: ci side>0 -> point on left of A->B. We want cross(Z-X, Y-X) > 0 i.e. Y left of X->Z.
+function pose(theta) {
+  const O = params.O, X = params.X;
+  const Z = [O[0] + L.OZ*Math.cos(theta), O[1] + L.OZ*Math.sin(theta)];
+  const Y = ci(X, L.XY, Z, L.ZY, +1);   // left of X->Z (upper)
+  const W = ci(X, L.XW, Z, L.ZW, -1);   // right of X->Z (lower)
+  const V = ci(X, L.XV, Y, L.YV, +1);   // left of X->Y
+  const U = ci(W, L.WU, V, L.VU, +1);   // left of W->V
+  const T = ci(W, L.WT, U, L.UT, +1);   // left of W->U
+  return { O, X, Z, Y, W, V, U, T };
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181d);
+const camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 1, 5000);
+camera.position.set(-20, -25, 420);
+camera.lookAt(-20, -25, 0);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 1.0);
+dl.position.set(150, 250, 400);
+scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x88aaff, 0.4);
+dl2.position.set(-200, -100, 200);
+scene.add(dl2);
+
+const colors = { frame: 0x777f8c, crank: 0xe05050, rodUpper: 0xe0a030, rodLower: 0x50b060,
+  upperTriangle: 0x4a90e0, linkXW: 0xb070d0, linkVU: 0x30c0c0, legTriangle: 0xe0d050 };
+const zoff = { frame: -6, crank: 4, rodUpper: 10, rodLower: 16, upperTriangle: 22, linkXW: -2, linkVU: 28, legTriangle: 34 };
+const defs = {
+  frame: { pts: ['O','X'], edges: [['O','X']] },
+  crank: { pts: ['O','Z'], edges: [['O','Z']] },
+  rodUpper: { pts: ['Z','Y'], edges: [['Z','Y']] },
+  rodLower: { pts: ['Z','W'], edges: [['Z','W']] },
+  upperTriangle: { pts: ['X','Y','V'], edges: [['X','Y'],['Y','V'],['V','X']] },
+  linkXW: { pts: ['X','W'], edges: [['X','W']] },
+  linkVU: { pts: ['V','U'], edges: [['V','U']] },
+  legTriangle: { pts: ['W','U','T'], edges: [['W','U'],['U','T'],['W','T']] }
+};
+
+function toLocal(p0, ang, P) {
+  const dx = P[0]-p0[0], dy = P[1]-p0[1];
+  const c = Math.cos(-ang), s = Math.sin(-ang);
+  return [dx*c - dy*s, dx*s + dy*c];
+}
+function frameOf(name, pp) {
+  const d = defs[name];
+  if (name === 'frame') return { p0: [0,0], ang: 0 };
+  const a = pp[d.pts[0]], b = pp[d.pts[1]];
+  return { p0: a, ang: Math.atan2(b[1]-a[1], b[0]-a[0]) };
+}
+
+const parts = {};
+const p0pose = pose(params.theta0);
+const matCache = {};
+function mat(name) {
+  return new THREE.MeshStandardMaterial({ color: colors[name], metalness: 0.3, roughness: 0.5 });
+}
+for (const name of Object.keys(defs)) {
+  const d = defs[name];
+  const g = new THREE.Object3D();
+  g.name = name;
+  const m = mat(name);
+  const { p0, ang } = frameOf(name, p0pose);
+  const loc = {};
+  for (const k of d.pts) loc[k] = toLocal(p0, ang, p0pose[k]);
+  const z = zoff[name];
+  const w = name === 'frame' ? 6 : 5, th = 4;
+  for (const [a, b] of d.edges) {
+    const A = loc[a], B = loc[b];
+    const len = Math.hypot(B[0]-A[0], B[1]-A[1]);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, w, th), m);
+    mesh.position.set((A[0]+B[0])/2, (A[1]+B[1])/2, z);
+    mesh.rotation.z = Math.atan2(B[1]-A[1], B[0]-A[0]);
+    g.add(mesh);
+  }
+  for (const k of d.pts) {
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, th + 2, 20), m);
+    cyl.rotation.x = Math.PI/2;
+    cyl.position.set(loc[k][0], loc[k][1], z);
+    g.add(cyl);
+    const mk = new THREE.Object3D();
+    mk.name = name + '@' + k;
+    mk.position.set(loc[k][0], loc[k][1], 0);
+    g.add(mk);
+  }
+  if (name === 'frame') {
+    // ground pins
+    for (const k of d.pts) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 60, 12), new THREE.MeshStandardMaterial({ color: 0x555b66 }));
+      post.rotation.x = Math.PI/2;
+      post.position.set(loc[k][0], loc[k][1], 0);
+      g.add(post);
+    }
+  }
+  if (name === 'legTriangle') {
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(5, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    foot.position.set(loc.T[0], loc.T[1], z);
+    g.add(foot);
+  }
+  scene.add(g);
+  parts[name] = g;
+}
+
+// foot path trail (static, precomputed over one revolution)
+{
+  const pts = [];
+  for (let i = 0; i <= 180; i++) {
+    const p = pose(params.theta0 + 2*Math.PI*i/180).T;
+    pts.push(new THREE.Vector3(p[0], p[1], 0));
+  }
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffffff }));
+  scene.add(line);
+}
+
+const els = {
+  crank_deg: document.querySelector('[data-q="crank_deg"]'),
+  foot_x: document.querySelector('[data-q="foot_x"]'),
+  foot_y: document.querySelector('[data-q="foot_y"]')
+};
+
+function render(t) {
+  const theta = params.theta0 + params.omega * t;
+  const pp = pose(theta);
+  for (const name of Object.keys(defs)) {
+    const g = parts[name];
+    const { p0, ang } = frameOf(name, pp);
+    g.position.set(p0[0], p0[1], 0);
+    g.rotation.set(0, 0, ang);
+    g.updateMatrixWorld(true);
+  }
+  let deg = (theta * 180 / Math.PI) % 360;
+  if (deg < 0) deg += 360;
+  els.crank_deg.textContent = deg.toFixed(1);
+  els.foot_x.textContent = pp.T[0].toFixed(2);
+  els.foot_y.textContent = pp.T[1].toFixed(2);
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+window.SIM = { scene, camera, renderer, period: 2*Math.PI/params.omega, params, render };
+render(0);
+window.SIM_READY = true;
+
+if (!location.search.includes('capture')) {
+  const start = performance.now();
+  const loop = () => {
+    SIM.render((performance.now() - start) / 1000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body></html>
