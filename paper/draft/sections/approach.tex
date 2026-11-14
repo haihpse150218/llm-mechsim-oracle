@@ -8,7 +8,7 @@ The generator receives a short prose description of the mechanism, for example `
 \item a panel element per listed quantity, marked with a \texttt{data-q} attribute (for example the crank angle and the foot position);
 \item an object \texttt{window.SIM} exposing the scene, the period, the parameters the simulator actually uses (\texttt{SIM.params}: link lengths, pivot positions, angular speed, initial angle) and a function \texttt{render(t)} that poses all parts and the panel for time $t$. The function must be \emph{pure}: no randomness, no clock, no state carried between calls.
 \end{enumerate}
-The contract fixes \emph{names}, not dimensions. It is a reduced version of the teardown skill's own contract \cite{teardown}, which already requires a pure \texttt{render(t)} so that videos can be captured frame by frame. In a first phase we also tried a detailed specification that fixed coordinate frames, assembly branches and formulas; it is discussed in Section~\ref{sec:design}.
+The contract fixes \emph{names}, not dimensions. It is a reduced version of the teardown skill's own contract \citep{teardown}, which already requires a pure \texttt{render(t)} so that videos can be captured frame by frame. In a first phase we also tried a detailed specification that fixed coordinate frames, assembly branches and formulas; it is discussed in Section~\ref{sec:design}.
 
 \subsection{Sampling}
 The oracle loads the page in headless Chrome through Playwright and waits for a readiness flag. It then calls \texttt{render(t)} at 120 instants per input period (two periods for the Geneva drive) and records the world position of every marker and the text of every panel element. Times are offset by a small irrational fraction of the period to avoid special angles. Tolerances scale with the machine: lengths are compared to within 1~mm per 100~mm of machine size (at least 1~mm), angles to within $1^\circ$, and relative quantities to within 1\%.
@@ -18,7 +18,7 @@ Figure~\ref{fig:oracle} gives an overview and Table~\ref{tab:checks} lists the c
 
 \input{figures/oracle}
 
-\begin{table*}[t]
+\begin{table}[!htbp]
 \caption{Check families of the oracle. Only DESIGN encodes mechanism-specific engineering knowledge; GT and PANEL use the kinematic solution computed from the simulator's own declared parameters.}\label{tab:checks}
 \begin{tabular*}{\textwidth}{@{\extracolsep\fill}lp{0.38\textwidth}p{0.42\textwidth}}
 \toprule
@@ -31,7 +31,7 @@ GT & every marker vs.\ the position obtained by solving the loop-closure equatio
 PANEL & every displayed number vs.\ the same solution & as GT \\
 \botrule
 \end{tabular*}
-\end{table*}
+\end{table}
 
 Two design choices make the oracle reusable without a specification per task. First, GT and PANEL compare the drawing with the solution of the simulator's \emph{own} declared parameters, not with a fixed reference design. Any dimensions are acceptable as long as the drawing is consistent with them. Second, engineering knowledge enters only through DESIGN rules, one small rule set per mechanism type. The rules state what any correct instance must satisfy, for example that a lambda linkage has Chebyshev's proportions up to a uniform scale, regardless of the scale and placement the generator chose. A proportion check therefore uses the best uniform scale. With ratios $r_i$ between drawn and published values, the minimax relative error is $(r_{\max}-r_{\min})/(r_{\max}+r_{\min})$.
 
