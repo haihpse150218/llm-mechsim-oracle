@@ -14,7 +14,7 @@ The main findings are:
 
 We believe the work fits the journal's scope in validation, testing, and the animation and execution of specifications and designs, and its interest in AI techniques for automated software engineering.
 
-All specifications, generated and repaired simulators, mutants, oracle code, feedback texts, raw results and analysis scripts are public under open licences. They are available at https://github.com/haihpse150218/llm-mechsim-oracle and archived at https://doi.org/10.5281/zenodo.24218132. The use of large language models in the study and in preparing the manuscript is described in the Methods section.
+All specifications, generated and repaired simulators, mutants, oracle code, feedback texts, raw results and analysis scripts are public under open licences. They are available at https://github.com/haihpse150218/llm-mechsim-oracle and archived at https://doi.org/10.5281/zenodo.24218385. The use of large language models in the study and in preparing the manuscript is described in the Methods section.
 
 The manuscript is original, has not been published elsewhere and is not under consideration by another journal. The author has no competing interests and received no funding for this work. The LaTeX source (Springer Nature template) and the compiled PDF are enclosed.
 
